@@ -1,5 +1,10 @@
 # Document
 ## Class RotateStackedWidget
+| File |
+| ---- |
+| [rotatestackedwidget.h](./src/customWidgets/rotatestackedwidget.h) |
+| [rotatestackedwidget.cpp](./src/customWidgets/rotatestackedwidget.cpp) |
+
 * 带有翻转动画的 Stacked Widget
 * Example
 ```cpp
@@ -11,6 +16,11 @@ stackedWidget->rotate(1);           // 页面翻转
 ```
 -----
 ## Class Toast
+| File |
+| ---- |
+| [toast.h](./src/customWidgets/toast.h) |
+| [toast.cpp](./src/customWidgets/toast.cpp) |
+
 * Toast 提示窗
 
     注意：
@@ -23,6 +33,11 @@ toast->toast("Hello");
 ```
 -----
 ## Class TranslationStackedWidget
+| File |
+| ---- |
+| [translationstackedwidget.h](./src/customWidgets/translationstackedwidget.h) |
+| [translationstackedwidget.cpp](./src/customWidgets/translationstackedwidget.cpp) |
+
 * 具有平移动画的 Stacked Widget
 * Example
 ```cpp
