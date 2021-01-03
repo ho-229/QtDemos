@@ -1,0 +1,76 @@
+﻿/**
+ * Toast Widget
+ * @brief 自动消失提示框
+ * @anchor Ho229
+ * @date 2020/12/12
+ */
+
+#ifndef TOAST_H
+#define TOAST_H
+
+#include <QLabel>
+
+class QTimer;
+class QHBoxLayout;
+class QPropertyAnimation;
+class QSequentialAnimationGroup;
+
+#define DEFULT_TOAST_STYLE "\
+QLabel{\
+    color:#FFFFFF;\
+    font:15px;\
+    font-weight:500;\
+    background-color:rgba(0,0,0,150);\
+    padding:3px;\
+    border-radius:9;\
+}"\
+
+class Toast : public QWidget
+{
+    Q_OBJECT
+public:
+
+    /**
+     * @brief Toast
+     * @param parent 父对象
+     * @param horizontalMargin 水平方向的边界
+     * @param verticalMargin 竖直方向上的边界
+     * @param waitMsece 等待时间
+     * @param style 提示框样式表:注意字体大小和宽高效果要配合好
+     */
+    explicit Toast(QWidget *parent = nullptr, int horizontalMargin = 12, int verticalMargin = 12,
+                   int waitMsecs = 1200, const QString &style = DEFULT_TOAST_STYLE);
+    ~Toast();
+
+    /**
+     * @brief 设置提示文字
+     * @param text 提示文字
+     */
+    void setText(const QString& text);
+
+    /**
+     * @brief 弹出提示
+     */
+    void toast();
+
+    /**
+     * @brief 弹出提示
+     * @param text 提示文字
+     */
+    void toast(const QString& text)
+    {
+        this->setText(text);
+        this->toast();
+    }
+
+private:
+    QLabel *m_messageLabel = nullptr;
+    QHBoxLayout *m_layout  = nullptr;
+
+    QSequentialAnimationGroup *m_animation = nullptr;
+    QPropertyAnimation *m_posAnimation     = nullptr;   // 弹出动画
+    QPropertyAnimation *m_opacityAnimation = nullptr;   // 消失动画
+
+};
+
+#endif // TOAST_H
