@@ -66,8 +66,6 @@ private:
 
     QWidget *m_currentWidget = nullptr;
     QWidget *m_nextWidget    = nullptr;
-    QPixmap m_currentPixmap;
-    QPixmap m_nextPixmap;
 
     int m_animationX = 0;
     int m_nextIndex;
@@ -75,6 +73,7 @@ private:
     static QPixmap mergePixmap(const QPixmap& leftPixmap, const QPixmap& rightPixmap);
 
     inline void updateFrame();
+    inline void updateAnimation();
 
     void paintEvent(QPaintEvent* event) Q_DECL_OVERRIDE;
     void resizeEvent(QResizeEvent* event) Q_DECL_OVERRIDE;

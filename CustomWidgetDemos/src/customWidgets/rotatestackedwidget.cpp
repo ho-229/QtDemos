@@ -109,9 +109,9 @@ void RotateStackedWidget::paintEvent(QPaintEvent *event)
     {
         QPainter painter(this);
 
+        QTransform transform;
         if(m_rotateValue > 90)
         {
-            QTransform transform;
             transform.translate(this->width() / 2, 0);
             transform.rotate(m_rotateValue + 180, Qt::YAxis);
 
@@ -120,7 +120,6 @@ void RotateStackedWidget::paintEvent(QPaintEvent *event)
         }
         else
         {
-            QTransform transform;
             transform.translate(this->width() / 2, 0);
             transform.rotate(m_rotateValue, Qt::YAxis);
 

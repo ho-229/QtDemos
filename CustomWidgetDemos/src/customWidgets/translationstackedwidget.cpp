@@ -46,21 +46,7 @@ void TranslationStackedWidget::moveToIndex(int index, bool exec)
         return;
 
     this->updateFrame();
-
-    if(index < this->currentIndex())
-    {
-        // Last page
-        m_animation->setStartValue(0 - this->width());
-        m_animation->setEndValue(0);
-        m_animationPixmap = mergePixmap(m_nextPixmap, m_currentPixmap);
-    }
-    else
-    {
-        // Next page
-        m_animation->setStartValue(0);
-        m_animation->setEndValue(0 - this->width());
-        m_animationPixmap = mergePixmap(m_currentPixmap, m_nextPixmap);
-    }
+    this->updateAnimation();
 
     m_currentWidget->hide();
     m_animation->start();
@@ -122,11 +108,33 @@ void TranslationStackedWidget::updateFrame()
 
     m_nextWidget->setGeometry(0, 0, this->width(), this->height());
 
-    m_currentPixmap = QPixmap(m_currentWidget->size());
-    m_currentWidget->render(&m_currentPixmap);
+    QPixmap currentPixmap(m_currentWidget->size());
+    m_currentWidget->render(&currentPixmap);
 
-    m_nextPixmap = QPixmap(m_nextWidget->size());
-    m_nextWidget->render(&m_nextPixmap);
+    QPixmap nextPixmap(m_nextWidget->size());
+    m_nextWidget->render(&nextPixmap);
+
+    if(m_nextIndex < this->currentIndex())
+        m_animationPixmap = mergePixmap(nextPixmap, currentPixmap);
+    else
+        m_animationPixmap = mergePixmap(currentPixmap, nextPixmap);
+}
+
+
+void TranslationStackedWidget::updateAnimation()
+{
+    if(m_nextIndex < this->currentIndex())
+    {
+        // Last page
+        m_animation->setStartValue(0 - this->width());
+        m_animation->setEndValue(0);
+    }
+    else
+    {
+        // Next page
+        m_animation->setStartValue(0);
+        m_animation->setEndValue(0 - this->width());
+    }
 }
 
 void TranslationStackedWidget::paintEvent(QPaintEvent *event)
@@ -145,18 +153,7 @@ void TranslationStackedWidget::resizeEvent(QResizeEvent *event)
     if(m_animation->state() == QVariantAnimation::Running)
     {
         this->updateFrame();
-        if(m_nextIndex < this->currentIndex())
-        {
-            // Last page
-            m_animation->setStartValue(0 - this->width());
-            m_animationPixmap = mergePixmap(m_nextPixmap, m_currentPixmap);
-        }
-        else
-        {
-            // Next page
-            m_animation->setEndValue(0 - this->width());
-            m_animationPixmap = mergePixmap(m_currentPixmap, m_nextPixmap);
-        }
+        this->updateAnimation();
     }
 
     QStackedWidget::resizeEvent(event);
