@@ -13,8 +13,8 @@
 #include <QPropertyAnimation>
 #include <QSequentialAnimationGroup>
 
-Toast::Toast(QWidget *parent, int horizontalMargin, int verticalMargin, int waitMsecs,
-             const QString &style) :
+Toast::Toast(QWidget *parent, int horizontalMargin, int verticalMargin,
+             int maximumWidth, bool wordWrap, int waitMsecs, const QString &style) :
     QWidget(parent),
     m_messageLabel(new QLabel(this)),
     m_layout(new QHBoxLayout(this)),
@@ -30,9 +30,11 @@ Toast::Toast(QWidget *parent, int horizontalMargin, int verticalMargin, int wait
     m_layout->setContentsMargins(0, 0, 0, 0);
 
     m_messageLabel->setStyleSheet(style);
-    m_messageLabel->setAlignment(Qt::AlignCenter);
     m_messageLabel->setContentsMargins(horizontalMargin, verticalMargin,
                                        horizontalMargin, verticalMargin);
+    m_messageLabel->setAlignment(Qt::AlignCenter);
+    m_messageLabel->setMaximumWidth(maximumWidth);
+    m_messageLabel->setWordWrap(wordWrap);
 
     /* 显示动画 */
     m_posAnimation->setDuration(300);
