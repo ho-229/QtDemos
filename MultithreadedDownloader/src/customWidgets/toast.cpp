@@ -74,7 +74,7 @@ void Toast::setText(const QString &text)
 
     m_posAnimation->setEndValue(rect.topLeft());
 
-    rect.translate(0, parentGeometry.height() / 4);
+    rect.translate(0, parentGeometry.height() / 4 - this->height() / 2);
 
     m_posAnimation->setStartValue(rect.topLeft());
 }
