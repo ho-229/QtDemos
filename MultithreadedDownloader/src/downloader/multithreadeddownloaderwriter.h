@@ -1,4 +1,10 @@
-﻿#ifndef MULTITHREADEDDOWNLOADERWRITER_H
+﻿/**
+ * @brief MultithreadedDownloaderWriter
+ * @anchor Ho229<2189684957@qq.com>
+ * @date 2021/2/1
+ */
+
+#ifndef MULTITHREADEDDOWNLOADERWRITER_H
 #define MULTITHREADEDDOWNLOADERWRITER_H
 
 #include <QDir>
@@ -30,10 +36,7 @@ public:
     void setSize(qint64 size){ m_fileSize = size; }
     qint64 size(){ return m_fileSize; }
 
-    void write(QByteArray data, qint64 seek);
-
-signals:
-
+    void write(const QByteArray data, const qint64 seek);
 
 private:
     void run() Q_DECL_OVERRIDE;
@@ -43,7 +46,6 @@ private:
 
     mutable QMutex m_mutex;
     QList<WriteMisson> m_writeList;
-
 };
 
 #endif // MULTITHREADEDDOWNLOADERWRITER_H

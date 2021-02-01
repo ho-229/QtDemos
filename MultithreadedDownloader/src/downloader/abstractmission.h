@@ -1,7 +1,14 @@
-﻿#ifndef ABSTRACTMISSION_H
+﻿/**
+ * @brief AbstractMission
+ * @anchor Ho229<2189684957@qq.com>
+ * @date 2021/2/1
+ */
+
+#ifndef ABSTRACTMISSION_H
 #define ABSTRACTMISSION_H
 
 #include <QUrl>
+#include <QDebug>
 #include <QObject>
 
 class AbstractMission : public QObject

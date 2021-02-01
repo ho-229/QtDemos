@@ -1,4 +1,11 @@
-﻿#include "multithreadeddownloaderwriter.h"
+﻿/**
+ * @brief MultithreadedDownloaderWriter
+ * @anchor Ho229<2189684957@qq.com>
+ * @date 2021/2/1
+ */
+
+#include "multithreadeddownloaderwriter.h"
+#include <QDebug>
 
 MultithreadedDownloaderWriter::MultithreadedDownloaderWriter(QObject *parent)
     : QThread(parent)
@@ -12,7 +19,7 @@ MultithreadedDownloaderWriter::~MultithreadedDownloaderWriter()
         m_downloadFile.close();
 }
 
-void MultithreadedDownloaderWriter::write(QByteArray data, qint64 seek)
+void MultithreadedDownloaderWriter::write(const QByteArray data, const qint64 seek)
 {
     WriteMisson newMisson = { data, seek };
 
@@ -36,7 +43,7 @@ void MultithreadedDownloaderWriter::run()
         m_mutex.unlock();
 
         if(m_writeList.isEmpty())       // Hold on !!!
-            this->msleep(100);
+            this->msleep(200);
     }
     while(!m_writeList.isEmpty());
 }

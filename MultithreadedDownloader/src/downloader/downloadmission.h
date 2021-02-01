@@ -1,4 +1,10 @@
-﻿#ifndef DOWNLOADMISSION_H
+﻿/**
+ * @brief DownloadMission
+ * @anchor Ho229<2189684957@qq.com>
+ * @date 2021/2/1
+ */
+
+#ifndef DOWNLOADMISSION_H
 #define DOWNLOADMISSION_H
 
 #include <QNetworkReply>
@@ -55,7 +61,7 @@ private:
     qint64 m_totalSize      = 0;
     qint64 m_downloadedSize = 0;
 
-    inline void reset();
+    inline void reset();            // 重置状态
     inline void destoryReply();
 };
 

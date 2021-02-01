@@ -1,4 +1,10 @@
-﻿#ifndef MAINWIDGET_H
+﻿/**
+ * @brief MainWidget
+ * @anchor Ho229<2189684957@qq.com>
+ * @date 2021/2/1
+ */
+
+#ifndef MAINWIDGET_H
 #define MAINWIDGET_H
 
 #include "multithreadeddownloader.h"

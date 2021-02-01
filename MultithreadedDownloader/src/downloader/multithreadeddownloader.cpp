@@ -1,4 +1,10 @@
-﻿#include "multithreadeddownloader.h"
+﻿/**
+ * @brief MultithreadedDownloader
+ * @anchor Ho229<2189684957@qq.com>
+ * @date 2021/2/1
+ */
+
+#include "multithreadeddownloader.h"
 
 #include <QThread>
 #include <QEventLoop>
@@ -43,7 +49,7 @@ bool MultithreadedDownloader::getFileInfo()
 
     if(reply->hasRawHeader("Content-Disposition"))
         m_writer->setFileName(reply->header(QNetworkRequest::ContentDispositionHeader)
-                              .toString().split("filename=")[1]);
+                              .toString().split("filename=").at(1));
     else
         m_writer->setFileName(reply->url().fileName());
 
@@ -52,7 +58,7 @@ bool MultithreadedDownloader::getFileInfo()
 
 void MultithreadedDownloader::start()
 {
-    if(m_state == Running)
+    if(m_state == Running || m_writer->fileName().isEmpty() || m_writer->size() <= 0)
         return;
 
     if(m_state == Stopped)
@@ -127,7 +133,7 @@ void MultithreadedDownloader::on_finished()
 {
     m_finishedCount++;
 
-    qDebug()<<"finishedCount:"<<m_finishedCount;
+    qDebug() << "finishedCount:" << m_finishedCount;
 
     if(m_finishedCount == m_threadCount)
     {

@@ -1,7 +1,12 @@
-﻿#include "mainwidget.h"
+﻿/**
+ * @brief MainWidget
+ * @anchor Ho229<2189684957@qq.com>
+ * @date 2021/2/1
+ */
+
+#include "mainwidget.h"
 #include "ui_mainwidget.h"
 
-#include <QDebug>
 #include <QFileDialog>
 #include <QMessageBox>
 
@@ -41,7 +46,11 @@ void MainWidget::initSignalSlots()
             QMessageBox::critical(this, tr("error"), tr("File can not open."));
         else
             QMessageBox::critical(this, tr("error"),
-                                  tr("Download Failed.\nNetwork Error Code:").append(m_downloader->networkError()));
+                                  tr("Download Failed.\nNetwork Error Code:")
+                                  .append(m_downloader->networkError()));
+
+        m_downloader->stop();
+        ui->stackedWidget->moveToIndex(0);
     });
 
     QObject::connect(m_downloader, &MultithreadedDownloader::stateChanged,
@@ -62,7 +71,9 @@ void MainWidget::initSignalSlots()
 
     QObject::connect(m_downloader, &MultithreadedDownloader::downloadProgress,
                      [this](qint64 bytesReceived, qint64 bytesTotal){
-        ui->progressBar->setValue(((qreal)bytesReceived / bytesTotal) * 100);
+        ui->progressBar->setValue(((qreal)bytesReceived / bytesTotal) * 100.0);
+        //ui->progressBar->setValue(static_cast<int>
+        //                         (static_cast<qreal>(bytesReceived / bytesTotal) * 100.0));
         ui->byteLabel->setText(tr("Received: %1 / Total: %2 (Byte)")
                                .arg(bytesReceived).arg(bytesTotal));
     });

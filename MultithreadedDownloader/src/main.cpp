@@ -1,4 +1,9 @@
-﻿#include "mainwidget.h"
+﻿/**
+ * @anchor Ho229<2189684957@qq.com>
+ * @date 2021/2/1
+ */
+
+#include "mainwidget.h"
 
 #include <QApplication>
 

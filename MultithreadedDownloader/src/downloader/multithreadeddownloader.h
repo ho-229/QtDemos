@@ -1,4 +1,10 @@
-﻿#ifndef MULTITHREADEDDOWNLOADER_H
+﻿/**
+ * @brief MultithreadedDownloader
+ * @anchor Ho229<2189684957@qq.com>
+ * @date 2021/2/1
+ */
+
+#ifndef MULTITHREADEDDOWNLOADER_H
 #define MULTITHREADEDDOWNLOADER_H
 
 #include <QFile>
@@ -25,7 +31,7 @@ public:
     void setThreadCount(int threadCount);
     int threadCount(){ return m_threadCount; }
 
-    bool getFileInfo();
+    bool getFileInfo();             // 获取文件信息
 
     void setFileName(const QString& name){ m_writer->setFileName(name); }
     QString fileName(){ return m_writer->fileName(); }

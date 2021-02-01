@@ -1,4 +1,10 @@
-﻿#include "downloadmission.h"
+﻿/**
+ * @brief DownloadMission
+ * @anchor Ho229<2189684957@qq.com>
+ * @date 2021/2/1
+ */
+
+#include "downloadmission.h"
 
 #include <QEventLoop>
 #include <QNetworkReply>
