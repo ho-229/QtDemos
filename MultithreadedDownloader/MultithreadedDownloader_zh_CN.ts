@@ -88,7 +88,8 @@
 Network Error Code:</source>
         <oldsource>Download Failed.
 Network Error Code </oldsource>
-        <translation>下载失败。\n网络错误码：</translation>
+        <translation>下载失败。
+网络错误码：</translation>
     </message>
     <message>
         <location filename="src/mainwidget.cpp" line="65"/>
@@ -119,7 +120,7 @@ Network Error Code </oldsource>
         <location filename="src/mainwidget.cpp" line="108"/>
         <location filename="src/mainwidget.cpp" line="127"/>
         <source>Download started.</source>
-        <translation></translation>
+        <translation>下载已开始。</translation>
     </message>
     <message>
         <location filename="src/mainwidget.cpp" line="137"/>

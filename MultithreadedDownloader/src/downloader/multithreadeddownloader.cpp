@@ -149,8 +149,8 @@ void MultithreadedDownloader::on_finished()
         }
         m_finishedCount = 0;
 
-        this->stop();
         this->updateProgress();
+        this->stop();
 
         emit finished();
     }

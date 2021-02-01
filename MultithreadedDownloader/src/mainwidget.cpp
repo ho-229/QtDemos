@@ -107,10 +107,10 @@ void MainWidget::on_downloadBtn_clicked()
         ui->stopBtn->setEnabled(true);
         m_toast->toast(tr("Download started."));
 
+        ui->stackedWidget->moveToIndex(1);
+
         m_downloader->setDownloadDir(dir);
         m_downloader->start();
-
-        ui->stackedWidget->moveToIndex(1);
     }
     else
         ui->failedLabel->show();

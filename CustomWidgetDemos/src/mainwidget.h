@@ -42,5 +42,7 @@ private:
     QButtonGroup *m_langGroup     = nullptr;
 
     QTranslator *m_trans = nullptr;
+
+    inline void initUI();
 };
 #endif // MAINWIDGET_H

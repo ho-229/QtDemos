@@ -1,4 +1,18 @@
 # Document
+## Class AlignIconButton
+| File |
+| ---- |
+| [aligniconbutton.h](./src/customWidgets/aligniconbutton.h) |
+| [aligniconbutton.cpp](./src/customWidgets/aligniconbutton.cpp) |
+* 左右 icon 对齐 Push Button
+* Example
+```cpp
+AlignIconButton *pushButton = new AlignIconButton(this);
+pushButton->setLeftIcon(leftIcon);
+pushButton->setRightIcon(rightIcon)k
+pushButton->show();
+```
+-----
 ## Class RotateStackedWidget
 | File |
 | ---- |

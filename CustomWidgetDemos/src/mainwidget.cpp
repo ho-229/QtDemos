@@ -9,6 +9,7 @@
 
 #include <QButtonGroup>
 #include <QTranslator>
+#include <QStyle>
 
 #ifdef Q_OS_WIN
 # if _MSC_VER >= 1600
@@ -42,6 +43,21 @@ MainWidget::MainWidget(QWidget *parent)
     m_langGroup->addButton(ui->CnBtn, 1);
     connect(m_langGroup, QOverload<int>::of(&QButtonGroup::buttonClicked), this,
             &MainWidget::on_buttonClicked);
+
+    ui->pushButton->setLeftIcon(QApplication::style()->
+                                standardIcon(QStyle::SP_MessageBoxInformation));
+    ui->pushButton->setRightIcon(QApplication::style()->
+                                 standardIcon(QStyle::SP_MessageBoxWarning));
+    connect(ui->sideMarginEdit, QOverload<int>::of(&QSpinBox::valueChanged),
+            [this](int value){
+        ui->pushButton->setSideMargin(value);
+        ui->pushButton->repaint();
+    });
+    connect(ui->topBottomMarginEdit, QOverload<int>::of(&QSpinBox::valueChanged),
+            [this](int value){
+        ui->pushButton->setTopBottomMargin(value);
+        ui->pushButton->repaint();
+    });
 
     m_trans->load(":/translations/CustomWidgetDemos_zh_CN.qm");
 }

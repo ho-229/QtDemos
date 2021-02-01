@@ -29,3 +29,7 @@ RESOURCES += \
    res.qrc
 
 DISTFILES +=
+
+HEADERS +=
+
+SOURCES +=
