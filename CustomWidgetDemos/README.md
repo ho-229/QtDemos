@@ -9,7 +9,7 @@
 ```cpp
 AlignIconButton *pushButton = new AlignIconButton(this);
 pushButton->setLeftIcon(leftIcon);
-pushButton->setRightIcon(rightIcon)k
+pushButton->setRightIcon(rightIcon);
 pushButton->show();
 ```
 -----
