@@ -42,6 +42,7 @@ public:
     qint64 fileSize(){ return m_writer->size(); }
 
     QNetworkReply::NetworkError networkError() const { return m_networkError; }
+    QString networkErrorString() const { return m_networkErrorString; }
 
     void start() Q_DECL_OVERRIDE;
     void pause() Q_DECL_OVERRIDE;
@@ -67,6 +68,7 @@ private:
     QList<DownloadMission *>m_missions;
 
     QNetworkReply::NetworkError m_networkError = QNetworkReply::NoError;
+    QString m_networkErrorString;
 
     inline DownloadMission* createMission(qint64 start, qint64 end);
     inline void destoryMissions();

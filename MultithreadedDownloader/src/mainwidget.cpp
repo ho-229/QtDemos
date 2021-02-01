@@ -30,6 +30,7 @@ MainWidget::~MainWidget()
 void MainWidget::initUI()
 {
     ui->failedLabel->hide();
+    ui->retranslateUi(this);
 }
 
 void MainWidget::initSignalSlots()
@@ -47,7 +48,7 @@ void MainWidget::initSignalSlots()
         else
             QMessageBox::critical(this, tr("error"),
                                   tr("Download Failed.\nNetwork Error Code:")
-                                  .append(m_downloader->networkError()));
+                                  .append(m_downloader->networkErrorString()));
 
         m_downloader->stop();
         ui->stackedWidget->moveToIndex(0);
@@ -81,6 +82,7 @@ void MainWidget::initSignalSlots()
 
 void MainWidget::on_downloadBtn_clicked()
 {
+    ui->retranslateUi(this);
     QString url;
     if((url = ui->urlEdit->toPlainText()).isEmpty())
     {

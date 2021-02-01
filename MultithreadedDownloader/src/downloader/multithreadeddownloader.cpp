@@ -6,9 +6,7 @@
 
 #include "multithreadeddownloader.h"
 
-#include <QThread>
 #include <QEventLoop>
-#include <QBasicTimer>
 #include <QRegularExpression>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -27,6 +25,9 @@ MultithreadedDownloader::~MultithreadedDownloader()
 {
     if(m_state == Running)
         this->stop();
+
+    if(m_writer->isRunning())
+        m_writer->terminate();
 }
 
 bool MultithreadedDownloader::getFileInfo()
@@ -122,6 +123,8 @@ void MultithreadedDownloader::stop()
 void MultithreadedDownloader::errorHanding(QNetworkReply::NetworkError err)
 {
     m_networkError = err;
+    m_networkErrorString = qobject_cast<DownloadMission *>
+            (this->sender())->replyErrorString();
     if(err == QNetworkReply::OperationCanceledError || err == QNetworkReply::NoError)
         return;
 

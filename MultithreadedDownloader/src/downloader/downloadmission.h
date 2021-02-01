@@ -39,6 +39,14 @@ public:
 
     qint64 downloadedSize() const { return m_downloadedSize; }
 
+    QString replyErrorString() const
+    {
+        if(m_reply == nullptr)
+            return m_reply->errorString();
+
+        return QString();
+    }
+
     void start() Q_DECL_OVERRIDE;
     void pause() Q_DECL_OVERRIDE;
     void stop()  Q_DECL_OVERRIDE;
