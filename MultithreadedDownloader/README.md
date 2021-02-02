@@ -1,6 +1,10 @@
 # MultithreadedDownloader
 > *我想凭时间的有效利用去弥补匆匆流逝的光阴。*  
 > *—— 蒙田《蒙田随笔》*
+
+![image](./image/MultithreadedDownloader_1.png)
+![image](./image/MultithreadedDownloader_2.png)
+------
 ### 原理介绍
 * 这是一个基于 `Qt5` 的多线程下载器。
 * `Class AbstractMission` 是一个任务抽象类。

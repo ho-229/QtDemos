@@ -8,5 +8,5 @@
   | [MultithreadedDownloader](./MultithreadedDownloader) | 多线程下载器 |
 ---------
 ### 关于作者
-* QQ：2189684957<br>
-* E-mail：2189684957@qq.com<br>
+* QQ：2189684957
+* E-mail：<2189684957@qq.com>
