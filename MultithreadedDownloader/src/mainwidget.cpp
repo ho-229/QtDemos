@@ -50,8 +50,7 @@ void MainWidget::initSignalSlots()
                                   tr("Download Failed.\nNetwork Error Code:")
                                   .append(m_downloader->networkErrorString()));
 
-        m_downloader->stop();
-        ui->stackedWidget->moveToIndex(0);
+        this->on_stopBtn_clicked();
     });
 
     QObject::connect(m_downloader, &MultithreadedDownloader::stateChanged,
@@ -72,9 +71,8 @@ void MainWidget::initSignalSlots()
 
     QObject::connect(m_downloader, &MultithreadedDownloader::downloadProgress,
                      [this](qint64 bytesReceived, qint64 bytesTotal){
-        ui->progressBar->setValue(((qreal)bytesReceived / bytesTotal) * 100.0);
-        //ui->progressBar->setValue(static_cast<int>
-        //                         (static_cast<qreal>(bytesReceived / bytesTotal) * 100.0));
+        ui->progressBar->setValue(static_cast<int>
+                                 (static_cast<qreal>(bytesReceived) / bytesTotal * 100));
         ui->byteLabel->setText(tr("Received: %1 / Total: %2 (Byte)")
                                .arg(bytesReceived).arg(bytesTotal));
     });

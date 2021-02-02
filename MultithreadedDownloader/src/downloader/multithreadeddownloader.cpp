@@ -87,8 +87,9 @@ void MultithreadedDownloader::start()
     }
     else
     {
-        for(auto mission : m_missions)
-            mission->start();
+        for(DownloadMission *mission : m_missions)
+            if(!mission->isFinished())
+                mission->start();
     }
 
     m_timerId = this->startTimer(400);
@@ -112,7 +113,16 @@ void MultithreadedDownloader::stop()
 {
     if(m_state != Stopped)
     {
+        if(m_writer->isRunning())           // Wait for the write finish
+        {
+            QEventLoop loop;
+            QObject::connect(m_writer, &MultithreadedDownloaderWriter::finished, &loop,
+                             &QEventLoop::quit);
+            loop.exec();
+        }
+
         m_writer->closeFile();
+        m_finishedCount = 0;
 
         this->destoryMissions();
         this->killTimer(m_timerId);
@@ -128,6 +138,8 @@ void MultithreadedDownloader::errorHanding(QNetworkReply::NetworkError err)
     if(err == QNetworkReply::OperationCanceledError || err == QNetworkReply::NoError)
         return;
 
+    qDebug()<<"NetworkError:"<<err;
+
     this->stop();
     emit error(DownloadFailed);
 }
@@ -136,19 +148,10 @@ void MultithreadedDownloader::on_finished()
 {
     m_finishedCount++;
 
-    qDebug() << "finishedCount:" << m_finishedCount;
+    qDebug() << "MultithreadedDownloader: finishedCount:" << m_finishedCount;
 
     if(m_finishedCount == m_threadCount)
     {
-        if(m_writer->isRunning())           // Wait for the write finish
-        {
-            QEventLoop loop;
-            QObject::connect(m_writer, &MultithreadedDownloaderWriter::finished, &loop,
-                             &QEventLoop::quit);
-            loop.exec();
-        }
-        m_finishedCount = 0;
-
         this->updateProgress();
         this->stop();
 
