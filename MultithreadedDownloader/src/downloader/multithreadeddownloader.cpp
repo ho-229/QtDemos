@@ -7,6 +7,7 @@
 #include "multithreadeddownloader.h"
 
 #include <QEventLoop>
+#include <QTimerEvent>
 #include <QRegularExpression>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -113,6 +114,9 @@ void MultithreadedDownloader::stop()
 {
     if(m_state != Stopped)
     {
+        this->killTimer(m_timerId);
+        this->destoryMissions();
+
         if(m_writer->isRunning())           // Wait for the write finish
         {
             QEventLoop loop;
@@ -124,8 +128,6 @@ void MultithreadedDownloader::stop()
         m_writer->closeFile();
         m_finishedCount = 0;
 
-        this->destoryMissions();
-        this->killTimer(m_timerId);
         this->updateState(Stopped);
     }
 }
@@ -137,8 +139,6 @@ void MultithreadedDownloader::errorHanding(QNetworkReply::NetworkError err)
             (this->sender())->replyErrorString();
     if(err == QNetworkReply::OperationCanceledError || err == QNetworkReply::NoError)
         return;
-
-    qDebug()<<"NetworkError:"<<err;
 
     this->stop();
     emit error(DownloadFailed);
@@ -200,6 +200,6 @@ void MultithreadedDownloader::updateProgress()
 
 void MultithreadedDownloader::timerEvent(QTimerEvent *event)
 {
-    Q_UNUSED(event)
-    this->updateProgress();
+    if(event->timerId() == m_timerId)
+        this->updateProgress();
 }

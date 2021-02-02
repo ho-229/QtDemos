@@ -130,7 +130,7 @@ Network Error Code </oldsource>
     <message>
         <location filename="src/mainwidget.cpp" line="143"/>
         <source>Download terminated.</source>
-        <translation>下载以停止。</translation>
+        <translation>下载已停止。</translation>
     </message>
 </context>
 </TS>

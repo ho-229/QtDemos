@@ -1,2 +1,2 @@
 /build
-/QtDemos.pro.user
+*.pro.user*
