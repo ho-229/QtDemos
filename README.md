@@ -1,7 +1,7 @@
 # QtDemos
 ### 项目说明
 * 一个关于 `Qt5` 的项目实践，未来会添加一些控件和 `Video Player`。欢迎大家留言评论，参考学习和测试。
-* 开发环境：`Qt 5.14.2 MSVC 2017`（跨平台）
+* 开发环境：`Qt 5.14.2 MSVC 2017 (Windows)`，`Qt 5.15.2 GCC (Linux)`
 * | 名称 | 描述              |
   | ---- | ---------------- |
   | [CustomWidgetDemos](./CustomWidgetDemos) | 一些动画控件和使用示例 |
