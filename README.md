@@ -7,6 +7,21 @@
   | [CustomWidgetDemos](./CustomWidgetDemos) | 一些动画控件和使用示例 |
   | [MultithreadedDownloader](./MultithreadedDownloader) | 多线程下载器 |
 ---------
+### 如何编译
+* 需要 `Qt5` 环境
+```shell
+sudo pacman -S qt5
+```
+* 克隆到仓库到本地并编译项目
+```shell
+git clone https://gitee.com/ho229/QtDemos.git
+cd QtDemos
+mkdir build
+cd build
+qmake ..
+make -j
+```
+
 ### 关于作者
 * QQ：2189684957
 * E-mail：<2189684957@qq.com>
