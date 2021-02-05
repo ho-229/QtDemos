@@ -32,14 +32,20 @@ int main(int argc, char *argv[])
                                     "number",
                                     "0");
 
+    QCommandLineOption urlOpt({"u", "url"},
+                              "The URL to download.",
+                              "URL");
+
     QCommandLineParser parser;
     parser.setApplicationDescription("Qt Multithreaded Downloader Example.");
     parser.addHelpOption();
+    parser.addOption(urlOpt);
     parser.addOption(threadNumOpt);
     parser.process(a);
 
     MainWidget w;
-    w.setThreadNumber(parser.value(threadNumOpt).toInt());
+    w.initThreadNumber(parser.value(threadNumOpt).toInt());
     w.show();
+    w.initDownloadUrl(parser.value(urlOpt));
     return a.exec();
 }

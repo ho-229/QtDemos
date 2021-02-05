@@ -55,12 +55,13 @@ bool MultithreadedDownloader::getFileInfo()
     else
         m_writer->setFileName(reply->url().fileName());
 
-    return ok && (!m_writer->fileName().isEmpty());
+    return ok && m_writer->size() > 0 && (!m_writer->fileName().isEmpty());
 }
 
 void MultithreadedDownloader::start()
 {
-    if(m_state == Running || m_writer->fileName().isEmpty() || m_writer->size() <= 0)
+    if(m_state == Running || m_writer->fileName().isEmpty() ||
+            m_writer->size() <= 0 || m_url.isEmpty())
         return;
 
     if(m_state == Stopped)

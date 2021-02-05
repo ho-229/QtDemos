@@ -25,11 +25,13 @@ public:
     MainWidget(QWidget *parent = nullptr);
     ~MainWidget();
 
-    void setThreadNumber(int num)
+    void initThreadNumber(int num)
     {
         if(num > 0)
             m_downloader->setThreadNumber(num);
     }
+
+    void initDownloadUrl(const QString& url);
 
 private slots:
     void on_downloadBtn_clicked();

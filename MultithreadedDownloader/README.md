@@ -4,7 +4,19 @@
 
 ![image](./image/MultithreadedDownloader_1.png)
 ![image](./image/MultithreadedDownloader_2.png)
+
 ------
+### 使用方法
+```
+Usage: MultithreadedDownloader [options]
+Qt Multithreaded Downloader Example.
+
+Options:
+  -?, -h, --help                Displays help on commandline options.
+  --help-all                    Displays help including Qt specific options.
+  -u, --url <URL>               The URL to download.
+  -t, --thread-number <number>  Set the thread number for download.
+```
 ### 原理介绍
 * 这是一个基于 `Qt5` 的多线程下载器。
 * `Class AbstractMission` 是一个任务抽象类。
