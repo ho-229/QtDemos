@@ -25,6 +25,12 @@ public:
     MainWidget(QWidget *parent = nullptr);
     ~MainWidget();
 
+    void setThreadNumber(int num)
+    {
+        if(num > 0)
+            m_downloader->setThreadNumber(num);
+    }
+
 private slots:
     void on_downloadBtn_clicked();
 

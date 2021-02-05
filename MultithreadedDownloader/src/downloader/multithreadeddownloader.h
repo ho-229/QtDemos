@@ -28,8 +28,8 @@ public:
     explicit MultithreadedDownloader(QObject *parent = nullptr);
     ~MultithreadedDownloader() Q_DECL_OVERRIDE;
 
-    void setThreadCount(int threadCount);
-    int threadCount(){ return m_threadCount; }
+    void setThreadNumber(int num){ m_threadNumber = num; }
+    int threadNumber(){ return m_threadNumber; }
 
     bool getFileInfo();             // 获取文件信息
 
@@ -60,7 +60,7 @@ private:
     QNetworkAccessManager* m_manager = nullptr;
     MultithreadedDownloaderWriter *m_writer = nullptr;
 
-    int m_threadCount = 0;
+    int m_threadNumber = 0;
     int m_finishedCount = 0;
 
     int m_timerId = 0;

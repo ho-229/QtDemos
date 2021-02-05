@@ -17,7 +17,7 @@ MultithreadedDownloader::MultithreadedDownloader(QObject *parent)
     : AbstractMission(parent),
       m_manager(new QNetworkAccessManager(this)),
       m_writer(new MultithreadedDownloaderWriter(this)),
-      m_threadCount(QThread::idealThreadCount())
+      m_threadNumber(QThread::idealThreadCount())
 {
 
 }
@@ -72,11 +72,11 @@ void MultithreadedDownloader::start()
         }
 
         qint64 start, end;
-        qint64 segmentSize = m_writer->size() / m_threadCount;
-        for(int i = 0; i < m_threadCount; i++)
+        qint64 segmentSize = m_writer->size() / m_threadNumber;
+        for(int i = 0; i < m_threadNumber; i++)
         {
             start = i * segmentSize;
-            if(i != m_threadCount - 1)
+            if(i != m_threadNumber - 1)
                 end = start + segmentSize -1;
             else
                 end = m_writer->size();               // Last mission
@@ -150,7 +150,7 @@ void MultithreadedDownloader::on_finished()
 
     qDebug() << "MultithreadedDownloader: finishedCount:" << m_finishedCount;
 
-    if(m_finishedCount == m_threadCount)
+    if(m_finishedCount == m_threadNumber)
     {
         this->updateProgress();
         this->stop();

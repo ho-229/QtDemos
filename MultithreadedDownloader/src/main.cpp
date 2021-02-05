@@ -5,10 +5,10 @@
 
 #include "mainwidget.h"
 
-#include <QDebug>
 #include <QLocale>
 #include <QTranslator>
 #include <QApplication>
+#include <QCommandLineParser>
 
 int main(int argc, char *argv[])
 {
@@ -25,7 +25,21 @@ int main(int argc, char *argv[])
         a.installTranslator(&tr_CN);
     }
 
+    a.setApplicationName("Multithreaded Downloader");
+
+    QCommandLineOption threadNumOpt({"t", "thread-number"},
+                                    "Set the thread number for download.",
+                                    "number",
+                                    "0");
+
+    QCommandLineParser parser;
+    parser.setApplicationDescription("Qt Multithreaded Downloader Example.");
+    parser.addHelpOption();
+    parser.addOption(threadNumOpt);
+    parser.process(a);
+
     MainWidget w;
+    w.setThreadNumber(parser.value(threadNumOpt).toInt());
     w.show();
     return a.exec();
 }
