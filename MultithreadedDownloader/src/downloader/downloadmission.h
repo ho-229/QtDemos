@@ -21,6 +21,11 @@ public:
     explicit DownloadMission(QObject *parent);
     ~DownloadMission() Q_DECL_OVERRIDE;
 
+    /**
+     * @brief 设置下载范围
+     * @param start 下载起始位置
+     * @param end 下载结束位置
+     */
     void setRange(qint64 start, qint64 end)
     {
         if(m_state == Stopped)
@@ -37,6 +42,9 @@ public:
     void setWriter(MultithreadedDownloaderWriter *writer){ m_writer = writer; }
     MultithreadedDownloaderWriter* writer(){ return m_writer; }
 
+    /**
+     * @return 下载大小
+     */
     qint64 downloadedSize() const { return m_downloadedSize; }
 
     QString replyErrorString() const

@@ -125,7 +125,6 @@ void MainWidget::on_downloadBtn_clicked()
 
 void MainWidget::on_startBtn_clicked()
 {
-    //ui->fileNameLabel->setText(m_downloader->fileName());
     ui->startBtn->setEnabled(false);
     ui->pauseBtn->setEnabled(true);
     ui->stopBtn->setEnabled(true);
