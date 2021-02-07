@@ -20,7 +20,7 @@ class AlignIconButton : public QPushButton
 
 public:
     explicit AlignIconButton(QWidget *parent = nullptr);
-    ~AlignIconButton() Q_DECL_OVERRIDE;
+    virtual ~AlignIconButton() Q_DECL_OVERRIDE;
 
     /**
      * @brief 设置左对齐 icon
@@ -73,7 +73,7 @@ public:
     int topBottomMargin() const { return m_topBottomMargin; }
 
 protected:
-    void paintEvent(QPaintEvent *event) Q_DECL_OVERRIDE;
+    virtual void paintEvent(QPaintEvent *event) Q_DECL_OVERRIDE;
 
 private:
     QIcon m_leftIcon;
