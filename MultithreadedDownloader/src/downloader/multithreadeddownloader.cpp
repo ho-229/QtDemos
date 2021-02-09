@@ -43,7 +43,7 @@ bool MultithreadedDownloader::getFileInfo()
 
     QEventLoop loop;
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-    loop.exec();
+    loop.exec(QEventLoop::ExcludeUserInputEvents);
 
     bool ok = false;
     if(reply->hasRawHeader("Content-Length"))
