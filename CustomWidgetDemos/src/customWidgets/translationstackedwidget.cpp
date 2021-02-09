@@ -15,8 +15,8 @@ TranslationStackedWidget::TranslationStackedWidget(QWidget *parent) :
     QStackedWidget(parent),
     m_animation(new QVariantAnimation(this))
 {
-    m_animation->setDuration(350);
-    m_animation->setEasingCurve(QEasingCurve::InCubic);
+    m_animation->setDuration(400);
+    m_animation->setEasingCurve(QEasingCurve::InOutQuart);
 
     connect(m_animation, &QVariantAnimation::finished, this,
             &TranslationStackedWidget::on_finished);
