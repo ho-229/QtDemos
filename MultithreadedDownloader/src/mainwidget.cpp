@@ -44,13 +44,13 @@ void MainWidget::initUI()
 
 void MainWidget::initSignalSlots()
 {
-    QObject::connect(m_downloader, &MultithreadedDownloader::finished,
+    QObject::connect(m_downloader, &MultithreadedDownloader::finished, this,
                      [this]{
         QMessageBox::information(this, tr("infomation"), tr("download finished."));
         ui->stackedWidget->moveToIndex(0);
     });
 
-    QObject::connect(m_downloader, &MultithreadedDownloader::error,
+    QObject::connect(m_downloader, &MultithreadedDownloader::error, this,
                      [this](MultithreadedDownloader::Error err){
         if(err == MultithreadedDownloader::OpenFileFailed)
             QMessageBox::critical(this, tr("error"), tr("File can not open."));
@@ -62,7 +62,7 @@ void MainWidget::initSignalSlots()
         this->on_stopBtn_clicked();
     });
 
-    QObject::connect(m_downloader, &MultithreadedDownloader::stateChanged,
+    QObject::connect(m_downloader, &MultithreadedDownloader::stateChanged, this,
                      [this](MultithreadedDownloader::State state){
         switch (state)
         {
@@ -78,7 +78,7 @@ void MainWidget::initSignalSlots()
         }
     });
 
-    QObject::connect(m_downloader, &MultithreadedDownloader::downloadProgress,
+    QObject::connect(m_downloader, &MultithreadedDownloader::downloadProgress, this,
                      [this](qint64 bytesReceived, qint64 bytesTotal){
         ui->progressBar->setValue(static_cast<int>
                                  (static_cast<qreal>(bytesReceived) / bytesTotal * 100));

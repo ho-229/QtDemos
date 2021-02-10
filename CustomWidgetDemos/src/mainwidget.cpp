@@ -64,13 +64,13 @@ MainWidget::MainWidget(QWidget *parent)
     ui->pushButton->setRightIcon(QApplication::style()->
                                  standardIcon(QStyle::SP_MessageBoxWarning));
 #if QT_DEPRECATED_SINCE(5, 15)
-    connect(ui->sideMarginEdit, &QSpinBox::textChanged,
+    connect(ui->sideMarginEdit, &QSpinBox::textChanged, this,
             [this](QString value){
         ui->pushButton->setSideMargin(value.toInt());
         ui->pushButton->repaint();
     });
 
-    connect(ui->topBottomMarginEdit, &QSpinBox::textChanged,
+    connect(ui->topBottomMarginEdit, &QSpinBox::textChanged, this,
             [this](QString value){
         ui->pushButton->setTopBottomMargin(value.toInt());
         ui->pushButton->repaint();

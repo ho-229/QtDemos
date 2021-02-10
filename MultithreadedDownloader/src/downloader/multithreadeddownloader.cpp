@@ -89,7 +89,8 @@ void MultithreadedDownloader::start()
     }
     else
     {
-        for(DownloadMission *mission : m_missions)
+        const QList<DownloadMission *>& constlist = m_missions;
+        for(DownloadMission *mission : constlist)
             if(!mission->isFinished())
                 mission->start();
     }
@@ -102,7 +103,8 @@ void MultithreadedDownloader::pause()
 {
     if(m_state == Running)
     {
-        for(DownloadMission *misson : m_missions)
+        const QList<DownloadMission *>& constlist = m_missions;
+        for(DownloadMission *misson : constlist)
             if(!misson->isFinished())
                 misson->pause();
 
@@ -180,7 +182,7 @@ DownloadMission *MultithreadedDownloader::createMission(qint64 start, qint64 end
 
 void MultithreadedDownloader::destoryMissions()
 {
-    const QList<DownloadMission *> &constlist = m_missions;
+    const QList<DownloadMission *>& constlist = m_missions;
     for(DownloadMission *mission : constlist)
     {
         if(mission->state() != Stopped)
@@ -194,7 +196,8 @@ void MultithreadedDownloader::updateProgress()
 {
     qint64 bytesReceived = 0;
 
-    for(DownloadMission* mission : m_missions)
+    const QList<DownloadMission *>& constlist = m_missions;
+    for(DownloadMission* mission : constlist)
         bytesReceived += mission->downloadedSize();
 
     emit downloadProgress(bytesReceived, m_writer->size());

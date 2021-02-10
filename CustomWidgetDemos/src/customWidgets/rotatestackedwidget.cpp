@@ -20,7 +20,7 @@ RotateStackedWidget::RotateStackedWidget(QWidget *parent) :
     m_animation->setDuration(500);
     m_animation->setEasingCurve(QEasingCurve::Linear);
 
-    connect(m_animation, &QVariantAnimation::valueChanged,
+    connect(m_animation, &QVariantAnimation::valueChanged, this,
             [this](const QVariant value){
         m_rotateValue = value.toInt();
         this->repaint();
