@@ -20,7 +20,7 @@ TranslationStackedWidget::TranslationStackedWidget(QWidget *parent) :
 
     connect(m_animation, &QVariantAnimation::finished, this,
             &TranslationStackedWidget::on_finished);
-    connect(m_animation, &QVariantAnimation::valueChanged,
+    connect(m_animation, &QVariantAnimation::valueChanged, this,
             [this](const QVariant value){
         m_animationX = value.toInt();
         this->repaint();

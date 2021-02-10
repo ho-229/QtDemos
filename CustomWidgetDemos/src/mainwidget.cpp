@@ -30,34 +30,65 @@ MainWidget::MainWidget(QWidget *parent)
     m_buttonGroup_1->addButton(ui->rotate_0, 0);
     m_buttonGroup_1->addButton(ui->rotate_1, 1);
     m_buttonGroup_1->addButton(ui->rotate_2, 2);
+#if QT_DEPRECATED_SINCE(5, 15)
+    connect(m_buttonGroup_1, &QButtonGroup::idClicked, this,
+            &MainWidget::on_buttonClicked);
+#else
     connect(m_buttonGroup_1, QOverload<int>::of(&QButtonGroup::buttonClicked), this,
             &MainWidget::on_buttonClicked);
+#endif
 
     m_buttonGroup_2->addButton(ui->translation_0, 0);
     m_buttonGroup_2->addButton(ui->translation_1, 1);
     m_buttonGroup_2->addButton(ui->translation_3, 2);
+#if QT_DEPRECATED_SINCE(5, 15)
+    connect(m_buttonGroup_2, &QButtonGroup::idClicked, this,
+            &MainWidget::on_buttonClicked);
+#else
     connect(m_buttonGroup_2, QOverload<int>::of(&QButtonGroup::buttonClicked), this,
             &MainWidget::on_buttonClicked);
+#endif
 
     m_langGroup->addButton(ui->EnBtn, 0);
     m_langGroup->addButton(ui->CnBtn, 1);
+#if QT_DEPRECATED_SINCE(5, 15)
+    connect(m_langGroup, &QButtonGroup::idClicked, this,
+            &MainWidget::on_buttonClicked);
+#else
     connect(m_langGroup, QOverload<int>::of(&QButtonGroup::buttonClicked), this,
             &MainWidget::on_buttonClicked);
+#endif
 
     ui->pushButton->setLeftIcon(QApplication::style()->
                                 standardIcon(QStyle::SP_MessageBoxInformation));
     ui->pushButton->setRightIcon(QApplication::style()->
                                  standardIcon(QStyle::SP_MessageBoxWarning));
+#if QT_DEPRECATED_SINCE(5, 15)
+    connect(ui->sideMarginEdit, &QSpinBox::textChanged,
+            [this](QString value){
+        ui->pushButton->setSideMargin(value.toInt());
+        ui->pushButton->repaint();
+    });
+
+    connect(ui->topBottomMarginEdit, &QSpinBox::textChanged,
+            [this](QString value){
+        ui->pushButton->setTopBottomMargin(value.toInt());
+        ui->pushButton->repaint();
+    });
+#else
     connect(ui->sideMarginEdit, QOverload<int>::of(&QSpinBox::valueChanged),
             [this](int value){
         ui->pushButton->setSideMargin(value);
         ui->pushButton->repaint();
     });
+
     connect(ui->topBottomMarginEdit, QOverload<int>::of(&QSpinBox::valueChanged),
             [this](int value){
         ui->pushButton->setTopBottomMargin(value);
         ui->pushButton->repaint();
     });
+#endif
+
 
     m_trans->load(":/translations/CustomWidgetDemos_zh_CN.qm");
 }

@@ -25,7 +25,7 @@ MultithreadedDownloader::MultithreadedDownloader(QObject *parent)
 MultithreadedDownloader::~MultithreadedDownloader()
 {
     if(m_state == Running)
-        this->stop();
+        this->MultithreadedDownloader::stop();
 
     if(m_writer->isRunning())
         m_writer->terminate();
@@ -180,7 +180,8 @@ DownloadMission *MultithreadedDownloader::createMission(qint64 start, qint64 end
 
 void MultithreadedDownloader::destoryMissions()
 {
-    for(DownloadMission *mission : m_missions)
+    const QList<DownloadMission *> &constlist = m_missions;
+    for(DownloadMission *mission : constlist)
     {
         if(mission->state() != Stopped)
             mission->stop();

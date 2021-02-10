@@ -5,7 +5,6 @@
  */
 
 #include "multithreadeddownloaderwriter.h"
-#include <QDebug>
 
 MultithreadedDownloaderWriter::MultithreadedDownloaderWriter(QObject *parent)
     : QThread(parent)
@@ -27,7 +26,7 @@ void MultithreadedDownloaderWriter::write(const QByteArray data, const qint64 se
     m_writeList.push_back(newMisson);
     m_mutex.unlock();
 
-    if(!this->isRunning())          // Stopped
+    if(!this->isRunning())              // Stopped
         this->start();
 }
 

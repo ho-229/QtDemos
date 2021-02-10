@@ -20,7 +20,7 @@ DownloadMission::DownloadMission(QObject *parent)
 DownloadMission::~DownloadMission()
 {
     if(m_state == Running)
-        this->stop();
+        this->DownloadMission::stop();
 }
 
 void DownloadMission::start()
@@ -38,8 +38,13 @@ void DownloadMission::start()
 
     QObject::connect(m_reply, &QNetworkReply::finished, this,
                      &DownloadMission::on_finished);
+#if QT_DEPRECATED_SINCE(5, 15)
+    QObject::connect(m_reply, &QNetworkReply::errorOccurred, this,
+                     &DownloadMission::replyError);
+#else
     QObject::connect(m_reply, QOverload<QNetworkReply::NetworkError>::of(&QNetworkReply::error), this,
                      &DownloadMission::replyError);
+#endif
     QObject::connect(m_reply, &QNetworkReply::readyRead, this,
                      &DownloadMission::writeData);
 
