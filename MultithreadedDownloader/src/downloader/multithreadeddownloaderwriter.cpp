@@ -18,7 +18,7 @@ MultithreadedDownloaderWriter::~MultithreadedDownloaderWriter()
         m_downloadFile.close();
 }
 
-void MultithreadedDownloaderWriter::write(const QByteArray data, const qint64 seek)
+void MultithreadedDownloaderWriter::write(const QByteArray& data, const qint64 seek)
 {
     WriteMisson newMisson = { data, seek };
 

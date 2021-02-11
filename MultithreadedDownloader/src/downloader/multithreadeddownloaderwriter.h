@@ -60,7 +60,7 @@ public:
      * @param data 写入数据
      * @param seek 写入偏移量
      */
-    void write(const QByteArray data, const qint64 seek);
+    void write(const QByteArray& data, const qint64 seek);
 
 private:
     void run() Q_DECL_OVERRIDE;
