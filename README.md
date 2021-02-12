@@ -25,5 +25,4 @@ make -j
 ```
 
 ### 关于作者
-* QQ：2189684957
-* E-mail：<2189684957@qq.com>
+* E-mail：<ho229v3666@gmail.com>
