@@ -33,6 +33,7 @@ void DownloadMission::start()
     if(m_start >= 0 && m_end > 0)
         request.setRawHeader("Range", QString("bytes=%1-%2")
                              .arg(m_start + m_downloadedSize).arg(m_end).toLatin1());
+    request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
 
     m_reply = m_manager->get(request);
 
