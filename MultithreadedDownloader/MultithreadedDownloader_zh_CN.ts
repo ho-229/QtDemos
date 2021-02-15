@@ -42,7 +42,7 @@
     </message>
     <message>
         <location filename="src/mainwidget.ui" line="242"/>
-        <location filename="src/mainwidget.cpp" line="62"/>
+        <location filename="src/mainwidget.cpp" line="70"/>
         <source>Running</source>
         <translation>下载中</translation>
     </message>
@@ -62,28 +62,28 @@
         <translation>停止</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="40"/>
+        <location filename="src/mainwidget.cpp" line="49"/>
         <source>infomation</source>
         <translation>消息</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="40"/>
+        <location filename="src/mainwidget.cpp" line="49"/>
         <source>download finished.</source>
         <translation>下载完成。</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="47"/>
-        <location filename="src/mainwidget.cpp" line="49"/>
+        <location filename="src/mainwidget.cpp" line="56"/>
+        <location filename="src/mainwidget.cpp" line="58"/>
         <source>error</source>
         <translation>错误</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="47"/>
+        <location filename="src/mainwidget.cpp" line="56"/>
         <source>File can not open.</source>
         <translation>文件无法打开。</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="50"/>
+        <location filename="src/mainwidget.cpp" line="59"/>
         <source>Download Failed.
 Network Error Code:</source>
         <oldsource>Download Failed.
@@ -92,43 +92,43 @@ Network Error Code </oldsource>
 网络错误码：</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="65"/>
+        <location filename="src/mainwidget.cpp" line="73"/>
         <source>Paused</source>
         <translation>暂停</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="68"/>
+        <location filename="src/mainwidget.cpp" line="76"/>
         <source>Stopped</source>
         <translation>停止</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="78"/>
+        <location filename="src/mainwidget.cpp" line="85"/>
         <source>Received: %1 / Total: %2 (Byte)</source>
         <translation>已接收: %1 / 总计: %2 (字节)</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="89"/>
+        <location filename="src/mainwidget.cpp" line="96"/>
         <source>URL is empty.</source>
         <translation>下载链接为空。</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="99"/>
+        <location filename="src/mainwidget.cpp" line="106"/>
         <source>Please select the download directory</source>
         <translation>请选择下载目录</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="108"/>
-        <location filename="src/mainwidget.cpp" line="127"/>
+        <location filename="src/mainwidget.cpp" line="115"/>
+        <location filename="src/mainwidget.cpp" line="133"/>
         <source>Download started.</source>
         <translation>下载已开始。</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="137"/>
+        <location filename="src/mainwidget.cpp" line="143"/>
         <source>Download has been pause.</source>
         <translation>下载已暂停。</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="143"/>
+        <location filename="src/mainwidget.cpp" line="149"/>
         <source>Download terminated.</source>
         <translation>下载已停止。</translation>
     </message>

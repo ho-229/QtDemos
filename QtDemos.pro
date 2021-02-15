@@ -2,4 +2,5 @@ TEMPLATE = subdirs
 
 SUBDIRS += \
    CustomWidgetDemos \
-   MultithreadedDownloader
+   MultithreadedDownloader \
+   QmlDemo

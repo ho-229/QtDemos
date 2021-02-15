@@ -100,7 +100,7 @@
         <translation></translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="77"/>
+        <location filename="src/mainwidget.cpp" line="108"/>
         <source>Please enter the tip text.</source>
         <oldsource>Please enter your information.</oldsource>
         <translation>请输入提示文本。</translation>
