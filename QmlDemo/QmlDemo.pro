@@ -9,7 +9,8 @@ CONFIG += c++11
 SOURCES += \
         main.cpp
 
-RESOURCES += qml.qrc
+RESOURCES += qml.qrc \
+   res.qrc
 
 TRANSLATIONS += \
     QmlDemo_zh_CN.ts

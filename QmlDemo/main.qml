@@ -1,6 +1,7 @@
 ﻿import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
+import QtQuick.Controls.Styles 1.4
 import QtQuick.Layouts 1.12
 
 Window {
@@ -107,8 +108,8 @@ Window {
             readOnly: true
         }
 
-        Button {
-            id: button
+        MyButton {
+            id: closeButton
             text: qsTr("Close")
             Layout.margins: 9
             Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
