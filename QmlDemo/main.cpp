@@ -1,4 +1,5 @@
 ﻿#include <QFont>
+#include <QTranslator>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 
@@ -11,6 +12,13 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     QGuiApplication::setFont(QFont("Microsoft YaHei", 12));
+
+    QTranslator tr_CN;
+    if(QLocale::system().language() == QLocale::Chinese)
+    {
+        tr_CN.load(":/translate/QmlDemo_zh_CN.qm");
+        app.installTranslator(&tr_CN);
+    }
 
     QQmlApplicationEngine engine;
     const QUrl url(QStringLiteral("qrc:/main.qml"));
