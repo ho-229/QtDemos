@@ -114,7 +114,7 @@ Window {
             Layout.margins: 9
             Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
 
-            onClicked: root.close()
+            //onClicked: root.close()
         }
     }
 }
