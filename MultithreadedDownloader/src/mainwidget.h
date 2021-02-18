@@ -23,7 +23,7 @@ class MainWidget : public QWidget
 
 public:
     MainWidget(QWidget *parent = nullptr);
-    ~MainWidget();
+    ~MainWidget() Q_DECL_OVERRIDE;
 
     void initThreadNumber(int num)
     {

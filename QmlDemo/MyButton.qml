@@ -1,16 +1,15 @@
 ﻿import QtQuick 2.15
-import QtQuick.Shapes 1.12
 import QtQuick.Controls 2.12
 
 Button {
-    property color baseColor: "#E0E0E0"
+    id: myButton
+
+    property color normalColor: "#E0E0E0"
     property color pressColor: "#CFCFCF"
     property color hoverColor: "#DBDBDB"
 
     property int clickedX: 0
     property int clickedY: 0
-
-    property bool isWaveFinished: false
 
     hoverEnabled: true
 
@@ -21,11 +20,16 @@ Button {
         pressAnimation.restart();
     }
 
+    onReleased: {
+        if(pressAnimation.paused)
+            pressAnimation.resume();
+    }
+
     background: Rectangle {
         implicitWidth: 100
         implicitHeight: 40
 
-        color: parent.hovered ? (parent.down && isWaveFinished ? pressColor : hoverColor) : baseColor
+        color: myButton.hovered ? hoverColor : normalColor
         clip: true
 
         Behavior on color {
@@ -49,20 +53,18 @@ Button {
             id: pressAnimation
 
             SmoothedAnimation {
-                id: waveAnimation
                 target: pressRect
                 property: "width"
                 from: 0
                 to: Math.max(width, height) * 2
                 duration: 800
-
-                onRunningChanged: {
-                    console.log("Running Changed");
-                }
             }
 
             ScriptAction {
-                script: isWaveFinished = true
+                script: {
+                    if(myButton.down)
+                        pressAnimation.pause();
+                }
             }
 
             OpacityAnimator {
@@ -71,8 +73,6 @@ Button {
                 to: 0
                 duration: 300
             }
-
-            onStarted: isWaveFinished = false
 
             onFinished: {
                 pressRect.width = 0;

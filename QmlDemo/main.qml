@@ -1,7 +1,6 @@
 ﻿import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
-import QtQuick.Controls.Styles 1.4
 import QtQuick.Layouts 1.12
 
 Window {
@@ -108,13 +107,31 @@ Window {
             readOnly: true
         }
 
-        MyButton {
-            id: closeButton
-            text: qsTr("Close")
-            Layout.margins: 9
-            Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+        RowLayout {
+            id: rowLayout
+            Layout.rowSpan: 1
+            Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
+            Layout.fillHeight: true
+            Layout.fillWidth: true
 
-            //onClicked: root.close()
+            MyButton {
+                id: myButton
+                text: qsTr("Push Button")
+                Layout.fillHeight: false
+                Layout.fillWidth: true
+                Layout.margins: 9
+                Layout.alignment: Qt.AlignLeft | Qt.AlignCenter
+            }
+
+            MyButton {
+                id: closeButton
+                text: qsTr("Close")
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                Layout.margins: 9
+
+                onClicked: root.close()
+            }
         }
     }
 }
