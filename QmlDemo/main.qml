@@ -11,7 +11,7 @@ Window {
     title: qsTr("Hello World")
 
     minimumWidth: 400
-    minimumHeight: 300
+    minimumHeight: 350
 
     ColumnLayout {
         anchors.fill: parent
@@ -109,25 +109,19 @@ Window {
 
         RowLayout {
             id: rowLayout
-            Layout.rowSpan: 1
-            Layout.alignment: Qt.AlignHCenter | Qt.AlignVCenter
-            Layout.fillHeight: true
-            Layout.fillWidth: true
+            Layout.preferredWidth: parent.width
 
             MyButton {
                 id: myButton
                 text: qsTr("Push Button")
-                Layout.fillHeight: false
-                Layout.fillWidth: true
                 Layout.margins: 9
-                Layout.alignment: Qt.AlignLeft | Qt.AlignCenter
+                Layout.alignment: Qt.AlignLeft //| Qt.AlignHCenter
             }
 
             MyButton {
                 id: closeButton
                 text: qsTr("Close")
-                Layout.fillWidth: true
-                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                Layout.alignment: Qt.AlignRight //| Qt.AlignHCenter
                 Layout.margins: 9
 
                 onClicked: root.close()
