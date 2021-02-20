@@ -15,18 +15,18 @@ Window {
         anchors.fill: parent
 
         Emitter {
-            x: 289
-            y: 331
-            width: 285
+            x: 60
+            y: 335
+            width: 520
             height: 41
 
             group: "launch"
-            emitRate: 1.25
+            emitRate: 2.25
             lifeSpan: 1500
-            lifeSpanVariation: 50
             size: 40
             endSize: 10
-            sizeVariation: 10
+
+            maximumEmitted: 6
 
             velocity: AngleDirection {
                 angle: 270
@@ -36,21 +36,19 @@ Window {
                 magnitudeVariation: 25
             }
 
-            acceleration: PointDirection { y:100 }
+            acceleration: PointDirection { y: 100 }
         }
 
         ImageParticle {
             id: fireball
             groups: "launch"
             source: "qrc:///particleresources/star.png"
-            //alphaVariation: 0.4
             colorVariation: 1
         }
 
         ImageParticle {
-            groups: "flame"
+            groups: ["flame", "burstFlame"]
             source: "qrc:///particleresources/glowdot.png"
-            //colorVariation: 0.6
         }
 
         TrailEmitter {
@@ -59,20 +57,15 @@ Window {
             group: "flame"
             follow: "launch"
 
-            emitRatePerParticle: 100
+            emitRatePerParticle: 50
             lifeSpan: 230
             lifeSpanVariation: 10
-            //emitWidth: TrailEmitter.ParticleSize
-            //emitHeight: TrailEmitter.ParticleSize
-            //emitShape: EllipseShape{}
 
-            size: 5
-            //sizeVariation: 1
-            endSize: 1
+            size: 10
+            endSize: 3
 
             onEmitFollowParticles: {
-                for(var i = 0; i < particles.length; i++)
-                {
+                for(var i = 0; i < particles.length; i++) {
                     particles[i].red = followed.red;
                     particles[i].green = followed.green;
                     particles[i].blue = followed.blue;
@@ -85,51 +78,58 @@ Window {
             groups: "burst"
             source: "qrc:///particleresources/star.png"
             colorVariation: 0.2
-            entryEffect: ImageParticle.Scale
-            rotation: 60
-            rotationVariation: 30
-            rotationVelocity: 45
-            rotationVelocityVariation: 15
         }
 
         Emitter {
-            id: burstEmitter2
+            id: burstEmitter
             group: "burst"
-            emitRate: 15
-            lifeSpan: 2000
+            lifeSpan: 2300
+            lifeSpanVariation: 200
 
-            size: 25
-            endSize: 5
-            sizeVariation: 10
+            size: 30
+            endSize: 15
+            //sizeVariation: 10
 
             enabled: false
-            velocity: CumulativeDirection {
-                AngleDirection {angleVariation: 360; magnitudeVariation: 80;}
-                PointDirection {y: 20}
+            velocity: AngleDirection {
+                angleVariation: 360
+                magnitudeVariation: 60
             }
-            acceleration: PointDirection {y: 30 }
+            acceleration: PointDirection { y: 10 }
         }
 
-        Affector {
-            x: 0
-            y: 30
-            width: 640
-            height: 135
-            once: true
-            groups: "launch"
-            onAffectParticles: {
-                for (var i = 0; i < particles.length; i++) {
-                    if(particles[i].lifeLeft() < 0.02)
-                    {
-                        burstEmitter2.burst(300, particles[i].x, particles[i].y);
-                        burstFirework.color = Qt.rgba(particles[i].red,
-                                                      particles[i].green,
-                                                      particles[i].blue,
-                                                      particles[i].alpha);
-                    }
+        TrailEmitter {
+            group: "burstFlame"
+            follow: "burst"
+            anchors.fill: parent
+
+            lifeSpan: 400
+
+            emitRatePerParticle: 30
+            size: 7
+            endSize: 5
+
+            onEmitFollowParticles: {
+                for(var i = 0; i < particles.length; i++) {
+                    particles[i].red = followed.red;
+                    particles[i].green = followed.green;
+                    particles[i].blue = followed.blue;
                 }
             }
-         }
+        }
+
+        Age {
+            x: 0
+            y: 120
+            width: 640
+            height: 16
+            once: true
+            groups: "launch"
+
+            onAffected: {
+                burstEmitter.burst(90, x, y);
+                burstFirework.color = Qt.hsva(Math.random(), 1, 1, 1);
+            }
+        }
     }
 }
-
