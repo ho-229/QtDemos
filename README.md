@@ -9,6 +9,7 @@
   | [CustomWidgetDemos](./CustomWidgetDemos) | 一些动画控件和使用示例 |
   | [MultithreadedDownloader](./MultithreadedDownloader) | 多线程下载器 |
   | [QmlDemo](./QmlDemo) | QML 学习项目 |
+  | [QmlFireworks](./QmlFireworks) | QML 粒子系统 ( 烟花 ) Demo |
 ---------
 ### 如何编译
 * 需要 `Qt5` 环境
