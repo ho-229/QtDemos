@@ -8,7 +8,8 @@ CONFIG += c++11
 
 include($$_PRO_FILE_PWD_/src/src.pri)
 
-RESOURCES += $$_PRO_FILE_PWD_/src/qml/qml.qrc
+RESOURCES += $$_PRO_FILE_PWD_/src/qml/qml.qrc \
+   $$_PRO_FILE_PWD_/resource/res.qrc
 
 TRANSLATIONS += \
     QmlFireworks_zh_CN.ts

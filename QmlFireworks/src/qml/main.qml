@@ -8,20 +8,31 @@ Window {
     visible: true
     title: qsTr("Fireworks")
 
-    color: "black";
+    maximumHeight: height
+    minimumHeight: height
+    maximumWidth: width
+    minimumWidth: width
+
+    Image {
+        id: background
+        source: "qrc:/image/background.png"
+        anchors.fill: parent
+        visible: true
+    }
 
     ParticleSystem {
         id: fireworksSystem
         anchors.fill: parent
 
         Emitter {
-            x: 60
-            y: 335
-            width: 520
-            height: 41
+            x: 274
+            y: 358
+            width: 314
+            height: 35
+            rotation: -25
 
             group: "launch"
-            emitRate: 2.25
+            emitRate: 2
             lifeSpan: 1500
             size: 40
             endSize: 10
@@ -29,7 +40,7 @@ Window {
             maximumEmitted: 6
 
             velocity: AngleDirection {
-                angle: 270
+                angle: 255
                 angleVariation: 5
 
                 magnitude: 250
@@ -88,14 +99,13 @@ Window {
 
             size: 30
             endSize: 15
-            //sizeVariation: 10
 
             enabled: false
             velocity: AngleDirection {
                 angleVariation: 360
                 magnitudeVariation: 60
             }
-            acceleration: PointDirection { y: 10 }
+            acceleration: PointDirection { y: 15 }
         }
 
         TrailEmitter {
@@ -118,18 +128,27 @@ Window {
             }
         }
 
-        Age {
-            x: 0
-            y: 120
-            width: 640
-            height: 16
+        Affector {
+            x: 17
+            y: 46
+            width: 607
+            height: 192
             once: true
             groups: "launch"
 
-            onAffected: {
+            onAffectParticles: {
+                for(const particle of particles) {
+                    if(particle.lifeLeft() < 0.02) {
+                        burstEmitter.burst(100, particle.x, particle.y);
+                        burstFirework.color = Qt.hsva(Math.random(), 1, 1, 1);
+                    }
+                }
+            }
+
+            /*onAffected: {
                 burstEmitter.burst(90, x, y);
                 burstFirework.color = Qt.hsva(Math.random(), 1, 1, 1);
-            }
+            }*/
         }
     }
 }
