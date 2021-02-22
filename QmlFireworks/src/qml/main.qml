@@ -58,6 +58,7 @@ Window {
         }
 
         ImageParticle {
+            id: flame
             groups: ["flame", "burstFlame"]
             source: "qrc:///particleresources/glowdot.png"
         }
@@ -69,11 +70,13 @@ Window {
             follow: "launch"
 
             emitRatePerParticle: 50
-            lifeSpan: 230
-            lifeSpanVariation: 10
+            lifeSpan: 400
+            lifeSpanVariation: 50
 
             size: 10
             endSize: 3
+
+
 
             onEmitFollowParticles: {
                 for(var i = 0; i < particles.length; i++) {
@@ -88,7 +91,6 @@ Window {
             id: burstFirework
             groups: "burst"
             source: "qrc:///particleresources/star.png"
-            colorVariation: 0.2
         }
 
         Emitter {
@@ -124,6 +126,7 @@ Window {
                     particles[i].red = followed.red;
                     particles[i].green = followed.green;
                     particles[i].blue = followed.blue;
+                    //flame.color = Qt.rgba(followed.red, followed.green, followed.blue, 1);  Linux use this
                 }
             }
         }
@@ -139,16 +142,11 @@ Window {
             onAffectParticles: {
                 for(const particle of particles) {
                     if(particle.lifeLeft() < 0.02) {
-                        burstEmitter.burst(100, particle.x, particle.y);
                         burstFirework.color = Qt.hsva(Math.random(), 1, 1, 1);
+                        burstEmitter.burst(150, particle.x, particle.y);
                     }
                 }
             }
-
-            /*onAffected: {
-                burstEmitter.burst(90, x, y);
-                burstFirework.color = Qt.hsva(Math.random(), 1, 1, 1);
-            }*/
         }
     }
 }
