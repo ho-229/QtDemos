@@ -7,7 +7,6 @@
 
 #include "progressbutton.h"
 
-#include <QDebug>
 #include <QPainter>
 
 ProgressButton::ProgressButton(QWidget *parent, const QString &style) :
@@ -17,7 +16,6 @@ ProgressButton::ProgressButton(QWidget *parent, const QString &style) :
     m_pen.setWidth(3);
     m_pen.setColor(QColor(69, 198, 214));
 
-    qDebug()<<style;
     this->setStyleSheet(style);
 }
 
