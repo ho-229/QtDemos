@@ -44,7 +44,7 @@ class ProgressButton : public QPushButton
 public:
     explicit ProgressButton(QWidget *parent = nullptr,
                             const QString &style = DEFULT_BUTTON_STYLE);
-    ~ProgressButton() Q_DECL_OVERRIDE;
+    virtual ~ProgressButton() Q_DECL_OVERRIDE;
 
     void setMaximun(const int value){ m_maximun = qMax(value, m_minimun); }
     void setMinimun(const int value){ m_minimun = qMin(value, m_maximun); }
@@ -63,14 +63,15 @@ public:
 signals:
     void valueChanged(int value);
 
+protected:
+    virtual void paintEvent(QPaintEvent *event) Q_DECL_OVERRIDE;
+
 private:
     int m_maximun = 100;
     int m_minimun = 0;
     int m_value = 0;
 
     QPen m_pen;
-
-    void paintEvent(QPaintEvent *event) Q_DECL_OVERRIDE;
 };
 
 #endif // PROGRESSBUTTON_H

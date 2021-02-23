@@ -32,6 +32,10 @@ private slots:
 
     void on_buttonClicked(int id);
 
+    void on_countdownStartBtn_clicked();
+
+    void on_countdownBtn_clicked();
+
 private:
     Ui::MainWidget *ui;
 

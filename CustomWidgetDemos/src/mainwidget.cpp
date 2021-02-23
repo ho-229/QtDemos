@@ -20,6 +20,7 @@
 MainWidget::MainWidget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::MainWidget),
+      m_toast(new Toast(this)),
       m_buttonGroup_1(new QButtonGroup(this)),
       m_buttonGroup_2(new QButtonGroup(this)),
       m_langGroup(new QButtonGroup(this)),
@@ -103,6 +104,10 @@ MainWidget::MainWidget(QWidget *parent)
          ui->progressButton->setText(QString::number(value).append("%"));
     });
 #endif
+
+    ui->countdownBtn->setIcon(QApplication::style()->
+                              standardIcon(QStyle::SP_MessageBoxInformation));
+
     m_trans->load(":/translations/CustomWidgetDemos_zh_CN.qm");
 }
 
@@ -113,9 +118,6 @@ MainWidget::~MainWidget()
 
 void MainWidget::on_toastBtn_clicked()
 {
-    if(m_toast == nullptr)
-        m_toast = new Toast(this);
-
     QString text = ui->toastEdit->text();
     if(text.isEmpty())
         m_toast->toast(tr("Please enter the tip text."));
@@ -139,4 +141,14 @@ void MainWidget::on_buttonClicked(int id)
             QApplication::installTranslator(m_trans);
         ui->retranslateUi(this);
     }
+}
+
+void MainWidget::on_countdownStartBtn_clicked()
+{
+    ui->countdownBtn->conutdownCilk(ui->countdownSpinBox->value());
+}
+
+void MainWidget::on_countdownBtn_clicked()
+{
+    m_toast->toast(tr("Countdown Button clicked."));
 }
