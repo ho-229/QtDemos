@@ -16,14 +16,15 @@ class QPropertyAnimation;
 class QSequentialAnimationGroup;
 
 #define DEFULT_TOAST_STYLE "\
-QLabel{\
+QLabel\
+{\
     color:#FFFFFF;\
     font:15px;\
     font-weight:500;\
     background-color:rgba(0,0,0,150);\
     padding:3px;\
     border-radius:9;\
-}"\
+}"
 
 class Toast : public QWidget
 {
@@ -43,7 +44,7 @@ public:
     explicit Toast(QWidget *parent = nullptr, int horizontalMargin = 12, int verticalMargin = 12,
                    int maxmaximumWidth = 1400, bool wordWrap = false, int waitMsecs = 1200,
                    const QString &style = DEFULT_TOAST_STYLE);
-    ~Toast();
+    ~Toast() Q_DECL_OVERRIDE;
 
     /**
      * @brief 设置提示文字

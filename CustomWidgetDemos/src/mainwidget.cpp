@@ -76,20 +76,33 @@ MainWidget::MainWidget(QWidget *parent)
         ui->pushButton->repaint();
     });
 #else
-    connect(ui->sideMarginEdit, QOverload<int>::of(&QSpinBox::valueChanged),
+    connect(ui->sideMarginEdit, QOverload<int>::of(&QSpinBox::valueChanged), this,
             [this](int value){
         ui->pushButton->setSideMargin(value);
         ui->pushButton->repaint();
     });
 
-    connect(ui->topBottomMarginEdit, QOverload<int>::of(&QSpinBox::valueChanged),
+    connect(ui->topBottomMarginEdit, QOverload<int>::of(&QSpinBox::valueChanged), this,
             [this](int value){
         ui->pushButton->setTopBottomMargin(value);
         ui->pushButton->repaint();
     });
 #endif
 
-
+    ui->progressButton->setValue(25);
+#if QT_DEPRECATED_SINCE(5, 15)
+    connect(ui->valueSpinBox, &QSpinBox::textChanged, this,
+            [this](QString value){
+        ui->progressButton->setValue(value.toInt());
+        ui->progressButton->setText(value.append("%"));
+    });
+#else
+    connect(ui->valueSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this,
+            [this](int value){
+         ui->progressButton->setValue(value);
+         ui->progressButton->setText(QString::number(value).append("%"));
+    });
+#endif
     m_trans->load(":/translations/CustomWidgetDemos_zh_CN.qm");
 }
 
