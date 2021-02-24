@@ -50,7 +50,12 @@
         <translation>蓝色</translation>
     </message>
     <message>
-        <location filename="main.qml" line="112"/>
+        <location filename="main.qml" line="116"/>
+        <source>Push Button</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="main.qml" line="123"/>
         <source>Close</source>
         <translation>关闭</translation>
     </message>

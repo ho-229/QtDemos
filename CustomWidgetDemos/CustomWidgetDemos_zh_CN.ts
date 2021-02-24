@@ -9,42 +9,42 @@
         <translation>Qt 自定义控件</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.ui" line="152"/>
+        <location filename="src/mainwidget.ui" line="20"/>
         <source>RotateStackedWidget</source>
         <translation></translation>
     </message>
     <message>
         <location filename="src/mainwidget.ui" line="26"/>
-        <location filename="src/mainwidget.ui" line="158"/>
+        <location filename="src/mainwidget.ui" line="187"/>
         <source>Index</source>
         <translation>索引</translation>
     </message>
     <message>
         <location filename="src/mainwidget.ui" line="32"/>
-        <location filename="src/mainwidget.ui" line="69"/>
-        <location filename="src/mainwidget.ui" line="164"/>
-        <location filename="src/mainwidget.ui" line="204"/>
+        <location filename="src/mainwidget.ui" line="72"/>
+        <location filename="src/mainwidget.ui" line="193"/>
+        <location filename="src/mainwidget.ui" line="230"/>
         <source>Page 1</source>
         <translation>第一页</translation>
     </message>
     <message>
         <location filename="src/mainwidget.ui" line="42"/>
-        <location filename="src/mainwidget.ui" line="89"/>
-        <location filename="src/mainwidget.ui" line="174"/>
-        <location filename="src/mainwidget.ui" line="224"/>
+        <location filename="src/mainwidget.ui" line="92"/>
+        <location filename="src/mainwidget.ui" line="203"/>
+        <location filename="src/mainwidget.ui" line="250"/>
         <source>Page 2</source>
         <translation>第二页</translation>
     </message>
     <message>
         <location filename="src/mainwidget.ui" line="49"/>
-        <location filename="src/mainwidget.ui" line="109"/>
-        <location filename="src/mainwidget.ui" line="181"/>
-        <location filename="src/mainwidget.ui" line="244"/>
+        <location filename="src/mainwidget.ui" line="112"/>
+        <location filename="src/mainwidget.ui" line="210"/>
+        <location filename="src/mainwidget.ui" line="270"/>
         <source>Page 3</source>
         <translation>第三页</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.ui" line="20"/>
+        <location filename="src/mainwidget.ui" line="181"/>
         <source>TranslationStackedWidget</source>
         <translation></translation>
     </message>
@@ -69,41 +69,81 @@
         <translation>按钮</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.ui" line="126"/>
+        <location filename="src/mainwidget.ui" line="369"/>
+        <source>ProgressButton</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="src/mainwidget.ui" line="375"/>
+        <source>Value:</source>
+        <translation>值：</translation>
+    </message>
+    <message>
+        <location filename="src/mainwidget.ui" line="411"/>
+        <source>25%</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="src/mainwidget.ui" line="421"/>
+        <source>CountdownButton</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location filename="src/mainwidget.ui" line="427"/>
+        <source>Countdown:</source>
+        <translation>倒计时：</translation>
+    </message>
+    <message>
+        <location filename="src/mainwidget.ui" line="444"/>
+        <source>ms</source>
+        <translation>毫秒</translation>
+    </message>
+    <message>
+        <location filename="src/mainwidget.ui" line="451"/>
+        <source>Start</source>
+        <translation>开始</translation>
+    </message>
+    <message>
+        <location filename="src/mainwidget.ui" line="155"/>
         <source>Toast</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="src/mainwidget.ui" line="132"/>
+        <location filename="src/mainwidget.ui" line="161"/>
         <source>Tip Text:</source>
         <oldsource>Tip Text</oldsource>
         <translation>提示文字：</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.ui" line="142"/>
+        <location filename="src/mainwidget.ui" line="171"/>
         <source>Show</source>
         <translation>显示</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.ui" line="261"/>
+        <location filename="src/mainwidget.ui" line="129"/>
         <source>Language</source>
         <translation>语言</translation>
     </message>
     <message>
-        <location filename="src/mainwidget.ui" line="267"/>
+        <location filename="src/mainwidget.ui" line="135"/>
         <source>English</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="src/mainwidget.ui" line="277"/>
+        <location filename="src/mainwidget.ui" line="145"/>
         <source>简体中文</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="src/mainwidget.cpp" line="108"/>
+        <location filename="src/mainwidget.cpp" line="123"/>
         <source>Please enter the tip text.</source>
         <oldsource>Please enter your information.</oldsource>
         <translation>请输入提示文本。</translation>
+    </message>
+    <message>
+        <location filename="src/mainwidget.cpp" line="153"/>
+        <source>Countdown Button clicked.</source>
+        <translation>倒计时按钮已按下。</translation>
     </message>
 </context>
 </TS>
