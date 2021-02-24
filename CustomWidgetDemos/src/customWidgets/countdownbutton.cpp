@@ -1,4 +1,10 @@
-﻿#include "countdownbutton.h"
+﻿/**
+ * @brief 倒计时 Button
+ * @anchor Ho229<2189684957@qq.com>
+ * @date 2021/2/1
+ */
+
+#include "countdownbutton.h"
 
 #include <QPropertyAnimation>
 
