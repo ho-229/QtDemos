@@ -27,7 +27,7 @@ QPushButton:hover\
 }\
 QPushButton:pressed\
 {\
-    background:rgb(220, 220, 220);\
+    background:rgba(100, 234, 255, 200);\
 }"
 
 class ProgressButton : public QPushButton

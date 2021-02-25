@@ -13,7 +13,7 @@
 
 class QVariantAnimation;
 
-class RotateStackedWidget : public QStackedWidget
+class RotateStackedWidget Q_DECL_FINAL : public QStackedWidget
 {
     Q_OBJECT
 

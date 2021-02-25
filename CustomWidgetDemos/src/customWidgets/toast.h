@@ -26,7 +26,7 @@ QLabel\
     border-radius:9;\
 }"
 
-class Toast : public QWidget
+class Toast Q_DECL_FINAL : public QWidget
 {
     Q_OBJECT
 public:

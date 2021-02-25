@@ -13,7 +13,7 @@
 
 class QVariantAnimation;
 
-class TranslationStackedWidget : public QStackedWidget
+class TranslationStackedWidget Q_DECL_FINAL : public QStackedWidget
 {
     Q_OBJECT
 
