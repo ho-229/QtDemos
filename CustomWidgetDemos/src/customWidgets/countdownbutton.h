@@ -1,4 +1,11 @@
-﻿#ifndef COUNTDOWNBUTTON_H
+﻿/**
+ * Countdown Button
+ * @brief 倒计时 Button
+ * @anchor Ho229<2189684957@qq.com>
+ * @date 2021/2/1
+ */
+
+#ifndef COUNTDOWNBUTTON_H
 #define COUNTDOWNBUTTON_H
 
 #include "progressbutton.h"
