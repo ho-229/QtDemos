@@ -1,5 +1,6 @@
 # CustomWidgetDemos
-![image](./image/CustomWidgetDemos.png)
+![image](./screenshot/CustomWidgetDemos_1.png)
+![image](./screenshot/CustomWidgetDemos_2.png)
 
 -------
 ## Class AlignIconButton
@@ -14,6 +15,20 @@
     pushButton->setLeftIcon(leftIcon);
     pushButton->setRightIcon(rightIcon);
     pushButton->show();
+    ```
+-----
+## Class NotifyWidget & NotifyManager
+| File |
+| ---- |
+| [notifywidget.h](./src/customWidgets/notifywidget.h) |
+| [notifywidget.cpp](./src/customWidgets/notifywidget.cpp) |
+| [notifymanager.h](./src/customWidgets/notifymanager.h) |
+| [notifymanager.cpp](./src/customWidgets/notifymanager.cpp) |
+* 桌面右下角弹窗
+* Example
+    ```cpp
+    NotifyManager *manager = new NotifyManager(this);
+    manager->notify(this, "Hello", "Hello World.\nHow are you today.");
     ```
 -----
 ## Class ProgressButton
