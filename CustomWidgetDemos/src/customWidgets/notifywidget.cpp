@@ -24,7 +24,7 @@ NotifyWidget::NotifyWidget(QWidget *parent, const QString &title,
     m_vLayout(new QVBoxLayout(this)),
     m_hSpacer(new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum)),
     m_closeButton(new CountdownButton(this)),
-    m_animation(new QPropertyAnimation(this, "pos"))
+    m_animation(new QPropertyAnimation(this, "pos", this))
 {
     m_hLayout->addWidget(m_titleLabel);
     m_hLayout->addSpacerItem(m_hSpacer);
@@ -52,11 +52,11 @@ NotifyWidget::NotifyWidget(QWidget *parent, const QString &title,
 
     m_animation->setDuration(350);
 
-    this->setLayout(m_vLayout);
     this->setAttribute(Qt::WA_DeleteOnClose);
     this->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowStaysOnTopHint
                          | Qt::WindowSystemMenuHint);
     this->setStyleSheet(style);
+    this->setLayout(m_vLayout);
     this->adjustSize();
 }
 
