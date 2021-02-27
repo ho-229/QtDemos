@@ -25,6 +25,8 @@
 | [notifymanager.h](./src/customWidgets/notifymanager.h) |
 | [notifymanager.cpp](./src/customWidgets/notifymanager.cpp) |
 * 桌面右下角弹窗
+* 注意：
+  * `NotifyWidget` 是一次性的，关闭窗口时将被销毁。
 * Example
     ```cpp
     NotifyManager *manager = new NotifyManager(this);
@@ -71,7 +73,7 @@
 
     注意：
     * 1.当 `parent == nullptr` 时，Toast会出现在活动桌面水平居中垂直 3/4 的地方，`parent != nullptr` 时则Toast会出现在父窗口水平居中垂直 3/4 的地方。
-    * 2.当 Toast 正在显示的时候，重新调用时 `Toast::toast()` 将重新显示消息。
+    * 2.当 Toast 正在显示消息时，再次调用 `Toast::toast()` 将显示新消息。
 * Example
     ```cpp
     Toast *toast = new Toast(this);
