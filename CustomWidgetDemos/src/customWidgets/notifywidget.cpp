@@ -75,20 +75,9 @@ int NotifyWidget::closeCountdown() const
     return m_closeButton->countdown();
 }
 
-void NotifyWidget::closeAnimation()
-{
-    m_animation->setEasingCurve(QEasingCurve::OutCubic);
-    m_animation->setStartValue(this->pos());
-    m_animation->setEndValue(QPoint(this->x() + this->width(), this->y()));
-    m_animation->start();
-
-    QObject::connect(m_animation, &QPropertyAnimation::finished,
-                     this, &NotifyWidget::close);
-}
-
 void NotifyWidget::showEvent(QShowEvent *event)
 {
-    m_animation->setEasingCurve(QEasingCurve::InCubic);
+    m_animation->setEasingCurve(QEasingCurve::OutQuart);
     m_animation->setStartValue(QPoint(this->x() + this->width(), this->y()));
     m_animation->setEndValue(this->pos());
     m_animation->start();
@@ -96,6 +85,16 @@ void NotifyWidget::showEvent(QShowEvent *event)
     return QWidget::showEvent(event);
 }
 
+void NotifyWidget::closeAnimation()
+{
+    m_animation->setEasingCurve(QEasingCurve::OutQuart);
+    m_animation->setStartValue(this->pos());
+    m_animation->setEndValue(QPoint(this->x() + this->width(), this->y()));
+    m_animation->start();
+
+    QObject::connect(m_animation, &QPropertyAnimation::finished,
+                     this, &NotifyWidget::close);
+}
 void NotifyWidget::closeEvent(QCloseEvent *event)
 {
     emit closed();

@@ -46,8 +46,8 @@ void NotifyManager::onNotifyClosed()
             break;
         }
     }
-
     this->updateNotifys();
+    emit windowClosed();
 }
 
 void NotifyManager::updateNotifys()

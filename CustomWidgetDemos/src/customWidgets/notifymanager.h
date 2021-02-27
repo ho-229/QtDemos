@@ -23,7 +23,13 @@ public:
 
     void notify(QWidget *parent, QString title, QString message, int showTime = 5000);
 
+    void setMaximum(int value){ m_maximum = qMax(1 ,value); }
+    int maximum() const { return m_maximum; }
+
+    int showCount() const { return m_showCount; }
+
 signals:
+    void windowClosed();
 
 private slots:
     void onNotifyClosed();
