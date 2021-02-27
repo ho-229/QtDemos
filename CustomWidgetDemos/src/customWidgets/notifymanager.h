@@ -14,18 +14,31 @@
 
 typedef QPair<NotifyWidget *, int> NotifyItem;
 
-class NotifyManager : public QObject
+class NotifyManager Q_DECL_FINAL : public QObject
 {
     Q_OBJECT
 public:
     explicit NotifyManager(QObject *parent = nullptr);
     ~NotifyManager() Q_DECL_OVERRIDE;
 
+    /**
+     * @brief 弹出提示窗
+     * @param parent 父对象
+     * @param title 提示窗标题
+     * @param message 提示消息
+     * @param showTime 展示时间 ( 为 -1 时永久展示 )
+     */
     void notify(QWidget *parent, QString title, QString message, int showTime = 5000);
 
+    /**
+     * @brief 设置最大弹窗数
+     */
     void setMaximum(int value){ m_maximum = qMax(1 ,value); }
     int maximum() const { return m_maximum; }
 
+    /**
+     * @return 当前弹窗数
+     */
     int showCount() const { return m_showCount; }
 
 signals:

@@ -29,8 +29,7 @@ void NotifyManager::notify(QWidget *parent, QString title, QString message, int 
                      &NotifyManager::onNotifyClosed);
     m_list.push_back({newNotofy, showTime});
 
-    if(m_showCount <= m_maximum)
-        this->updateNotifys();
+    this->updateNotifys();
 }
 
 void NotifyManager::onNotifyClosed()
@@ -63,7 +62,9 @@ void NotifyManager::updateNotifys()
                                 m_desktopSize.height() - (i + 1) * 140));
         if(item.first->isHidden())
         {
-            item.first->setCloseCountdown(item.second);
+            if(item.second > 0)
+                item.first->setCloseCountdown(item.second);
+
             item.first->show();
         }
         m_showCount++;

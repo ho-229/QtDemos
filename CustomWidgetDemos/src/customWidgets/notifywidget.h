@@ -28,7 +28,7 @@ QLabel\
     color:white;\
 }"
 
-class NotifyWidget : public QWidget
+class NotifyWidget Q_DECL_FINAL : public QWidget
 {
     Q_OBJECT
 public:

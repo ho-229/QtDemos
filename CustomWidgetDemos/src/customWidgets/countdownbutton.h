@@ -22,9 +22,15 @@ public:
     explicit CountdownButton(QWidget *parent = nullptr);
     virtual ~CountdownButton() Q_DECL_OVERRIDE;
 
+    /**
+     * @brief 设置倒计时时长 (毫秒)
+     */
     void setCountdown(int ms);
     int countdown() const;
 
+    /**
+     * @brief 启动倒计时
+     */
     void conutdownCilk();
 
     void conutdownCilk(int ms)
