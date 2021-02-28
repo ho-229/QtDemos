@@ -137,26 +137,32 @@
     <message>
         <location filename="src/mainwidget.ui" line="523"/>
         <source>ProgressDial</source>
+        <translation></translation>
     </message>
     <message>
         <location filename="src/mainwidget.ui" line="545"/>
         <source>Notfily</source>
+        <translation></translation>
     </message>
     <message>
         <location filename="src/mainwidget.ui" line="562"/>
         <source>Title:</source>
+        <translation>标题：</translation>
     </message>
     <message>
         <location filename="src/mainwidget.ui" line="575"/>
         <source>Message:</source>
+        <translation>消息：</translation>
     </message>
     <message>
         <location filename="src/mainwidget.ui" line="612"/>
         <source>Show Time:</source>
+        <translation>展示时间：</translation>
     </message>
     <message>
         <location filename="src/mainwidget.ui" line="648"/>
         <source>Notify</source>
+        <translation>弹出提示</translation>
     </message>
     <message>
         <location filename="src/mainwidget.cpp" line="124"/>
