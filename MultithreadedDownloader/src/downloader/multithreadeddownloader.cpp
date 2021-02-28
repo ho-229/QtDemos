@@ -87,7 +87,7 @@ void MultithreadedDownloader::start()
 
         this->setFinished(false);
     }
-    else
+    else        // Paused
     {
         const QList<DownloadMission *>& constlist = m_missions;
         for(DownloadMission *mission : constlist)
@@ -145,7 +145,7 @@ void MultithreadedDownloader::errorHanding(QNetworkReply::NetworkError err)
     if(err == QNetworkReply::OperationCanceledError || err == QNetworkReply::NoError)
         return;
 
-    this->stop();
+    this->pause();
     emit error(DownloadFailed);
 }
 

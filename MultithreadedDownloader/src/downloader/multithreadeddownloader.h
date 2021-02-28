@@ -65,7 +65,7 @@ public:
     void stop()  Q_DECL_OVERRIDE;
 
 signals:
-    void error(Error err);
+    void error(const MultithreadedDownloader::Error err);
     void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
 
 private slots:

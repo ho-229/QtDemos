@@ -60,7 +60,7 @@ protected:
 
 signals:
     void finished();
-    void stateChanged(State state);
+    void stateChanged(const AbstractMission::State state);
 };
 
 #endif // ABSTRACTMISSION_H

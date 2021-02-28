@@ -60,6 +60,7 @@ void MainWidget::initSignalSlots()
         else
         {
             if(QMessageBox::critical(this, tr("error"),
+                                      tr("Download Failed.\nNetwork Error:%1\nRetry ?")
                                           .arg(m_downloader->networkErrorString()),
                                       QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes)
                 this->on_startBtn_clicked();
