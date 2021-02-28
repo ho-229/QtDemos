@@ -22,7 +22,7 @@ public:
         Stopped
     };
 
-    virtual ~AbstractMission() = default;
+    virtual ~AbstractMission() Q_DECL_OVERRIDE = default;
 
     void setUrl(QUrl url)
     {

@@ -66,12 +66,16 @@ void DownloadMission::pause()
 
 void DownloadMission::stop()
 {
-    if(m_state == Running)
+    if(m_state != Stopped)
     {
         this->updateState(Stopped);
 
-        m_reply->abort();
-        this->destoryReply();
+        if(m_state == Running)
+        {
+            m_reply->abort();
+            this->destoryReply();
+        }
+
         this->reset();
     }
 }

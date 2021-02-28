@@ -117,7 +117,9 @@ void MultithreadedDownloader::stop()
 {
     if(m_state != Stopped)
     {
-        this->killTimer(m_timerId);
+        if(m_state == Running)
+            this->killTimer(m_timerId);
+
         this->destoryMissions();
 
         if(m_writer->isRunning())           // Wait for the write finish

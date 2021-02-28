@@ -49,7 +49,7 @@ public:
 
     QString replyErrorString() const
     {
-        if(m_reply == nullptr)
+        if(m_reply != nullptr)
             return m_reply->errorString();
 
         return QString();
