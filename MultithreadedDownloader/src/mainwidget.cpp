@@ -53,13 +53,19 @@ void MainWidget::initSignalSlots()
     QObject::connect(m_downloader, &MultithreadedDownloader::error, this,
                      [this](MultithreadedDownloader::Error err){
         if(err == MultithreadedDownloader::OpenFileFailed)
+        {
             QMessageBox::critical(this, tr("error"), tr("File can not open."));
+            this->on_stopBtn_clicked();
+        }
         else
-            QMessageBox::critical(this, tr("error"),
-                                  tr("Download Failed.\nNetwork Error Code:")
-                                  .append(m_downloader->networkErrorString()));
-
-        this->on_stopBtn_clicked();
+        {
+            if(QMessageBox::critical(this, tr("error"),
+                                          .arg(m_downloader->networkErrorString()),
+                                      QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes)
+                this->on_startBtn_clicked();
+            else
+                this->on_stopBtn_clicked();
+        }
     });
 
     QObject::connect(m_downloader, &MultithreadedDownloader::stateChanged, this,
