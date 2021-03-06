@@ -31,7 +31,7 @@ MultithreadedDownloader::~MultithreadedDownloader()
         m_writer->terminate();
 }
 
-bool MultithreadedDownloader::getFileInfo()
+bool MultithreadedDownloader::initDownload()
 {
     if(!m_url.isValid() || m_state != Stopped)
         return false;
@@ -49,13 +49,19 @@ bool MultithreadedDownloader::getFileInfo()
     if(reply->hasRawHeader("Content-Length"))
         m_writer->setSize(reply->header(QNetworkRequest::ContentLengthHeader).toLongLong(&ok));
 
+    QString fileName;
     if(reply->hasRawHeader("Content-Disposition"))
-        m_writer->setFileName(reply->header(QNetworkRequest::ContentDispositionHeader)
-                              .toString().split("filename=").at(1));
+        fileName = reply->header(QNetworkRequest::ContentDispositionHeader)
+                              .toString().split("filename=").at(1);
     else
-        m_writer->setFileName(reply->url().fileName());
+        fileName = reply->url().fileName();
 
-    return ok && m_writer->size() > 0 && (!m_writer->fileName().isEmpty());
+    if(fileName.isEmpty())
+        return false;
+    else
+        m_writer->setFileName(fileName);
+
+    return ok && m_writer->size() > 0;
 }
 
 void MultithreadedDownloader::start()
@@ -133,6 +139,7 @@ void MultithreadedDownloader::stop()
         m_writer->closeFile();
         m_finishedCount = 0;
 
+        this->reset();
         this->updateState(Stopped);
     }
 }
@@ -203,6 +210,14 @@ void MultithreadedDownloader::updateProgress()
         bytesReceived += mission->downloadedSize();
 
     emit downloadProgress(bytesReceived, m_writer->size());
+}
+
+void MultithreadedDownloader::reset()
+{
+    m_writer->setFileName(QString());
+    m_writer->setSize(0);
+
+    m_timerId = 0;
 }
 
 void MultithreadedDownloader::timerEvent(QTimerEvent *event)

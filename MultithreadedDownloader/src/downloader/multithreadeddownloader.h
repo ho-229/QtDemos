@@ -33,29 +33,33 @@ public:
      * @param num 下载线程数
      */
     void setThreadNumber(int num){ m_threadNumber = num; }
-    int threadNumber(){ return m_threadNumber; }
+    int threadNumber() const { return m_threadNumber; }
 
     /**
-     * @brief 获取下载文件信息
-     * @return 获取状态
+     * @brief 初始化下载
+     * @note 获取下载文件大小，文件名
+     * @return 是否成功
      */
-    bool getFileInfo();             // 获取文件信息
+    bool initDownload();
 
     /**
      * @brief 设置下载文件名
      * @param name 下载文件名
      */
     void setFileName(const QString& name){ m_writer->setFileName(name); }
-    QString fileName(){ return m_writer->fileName(); }
+    QString fileName() const { return m_writer->fileName(); }
 
     /**
      * @brief 设置下载文件目录
      * @param dir 下载文件目录
      */
     void setDownloadDir(const QString& dir){ m_writer->setDownloadDir(dir); }
-    QString downloadDir(){ return m_writer->downloadDir(); }
+    QString downloadDir() const { return m_writer->downloadDir(); }
 
-    qint64 fileSize(){ return m_writer->size(); }
+    /**
+     * @return 下载文件大小
+     */
+    qint64 fileSize() const { return m_writer->size(); }
 
     QNetworkReply::NetworkError networkError() const { return m_networkError; }
     QString networkErrorString() const { return m_networkErrorString; }
@@ -89,6 +93,7 @@ private:
     inline DownloadMission* createMission(qint64 start, qint64 end);
     inline void destoryMissions();
     inline void updateProgress();
+    inline void reset();
 
     void timerEvent(QTimerEvent* event) Q_DECL_OVERRIDE;        // 更新进度
 };

@@ -97,15 +97,15 @@ void MainWidget::initSignalSlots()
 void MainWidget::on_downloadBtn_clicked()
 {
     ui->retranslateUi(this);
-    QString url;
-    if((url = ui->urlEdit->toPlainText()).isEmpty())
+    QString url(ui->urlEdit->toPlainText());
+    if(url.isEmpty())
     {
         m_toast->toast(tr("URL is empty."));
         return;
     }
 
     m_downloader->setUrl(url);
-    if(m_downloader->getFileInfo())
+    if(m_downloader->initDownload())
     {
         ui->failedLabel->hide();
 

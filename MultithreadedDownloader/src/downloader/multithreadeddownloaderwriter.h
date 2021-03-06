@@ -14,7 +14,7 @@
 
 typedef QPair<QByteArray, qint64> WriteMisson;
 
-class MultithreadedDownloaderWriter : public QThread
+class MultithreadedDownloaderWriter Q_DECL_FINAL : public QThread
 {
     Q_OBJECT
 public:
@@ -39,21 +39,21 @@ public:
      * @param name 下载文件名
      */
     void setFileName(const QString& name){ m_downloadFile.setFileName(name); }
-    QString fileName(){ return m_downloadFile.fileName(); }
+    QString fileName() const { return m_downloadFile.fileName(); }
 
     /**
      * @brief 设置下载文件目录
      * @param dir 下载文件目录
      */
     void setDownloadDir(const QString& dir){ QDir::setCurrent(dir); }
-    QString downloadDir(){ return QDir::currentPath(); }
+    QString downloadDir() const { return QDir::currentPath(); }
 
     /**
      * @brief 设置下载文件大小
      * @param size 下载文件大小 byte
      */
-    void setSize(qint64 size){ m_fileSize = size; }
-    qint64 size(){ return m_fileSize; }
+    void setSize(const qint64 size){ m_fileSize = size; }
+    qint64 size() const { return m_fileSize; }
 
     /**
      * @brief 添加写任务
