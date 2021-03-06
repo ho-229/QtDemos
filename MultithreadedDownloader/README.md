@@ -7,16 +7,29 @@
 
 ------
 ### 使用方法
-```
-Usage: MultithreadedDownloader [options]
-Qt Multithreaded Downloader Example.
+* Qt Multithreaded Downloader Example
+  ```
+  Usage: MultithreadedDownloader [options]
+  Qt Multithreaded Downloader Example.
 
-Options:
-  -?, -h, --help                Displays help on commandline options.
-  --help-all                    Displays help including Qt specific options.
-  -u, --url <URL>               The URL to download.
-  -t, --thread-number <number>  Set the thread number for download.
-```
+  Options:
+    -?, -h, --help                Displays help on commandline options.
+    --help-all                    Displays help including Qt specific options.
+    -u, --url <URL>               The URL to download.
+    -t, --thread-number <number>  Set the thread number for download.
+  ```
+* Class MultithreadedDownloader
+  * Add [src/downloader](./src/downloader) directory to your project.
+  * `#include "multithreadeddownloader.h"`
+  ```cpp
+  MultithreadedDownloader *downloader = new MultithreadedDownloader(this);
+  downloader->setUrl("https://mirrors.tuna.tsinghua.edu.cn/qt/official_releases/qt/5.15/5.15.2/submodules/qtbase-everywhere-src-5.15.2.zip");
+
+  if(!downloader->initDownload())
+    return; // Failed to get resource.
+  
+  downloader->start();
+  ```
 ------
 ### 原理介绍
 * 这是一个基于 `Qt5` 的多线程下载器。
