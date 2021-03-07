@@ -7,7 +7,9 @@
 
 #include "notifymanager.h"
 
+#include <QTimer>
 #include <QScreen>
+#include <QEventLoop>
 #include <QGuiApplication>
 
 NotifyManager::NotifyManager(QObject *parent) :
@@ -30,6 +32,10 @@ void NotifyManager::notify(QWidget *parent, QString title, QString message, int 
     m_list.push_back({newNotofy, showTime});
 
     this->updateNotifys();
+
+    QEventLoop loop;
+    QTimer::singleShot(800, &loop, &QEventLoop::quit);
+    loop.exec(QEventLoop::ExcludeUserInputEvents);
 }
 
 void NotifyManager::onNotifyClosed()
@@ -58,15 +64,19 @@ void NotifyManager::updateNotifys()
     for(int i = 0; i < m_list.size() && i < m_maximum; i++)
     {
         NotifyItem item = m_list.at(i);
-        item.first->move(QPoint(m_desktopSize.width() - item.first->width(),
-                                m_desktopSize.height() - (i + 1) * 140));
+
         if(item.first->isHidden())
         {
+            item.first->move(QPoint(m_desktopSize.width(),
+                                    m_desktopSize.height() - (i + 1) * 170));
             if(item.second > 0)
                 item.first->setCloseCountdown(item.second);
 
             item.first->show();
         }
+        else
+            item.first->animatMove(m_desktopSize.width() - item.first->width(),
+                                   m_desktopSize.height() - (i + 1) * 170);
         m_showCount++;
     }
 }

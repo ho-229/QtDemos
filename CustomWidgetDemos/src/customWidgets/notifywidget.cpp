@@ -8,6 +8,7 @@
 #include "notifywidget.h"
 
 #include <QLabel>
+#include <QEventLoop>
 #include <QSpacerItem>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -42,7 +43,7 @@ NotifyWidget::NotifyWidget(QWidget *parent, const QString &title,
 
     m_messageLabel->setText(messsage);
     m_messageLabel->setWordWrap(true);
-    m_messageLabel->setMaximumSize(QSize(300, 100));
+    m_messageLabel->setMaximumSize(QSize(300, 70));
 
     m_closeButton->setFixedSize(QSize(30, 30));
     m_closeButton->setIcon(QIcon(":/image/resource/image/close.png"));
@@ -51,6 +52,7 @@ NotifyWidget::NotifyWidget(QWidget *parent, const QString &title,
                      &NotifyWidget::closeAnimation);
 
     m_animation->setDuration(350);
+    m_animation->setEasingCurve(QEasingCurve::OutQuart);
 
     this->setAttribute(Qt::WA_DeleteOnClose);
     this->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowStaysOnTopHint
@@ -75,22 +77,27 @@ int NotifyWidget::closeCountdown() const
     return m_closeButton->countdown();
 }
 
+void NotifyWidget::animatMove(int x, int y)
+{
+    m_animation->setEndValue(QPoint(x, y));
+    m_animation->setStartValue(this->pos());
+
+    if(m_animation->state() == QPropertyAnimation::Running)
+        m_animation->stop();
+
+    m_animation->start();
+}
+
 void NotifyWidget::showEvent(QShowEvent *event)
 {
-    m_animation->setEasingCurve(QEasingCurve::OutQuart);
-    m_animation->setStartValue(QPoint(this->x() + this->width(), this->y()));
-    m_animation->setEndValue(this->pos());
-    m_animation->start();
+    this->animatMove(this->x() - this->width(), this->y());
 
     return QWidget::showEvent(event);
 }
 
 void NotifyWidget::closeAnimation()
 {
-    m_animation->setEasingCurve(QEasingCurve::OutQuart);
-    m_animation->setStartValue(this->pos());
-    m_animation->setEndValue(QPoint(this->x() + this->width(), this->y()));
-    m_animation->start();
+    this->animatMove(this->x() + this->width(), this->y());
 
     QObject::connect(m_animation, &QPropertyAnimation::finished,
                      this, &NotifyWidget::close);

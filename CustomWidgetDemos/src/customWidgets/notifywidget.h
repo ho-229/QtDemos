@@ -40,6 +40,8 @@ public:
     void setCloseCountdown(int ms);
     int closeCountdown() const;
 
+    void animatMove(int x, int y);
+
 signals:
     void closed();
 
