@@ -53,10 +53,21 @@ Button {
             id: pressAnimation
 
             SmoothedAnimation {
+
+                function dist(pointA, pointB) {
+                    let dx = Math.abs(pointA.x - pointB.x);
+                    let dy = Math.abs(pointA.y - pointB.y);
+
+                    return Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+                }
+
                 target: pressRect
                 property: "width"
                 from: 0
-                to: Math.max(width, height) * 2
+                to: Math.max(dist(Qt.point(clickedX, clickedY), Qt.point(0, 0)),
+                             dist(Qt.point(clickedX, clickedY), Qt.point(myButton.width, 0)),
+                             dist(Qt.point(clickedX, clickedY), Qt.point(0, myButton.height)),
+                             dist(Qt.point(clickedX, clickedY), Qt.point(myButton.width, myButton.height))) * 2
                 duration: 800
             }
 
