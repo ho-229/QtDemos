@@ -45,9 +45,10 @@ bool MultithreadedDownloader::initDownload()
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     loop.exec(QEventLoop::ExcludeUserInputEvents);
 
+    qint64 size = 0;
     bool ok = false;
     if(reply->hasRawHeader("Content-Length"))
-        m_writer->setSize(reply->header(QNetworkRequest::ContentLengthHeader).toLongLong(&ok));
+        size = reply->header(QNetworkRequest::ContentLengthHeader).toLongLong(&ok);
 
     QString fileName;
     if(reply->hasRawHeader("Content-Disposition"))
@@ -56,12 +57,15 @@ bool MultithreadedDownloader::initDownload()
     else
         fileName = reply->url().fileName();
 
-    if(fileName.isEmpty())
+    if(fileName.isEmpty() || (!ok) || size <= 0)
         return false;
     else
+    {
         m_writer->setFileName(fileName);
+        m_writer->setSize(size);
+    }
 
-    return ok && m_writer->size() > 0;
+    return true;
 }
 
 void MultithreadedDownloader::start()
