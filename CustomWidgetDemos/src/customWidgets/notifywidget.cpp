@@ -8,10 +8,12 @@
 #include "notifywidget.h"
 
 #include <QLabel>
+#include <QScreen>
 #include <QEventLoop>
 #include <QSpacerItem>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QGuiApplication>
 #include <QPropertyAnimation>
 
 #include "countdownbutton.h"
@@ -79,11 +81,11 @@ int NotifyWidget::closeCountdown() const
 
 void NotifyWidget::animatMove(int x, int y)
 {
-    m_animation->setEndValue(QPoint(x, y));
-    m_animation->setStartValue(this->pos());
-
     if(m_animation->state() == QPropertyAnimation::Running)
         m_animation->stop();
+
+    m_animation->setEndValue(QPoint(x, y));
+    m_animation->setStartValue(this->pos());
 
     m_animation->start();
 }
@@ -97,10 +99,14 @@ void NotifyWidget::showEvent(QShowEvent *event)
 
 void NotifyWidget::closeAnimation()
 {
+    m_isClosing = true;
     this->animatMove(this->x() + this->width(), this->y());
 
-    QObject::connect(m_animation, &QPropertyAnimation::finished,
-                     this, &NotifyWidget::close);
+    QObject::connect(m_animation, &QPropertyAnimation::finished, this,
+                     [this]{
+                         if(QGuiApplication::primaryScreen()->size().width() == this->x())
+                             this->close();
+                     });
 }
 void NotifyWidget::closeEvent(QCloseEvent *event)
 {

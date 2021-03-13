@@ -32,10 +32,6 @@ void NotifyManager::notify(QWidget *parent, QString title, QString message, int 
     m_list.push_back({newNotofy, showTime});
 
     this->updateNotifys();
-
-    QEventLoop loop;
-    QTimer::singleShot(800, &loop, &QEventLoop::quit);
-    loop.exec(QEventLoop::ExcludeUserInputEvents);
 }
 
 void NotifyManager::onNotifyClosed()
@@ -75,8 +71,12 @@ void NotifyManager::updateNotifys()
             item.first->show();
         }
         else
-            item.first->animatMove(m_desktopSize.width() - item.first->width(),
-                                   m_desktopSize.height() - (i + 1) * 170);
+            if(item.first->isClosing())
+                item.first->animatMove(m_desktopSize.width(),
+                                       m_desktopSize.height() - (i + 1) * 170);
+            else
+                item.first->animatMove(m_desktopSize.width() - item.first->width(),
+                                       m_desktopSize.height() - (i + 1) * 170);
         m_showCount++;
     }
 }

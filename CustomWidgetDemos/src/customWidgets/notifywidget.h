@@ -42,6 +42,8 @@ public:
 
     void animatMove(int x, int y);
 
+    bool isClosing() const { return m_isClosing; }
+
 signals:
     void closed();
 
@@ -59,6 +61,8 @@ private:
     CountdownButton *m_closeButton  = nullptr;
 
     QPropertyAnimation *m_animation = nullptr;
+
+    bool m_isClosing = false;
 
     void showEvent(QShowEvent *event)   Q_DECL_OVERRIDE;
     void closeEvent(QCloseEvent *event) Q_DECL_OVERRIDE;

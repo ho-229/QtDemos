@@ -11,7 +11,9 @@ int main(int argc, char *argv[])
 
     QGuiApplication app(argc, argv);
 
+#ifdef Q_OS_WIN
     QGuiApplication::setFont(QFont("Microsoft YaHei", 12));
+#endif
 
     QTranslator tr_CN;
     if(QLocale::system().language() == QLocale::Chinese)
