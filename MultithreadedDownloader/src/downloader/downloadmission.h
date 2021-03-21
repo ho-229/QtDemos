@@ -37,10 +37,10 @@ public:
     }
 
     void setManager(QNetworkAccessManager *manager){ m_manager = manager; }
-    QNetworkAccessManager* manager(){ return m_manager; }
+    QNetworkAccessManager* manager() const { return m_manager; }
 
     void setWriter(MultithreadedDownloaderWriter *writer){ m_writer = writer; }
-    MultithreadedDownloaderWriter* writer(){ return m_writer; }
+    MultithreadedDownloaderWriter* writer() const { return m_writer; }
 
     /**
      * @return 下载大小
@@ -48,12 +48,7 @@ public:
     qint64 downloadedSize() const { return m_downloadedSize; }
 
     QString replyErrorString() const
-    {
-        if(m_reply != nullptr)
-            return m_reply->errorString();
-
-        return QString();
-    }
+    { return m_reply == nullptr ? QString() : m_reply->errorString(); }
 
     void start() Q_DECL_OVERRIDE;
     void pause() Q_DECL_OVERRIDE;

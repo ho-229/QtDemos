@@ -31,7 +31,9 @@ public:
             qWarning("AbstractMission : url is not valid.");
     }
 
-    bool isFinished(){ return m_isFinished; }
+    QUrl url() const { return m_url; }
+
+    bool isFinished() const { return m_isFinished; }
 
     virtual void start() = 0;
     virtual void pause() = 0;
