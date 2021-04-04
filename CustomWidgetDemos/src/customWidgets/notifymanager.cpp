@@ -24,9 +24,10 @@ NotifyManager::~NotifyManager()
 
 }
 
-void NotifyManager::notify(QWidget *parent, QString title, QString message, int showTime)
+void NotifyManager::notify(QWidget *parent, const QString& title,
+                           const QString& message, const QIcon& icon, int showTime)
 {
-    NotifyWidget *newNotofy = new NotifyWidget(parent, title, message);
+    NotifyWidget *newNotofy = new NotifyWidget(parent, title, message, icon);
     QObject::connect(newNotofy, &NotifyWidget::closed, this,
                      &NotifyManager::onNotifyClosed);
     m_list.push_back({newNotofy, showTime});

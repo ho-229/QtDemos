@@ -24,7 +24,7 @@ MainWidget::MainWidget(QWidget *parent)
       m_buttonGroup_1(new QButtonGroup(this)),
       m_buttonGroup_2(new QButtonGroup(this)),
       m_langGroup(new QButtonGroup(this)),
-    m_notifyManager(new NotifyManager(this)),
+      m_notifyManager(new NotifyManager(this)),
       m_trans(new QTranslator(this))
 {
     ui->setupUi(this);
@@ -160,5 +160,7 @@ void MainWidget::on_notifyBtn_clicked()
     QString message = ui->messageEdit->toPlainText();
 
     m_notifyManager->notify(this, title.isEmpty() ? "Hello" : title,
-                            message.isEmpty() ? "Hello World.\nHow are you today." : message);
+                            message.isEmpty() ? "Hello World.\nHow are you today." : message,
+                            QApplication::style()->
+                            standardIcon(QStyle::SP_MessageBoxInformation));
 }

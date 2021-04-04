@@ -8,6 +8,7 @@
 #ifndef NOTIFYMANAGER_H
 #define NOTIFYMANAGER_H
 
+#include <QIcon>
 #include <QObject>
 
 #include "notifywidget.h"
@@ -40,7 +41,8 @@ public slots:
      * @param message 提示消息
      * @param showTime 展示时间 ( 为 -1 时永久展示 )
      */
-    void notify(QWidget *parent, QString title, QString message, int showTime = 5000);
+    void notify(QWidget *parent, const QString& title, const QString& message,
+                const QIcon& icon = QIcon(), int showTime = 5000);
 
 signals:
     void windowClosed();

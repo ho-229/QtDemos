@@ -7,6 +7,7 @@
 
 #include "notifywidget.h"
 
+#include <QDebug>
 #include <QLabel>
 #include <QScreen>
 #include <QEventLoop>
@@ -19,22 +20,33 @@
 #include "countdownbutton.h"
 
 NotifyWidget::NotifyWidget(QWidget *parent, const QString &title,
-                           const QString &messsage, const QString &style) :
+                           const QString &messsage, const QIcon& icon,
+                           const QString &style) :
     QWidget(parent),
+    m_iconLabel(new QLabel(this)),
     m_titleLabel(new QLabel(this)),
     m_messageLabel(new QLabel(this)),
     m_hLayout(new QHBoxLayout()),
+    m_mLayout(new QHBoxLayout()),
     m_vLayout(new QVBoxLayout(this)),
     m_hSpacer(new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum)),
+    m_icon(icon),
     m_closeButton(new CountdownButton(this)),
     m_animation(new QPropertyAnimation(this, "pos", this))
 {
+    // Title and close button
     m_hLayout->addWidget(m_titleLabel);
     m_hLayout->addSpacerItem(m_hSpacer);
     m_hLayout->addWidget(m_closeButton);
 
+    // Icon and message
+    m_mLayout->addWidget(m_iconLabel);
+    m_mLayout->addWidget(m_messageLabel);
+    m_mLayout->setStretch(1, 1);
+    m_mLayout->setSpacing(9);
+
     m_vLayout->addLayout(m_hLayout);
-    m_vLayout->addWidget(m_messageLabel);
+    m_vLayout->addLayout(m_mLayout);
 
     QFont font = m_titleLabel->font();
     font.setPointSize(15);
@@ -42,6 +54,14 @@ NotifyWidget::NotifyWidget(QWidget *parent, const QString &title,
     m_titleLabel->setFont(font);
     m_titleLabel->setText(title);
     m_titleLabel->setMaximumWidth(300);
+
+    if(m_icon.isNull())
+        m_iconLabel->hide();
+    else
+    {
+        m_iconLabel->setPixmap(m_icon.pixmap(m_iconLabel->size()));
+        m_iconLabel->adjustSize();
+    }
 
     m_messageLabel->setText(messsage);
     m_messageLabel->setWordWrap(true);

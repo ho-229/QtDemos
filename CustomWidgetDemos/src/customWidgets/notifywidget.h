@@ -8,6 +8,7 @@
 #ifndef NOTIFYWIDGET_H
 #define NOTIFYWIDGET_H
 
+#include <QIcon>
 #include <QWidget>
 
 class QLabel;
@@ -33,7 +34,7 @@ class NotifyWidget Q_DECL_FINAL : public QWidget
     Q_OBJECT
 public:
     explicit NotifyWidget(QWidget *parent = nullptr, const QString& title = "",
-                          const QString& message = "",
+                          const QString& message = "", const QIcon& icon = QIcon(),
                           const QString& style = DEFULT_NOTIFY_STYLE);
     ~NotifyWidget() Q_DECL_OVERRIDE;
 
@@ -44,6 +45,8 @@ public:
 
     bool isClosing() const { return m_isClosing; }
 
+    QIcon icon() const { return m_icon; }
+
 signals:
     void closed();
 
@@ -51,12 +54,16 @@ private slots:
     void closeAnimation();
 
 private:
+    QLabel *m_iconLabel    = nullptr;
     QLabel *m_titleLabel   = nullptr;
     QLabel *m_messageLabel = nullptr;
 
     QHBoxLayout *m_hLayout = nullptr;
+    QHBoxLayout *m_mLayout = nullptr;
     QVBoxLayout *m_vLayout = nullptr;
     QSpacerItem *m_hSpacer = nullptr;
+
+    QIcon m_icon;
 
     CountdownButton *m_closeButton  = nullptr;
 
