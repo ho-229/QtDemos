@@ -6,9 +6,9 @@
 
 #include "multithreadeddownloader.h"
 
+#include <QPointer>
 #include <QEventLoop>
 #include <QTimerEvent>
-#include <QRegularExpression>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QNetworkAccessManager>
@@ -39,7 +39,7 @@ bool MultithreadedDownloader::initDownload()
     QNetworkRequest request(m_url);
     request.setAttribute(QNetworkRequest::FollowRedirectsAttribute, true);
 
-    QNetworkReply *reply = m_manager->head(request);
+    QPointer<QNetworkReply> reply = m_manager->head(request);
 
     QEventLoop loop;
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
