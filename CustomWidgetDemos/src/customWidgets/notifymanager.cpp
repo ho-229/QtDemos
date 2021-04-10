@@ -24,7 +24,7 @@ NotifyManager::~NotifyManager()
 
 }
 
-void NotifyManager::notify(QWidget *parent, const QString& title,
+NotifyWidget* NotifyManager::notify(QWidget *parent, const QString& title,
                            const QString& message, const QIcon& icon, int showTime)
 {
     NotifyWidget *newNotofy = new NotifyWidget(parent, title, message, icon);
@@ -33,6 +33,8 @@ void NotifyManager::notify(QWidget *parent, const QString& title,
     m_list.push_back({newNotofy, showTime});
 
     this->updateNotifys();
+
+    return newNotofy;
 }
 
 void NotifyManager::onNotifyClosed()

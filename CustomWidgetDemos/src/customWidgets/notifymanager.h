@@ -13,7 +13,9 @@
 
 #include "notifywidget.h"
 
-typedef QPair<NotifyWidget *, int> NotifyItem;
+typedef QPair<NotifyWidget *,   // Notify Widget
+            int>                // Show Time
+    NotifyItem;
 
 class NotifyManager Q_DECL_FINAL : public QObject
 {
@@ -25,7 +27,7 @@ public:
     /**
      * @brief 设置最大弹窗数
      */
-    void setMaximum(int value){ m_maximum = qMax(1 ,value); }
+    void setMaximum(int value){ m_maximum = qMax(1, value); }
     int maximum() const { return m_maximum; }
 
     /**
@@ -41,7 +43,7 @@ public slots:
      * @param message 提示消息
      * @param showTime 展示时间 ( 为 -1 时永久展示 )
      */
-    void notify(QWidget *parent, const QString& title, const QString& message,
+    NotifyWidget* notify(QWidget *parent, const QString& title, const QString& message,
                 const QIcon& icon = QIcon(), int showTime = 5000);
 
 signals:

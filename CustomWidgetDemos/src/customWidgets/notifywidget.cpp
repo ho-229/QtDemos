@@ -7,7 +7,6 @@
 
 #include "notifywidget.h"
 
-#include <QDebug>
 #include <QLabel>
 #include <QScreen>
 #include <QEventLoop>
@@ -110,6 +109,11 @@ void NotifyWidget::animatMove(int x, int y)
     m_animation->start();
 }
 
+int NotifyWidget::leftTime() const
+{
+    return m_animation->duration() - m_animation->currentLoopTime();
+}
+
 void NotifyWidget::showEvent(QShowEvent *event)
 {
     this->animatMove(this->x() - this->width(), this->y());
@@ -132,4 +136,10 @@ void NotifyWidget::closeEvent(QCloseEvent *event)
 {
     emit closed();
     return QWidget::closeEvent(event);
+}
+
+void NotifyWidget::mouseReleaseEvent(QMouseEvent *event)
+{
+    emit clicked();
+    return QWidget::mouseReleaseEvent(event);
 }

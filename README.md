@@ -1,31 +1,38 @@
 # QtDemos
-### 项目说明
-* 一个关于 `Qt5` 的项目实践，未来会添加一些控件和 `Video Player`。欢迎大家留言评论，参考学习和测试。
-* 开发环境 :
-  * Qt Version : `Qt 5.15.2`
-  * Compiler : `MSVC 2019 (Windows)` , `GCC 10 (Linux)`
-* | 名称 | 描述              |
-  | ---- | ---------------- |
-  | [CustomWidgetDemos](./CustomWidgetDemos) | 一些动画控件和使用示例 |
-  | [MultithreadedDownloader](./MultithreadedDownloader) | 多线程下载器 |
-  | [QmlDemo](./QmlDemo) | QML 学习项目 |
-  | [QmlFireworks](./QmlFireworks) | QML 粒子系统 ( 烟花 ) Demo |
----------
-### 如何编译
-* 需要 `Qt5` 环境
+English | [Chinese](./README.CN.md)
+
+![windows](https://img.shields.io/badge/Windows-passing-green.svg?style=flat-square)
+![linux](https://img.shields.io/badge/Linux-passing-green.svg?style=flat-square)
+
+
+* This is a project practice about 'Qt5'. Some controls and 'video player' will be added in the future. Welcome to comment, learn and test.
+
+| Name | Description              |
+| ---- | ---------------- |
+| [CustomWidgetDemos](./CustomWidgetDemos) | Custom animation controls and examples |
+| [MultithreadedDownloader](./MultithreadedDownloader) | Multithreaded Downloader |
+| [QmlDemo](./QmlDemo) | QML Learning project |
+| [QmlFireworks](./QmlFireworks) | QML Fireworks (Particle System) Demo |
+
+## Development Environment
+* Tool Kit : `Qt 5.15.2`
+* Complier : `Microsoft Visual C++ 2019` , `GCC 10`
+
+## Build
+* Need `Qt5` environment.
 ```shell
-sudo pacman -S qt5
+sudo pacman -S qt5  # Arch Linux
 ```
-* 克隆到仓库到本地并编译项目
+* Clone the repository locally and compile the project.
 ```shell
-git clone https://gitee.com/ho229/QtDemos.git
+git clone https://github.com/ho229v3666/QtDemos.git
+     # or https://gitee.com/ho229/QtDemos.git
 cd QtDemos
 mkdir build
 cd build
 qmake ..
 make -j
 ```
-
-### 关于作者
+## Author
 * QQ : 2189684957
 * E-mail : <ho229v3666@gmail.com>

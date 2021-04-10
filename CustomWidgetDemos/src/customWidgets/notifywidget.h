@@ -47,8 +47,14 @@ public:
 
     QIcon icon() const { return m_icon; }
 
+    /**
+     * @return 剩余时间
+     */
+    int leftTime() const;
+
 signals:
     void closed();
+    void clicked();
 
 private slots:
     void closeAnimation();
@@ -73,6 +79,7 @@ private:
 
     void showEvent(QShowEvent *event)   Q_DECL_OVERRIDE;
     void closeEvent(QCloseEvent *event) Q_DECL_OVERRIDE;
+    void mouseReleaseEvent(QMouseEvent *event) Q_DECL_OVERRIDE;
 };
 
 #endif // NOTIFYWIDGET_H
