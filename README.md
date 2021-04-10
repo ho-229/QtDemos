@@ -5,7 +5,7 @@ English | [Chinese](./README.CN.md)
 ![linux](https://img.shields.io/badge/Linux-passing-green.svg?style=flat-square)
 
 
-* This is a project practice about 'Qt5'. Some controls and 'video player' will be added in the future. Welcome to comment, learn and test.
+* This is a project practice about `Qt5`. Some controls and `video player` will be added in the future. Welcome to comment, learn and test.
 
 | Name | Description              |
 | ---- | ---------------- |
