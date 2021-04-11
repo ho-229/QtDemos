@@ -1,16 +1,16 @@
 # QtDemos
-English | [Chinese](./README.CN.md)
+English | [中文](./README.CN.md)
 
 ![windows](https://img.shields.io/badge/Windows-passing-green.svg?style=flat-square)
 ![linux](https://img.shields.io/badge/Linux-passing-green.svg?style=flat-square)
 
 
-* This is a project practice about `Qt5`. Some controls and `video player` will be added in the future. Welcome to comment, learn and test.
+* This is a small project about `Qt5`. More controls as well as `video player` will be added in the future. Welcome to try it out and leave your comments.
 
 | Name | Description              |
 | ---- | ---------------- |
 | [CustomWidgetDemos](./CustomWidgetDemos) | Custom animation controls and examples |
-| [MultithreadedDownloader](./MultithreadedDownloader) | Multithreaded Downloader |
+| [MultithreadedDownloader](./MultithreadedDownloader) | Multi-threaded Downloader |
 | [QmlDemo](./QmlDemo) | QML Learning project |
 | [QmlFireworks](./QmlFireworks) | QML Fireworks (Particle System) Demo |
 
@@ -23,7 +23,7 @@ English | [Chinese](./README.CN.md)
 ```shell
 sudo pacman -S qt5  # Arch Linux
 ```
-* Clone the repository locally and compile the project.
+* Clone the repository and compile from source.
 ```shell
 git clone https://github.com/ho229v3666/QtDemos.git
      # or https://gitee.com/ho229/QtDemos.git
