@@ -1,5 +1,5 @@
 # QtDemos
-English | [中文](./README.CN.md)
+English | [简体中文](./README.CN.md)
 
 ![windows](https://img.shields.io/badge/Windows-passing-green.svg?style=flat-square)
 ![linux](https://img.shields.io/badge/Linux-passing-green.svg?style=flat-square)

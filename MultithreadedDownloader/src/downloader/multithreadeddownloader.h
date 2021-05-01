@@ -12,7 +12,6 @@
 #include "downloadmission.h"
 #include "multithreadeddownloaderwriter.h"
 
-class QBasicTimer;
 class QNetworkAccessManager;
 
 class MultithreadedDownloader : public AbstractMission
@@ -59,7 +58,7 @@ public:
     /**
      * @return 下载文件大小
      */
-    qint64 fileSize() const { return m_writer->size(); }
+    qint64 downloadSize() const { return m_writer->size(); }
 
     QNetworkReply::NetworkError networkError() const { return m_networkError; }
     QString networkErrorString() const { return m_networkErrorString; }

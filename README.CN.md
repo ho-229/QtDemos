@@ -25,7 +25,7 @@ sudo pacman -S qt5  # Arch Linux
 ```
 * 克隆仓库到本地并编译项目
 ```shell
-git clone https://gitee.com/ho229/QtDemos.git
+git clone https://github.com/ho229v3666/QtDemos.git
      # or https://gitee.com/ho229/QtDemos.git
 cd QtDemos
 mkdir build
