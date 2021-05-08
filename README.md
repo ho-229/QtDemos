@@ -2,10 +2,10 @@
 English | [简体中文](./README.CN.md)
 
 ![windows](https://img.shields.io/badge/Windows-passing-green.svg?style=flat-square)
-![linux](https://img.shields.io/badge/Linux-passing-green.svg?style=flat-square)
+![linux](https://img.shields.io/badge/Linux-unknow-red.svg?style=flat-square)
 
 
-* This is a small project about `Qt5`. More controls as well as `video player` will be added in the future. Welcome to try it out and leave your comments.
+* This is a small project about `Qt5`. More controls will be added in the future. Welcome to try it out and leave your comments.
 
 | Name | Description              |
 | ---- | ---------------- |
@@ -13,6 +13,7 @@ English | [简体中文](./README.CN.md)
 | [MultithreadedDownloader](./MultithreadedDownloader) | Multi-threaded Downloader |
 | [QmlDemo](./QmlDemo) | QML Learning project |
 | [QmlFireworks](./QmlFireworks) | QML Fireworks (Particle System) Demo |
+| [VideoPlayer](./VideoPlayer) | Video Player (Use `FFmpeg` and `OpenGL`) |
 
 ## Development Environment
 * Tool Kit : `Qt 5.15.2`

@@ -4,4 +4,5 @@ SUBDIRS += \
    CustomWidgetDemos \
    MultithreadedDownloader \
    QmlDemo \
-   QmlFireworks
+   QmlFireworks \
+   VideoPlayer
