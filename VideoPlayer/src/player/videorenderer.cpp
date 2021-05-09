@@ -273,8 +273,8 @@ void VideoRenderer::destoryTexture(QOpenGLTexture *&texture)
 
         if (texture->isCreated())
             texture->destroy();
-    }
 
-    delete texture;
-    texture = nullptr;
+        delete texture;
+        texture = nullptr;
+    }
 }

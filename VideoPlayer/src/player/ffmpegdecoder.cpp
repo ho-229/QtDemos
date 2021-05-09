@@ -108,6 +108,9 @@ void FFmpegDecoder::release()
     m_videoStream = nullptr;
     m_audioStream = nullptr;
 
+    m_videoStream = nullptr;
+    m_audioStream = nullptr;
+
     m_videoCodecContext = nullptr;
     m_audioCodecContext = nullptr;
 }
