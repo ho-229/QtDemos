@@ -67,8 +67,8 @@ public:
 
     void seek(int position);
 
-    bool hasFrame() const { return !m_videoCache.isEmpty(); }
-    AVFrame* takeFrame();
+    bool hasVideoFrame() const { return !m_videoCache.isEmpty(); }
+    AVFrame* takeVideoFrame();
 
     VideoInfo videoInfo() const { return m_videoCodecContext ?
                                    VideoInfo({ m_videoCodecContext->width,
@@ -81,14 +81,13 @@ public:
 
     const QAudioFormat audioFormat() const;
 
-    qreal fps() const { return m_videoStream ?
+    qreal fps() const { return m_hasVideo ?
                              (av_q2d(m_videoStream->avg_frame_rate))
                              : -1; }
 
 signals:
     void callDecodec();
     void decodeFinished();
-    void cacheFinished();
 
 public slots:
     void decode();

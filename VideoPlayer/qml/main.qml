@@ -36,6 +36,10 @@ Window {
             controlBar.toast();
         }
 
+        onClicked: {
+            urlTitle.toast();
+            controlBar.toast();
+        }
 
         onDoubleClicked: playBtn.clicked();
     }
