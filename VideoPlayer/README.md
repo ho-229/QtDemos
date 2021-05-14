@@ -1,5 +1,5 @@
 # Video Player
 
 * A video player based on `Qt`. Used `FFmpeg` decoding and `OpenGL` rendering.
-* Screen Shot
+* Screenshot
 ![image](./screenshot/run.png)

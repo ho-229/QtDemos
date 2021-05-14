@@ -35,6 +35,9 @@ Window {
             urlTitle.toast();
             controlBar.toast();
         }
+
+
+        onDoubleClicked: playBtn.clicked();
     }
 
     Toast {
@@ -138,7 +141,7 @@ Window {
 
             onClicked: {
                 if(videoPlayer.playing)
-                    videoPlayer.seek(videoPlayer.position + 5);
+                    videoPlayer.seek(videoPlayer.position + 10);
             }
         }
 
@@ -168,7 +171,7 @@ Window {
 
             onClicked: {
                 if(videoPlayer.playing)
-                    videoPlayer.seek(videoPlayer.position - 5);
+                    videoPlayer.seek(videoPlayer.position - 10);
             }
         }
 

@@ -158,9 +158,7 @@ int VideoPlayer::position() const
 void VideoPlayer::seek(int position)
 {
     Q_D(VideoPlayer);
-    //this->pause();
     d->decoder->seek(position);
-    //this->pause(false);
     emit positionChanged(position);
 }
 
@@ -180,7 +178,7 @@ void VideoPlayer::timerEvent(QTimerEvent *event)
             emit positionChanged(d->position);
         }
 
-        if(!d->decoder->hasFrame() && d->decoder->isDecodeFinished())
+        if(!d->decoder->hasVideoFrame() && d->decoder->isDecodeFinished())
             this->play(false);
     }
 }

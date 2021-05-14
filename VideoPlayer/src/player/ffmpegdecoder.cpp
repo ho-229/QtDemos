@@ -6,8 +6,6 @@
 
 #include "ffmpegdecoder.h"
 
-#include <QDateTime>
-
 FFmpegDecoder::FFmpegDecoder(QObject *parent) :
     QObject(parent)
 {
@@ -122,6 +120,8 @@ void FFmpegDecoder::seek(int position)
 
     m_mutex.lock();
 
+    m_isSeeked = true;
+
     av_seek_frame(m_formatContext, m_videoStream->index, static_cast<qint64>
                   (position / av_q2d(m_videoStream->time_base)),
                   /*AVSEEK_FLAG_BACKWARD |*/ AVSEEK_FLAG_FRAME);
@@ -129,24 +129,22 @@ void FFmpegDecoder::seek(int position)
     avcodec_flush_buffers(m_audioCodecContext);
 
     this->clearCache();
+
     m_mutex.unlock();
 
     m_condition.wakeOne();
-
-    m_isSeeked = true;
 }
 
-AVFrame *FFmpegDecoder::takeFrame()
+AVFrame *FFmpegDecoder::takeVideoFrame()
 {
+    m_mutex.lock();
+
     if(m_state == Closed || m_videoCache.isEmpty())
     {
-        qCritical() << __FUNCTION__ << "Video cache is empty.";
+        m_mutex.unlock();
         return nullptr;
     }
 
-    m_mutex.lock();
-
-    // Update the system clock when seeked
     if(m_isSeeked)
     {
         m_startTimer.synchronize(static_cast<qint64>(
@@ -206,10 +204,7 @@ AVFrame *FFmpegDecoder::takeFrame()
 const QByteArray FFmpegDecoder::takeAudioData(int len)
 {
     if(m_audioBuffer.isEmpty())
-    {
-        qCritical() << __FUNCTION__ << ": Audio buffer is empty.";
         return QByteArray();
-    }
 
     m_mutex.lock();
     const QByteArray ret = m_audioBuffer.remove(0, len);
@@ -225,7 +220,7 @@ const QAudioFormat FFmpegDecoder::audioFormat() const
 {
     QAudioFormat format;
 
-    if(m_state == Opened)
+    if(m_state == Opened && m_hasAudio)
     {
         format.setSampleRate(m_audioCodecContext->sample_rate);
         format.setChannelCount(av_get_channel_layout_nb_channels(
@@ -239,20 +234,20 @@ const QAudioFormat FFmpegDecoder::audioFormat() const
     return format;
 }
 
-bool FFmpegDecoder::hasAudioData() const
-{
-    return !m_audioBuffer.isEmpty();
-}
-
 void FFmpegDecoder::decode()
 {
     AVPacket* packet = nullptr;
 
     m_isDecodeFinished = false;
-    while(m_state == Opened && (packet = av_packet_alloc()) &&
-           (!av_read_frame(m_formatContext, packet)))   // Read frame
+    while(m_state == Opened && (packet = av_packet_alloc()))
     {
         m_mutex.lock();
+
+        if(av_read_frame(m_formatContext, packet))      // Read frame
+        {
+            m_mutex.unlock();
+            break;
+        }
 
         // Video frame decode
         if(packet->stream_index == m_videoStream->index &&
@@ -302,15 +297,13 @@ void FFmpegDecoder::decode()
         }
 
         if(m_videoCache.isFull() && m_audioBuffer.size())
-        {
-            emit cacheFinished();
             m_condition.wait(&m_mutex);
-        }
 
         m_mutex.unlock();
 
         av_packet_free(&packet);
     }
+
     m_isDecodeFinished = true;
 
     emit decodeFinished();
@@ -319,11 +312,11 @@ void FFmpegDecoder::decode()
 void FFmpegDecoder::clearCache()
 {
     // Clear video cache
-    AVFrame *temp = nullptr;
+    AVFrame *frame = nullptr;
     while(!m_videoCache.isEmpty())
     {
-        temp = m_videoCache.takeFirst();
-        av_frame_free(&temp);
+        frame = m_videoCache.takeFirst();
+        av_frame_free(&frame);
     }
 
     // Clear audio cache
@@ -365,6 +358,8 @@ bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **
         qCritical() << "Failed to allocate codec context";
         return false;
     }
+
+    (*codecContext)->thread_count = 1;
 
     AVDictionary *opts = nullptr;
     ret = avcodec_parameters_to_context(*codecContext, (*stream)->codecpar);

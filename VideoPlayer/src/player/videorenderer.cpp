@@ -61,9 +61,9 @@ void VideoRenderer::synchronize(QQuickFramebufferObject *)
         m_player_p->isVideoInfoChanged = false;
     }
 
-    if(m_player_p->isUpdated && m_decoder->hasFrame())
+    if(m_player_p->isUpdated)
     {
-        this->updateTextureData(m_decoder->takeFrame());
+        this->updateTextureData(m_decoder->takeVideoFrame());
         m_player_p->isUpdated = false;
     }
 
@@ -119,6 +119,9 @@ void VideoRenderer::updateTextureInfo()
 
 void VideoRenderer::updateTextureData(AVFrame *frame)
 {
+    if(!frame)
+        return;
+
     QOpenGLPixelTransferOptions options;
     options.setImageHeight(frame->height);
 

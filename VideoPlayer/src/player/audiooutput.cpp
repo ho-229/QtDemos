@@ -62,6 +62,6 @@ void AudioOutput::stop()
 
 void AudioOutput::update()
 {
-    if(m_output && m_output->bytesFree() > 4096 && m_decoder->hasAudioData())
+    if(m_output && m_output->bytesFree() > 4096)
         m_audioBuffer->write(m_decoder->takeAudioData(m_output->bytesFree()));
 }
