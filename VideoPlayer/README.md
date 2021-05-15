@@ -1,5 +1,5 @@
 # Video Player
-* A video player based on `Qt`. Use `FFmpeg` for decoding and `OpenGL` for rendering.
+* A video player based on `Qt`, using `FFmpeg` for decoding and `OpenGL` for rendering.
 * Screenshot
 ![image](./screenshot/run.png)
 ## Build & Run
