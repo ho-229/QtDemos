@@ -46,7 +46,7 @@ Rectangle {
     Timer {
         id: pauseTimer
 
-        interval: 2000
+        interval: 2500
 
         onTriggered: hideAnimation.start()
     }

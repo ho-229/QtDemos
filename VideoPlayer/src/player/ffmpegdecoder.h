@@ -58,10 +58,9 @@ public:
     /**
      * @return duration of the media in seconds.
      */
-    int duration() const { return m_videoStream ?
-                             static_cast<int>(
-                                 static_cast<qreal>(m_videoStream->duration) *
-                                 av_q2d(m_videoStream->time_base)) : -1; }
+    int duration() const { return m_formatContext ?
+                          static_cast<int>(
+                              m_formatContext->duration / 1000000) : 0; }
 
     int position() const { return m_position; }
 

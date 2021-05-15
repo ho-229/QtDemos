@@ -179,6 +179,21 @@ Window {
             }
         }
 
+        Text {
+            id: progressText
+
+            text: parseInt(videoPlayer.position / 60) + ":" + videoPlayer.position % 60
+                  + " / " + parseInt(videoPlayer.duration / 60) + ":" + videoPlayer.duration % 60;
+
+            anchors.right: backBtn.left
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.rightMargin: 17
+
+            color: "white"
+
+            font.pointSize: 12
+        }
+
         Button {
             id: fullScreenBtn
 

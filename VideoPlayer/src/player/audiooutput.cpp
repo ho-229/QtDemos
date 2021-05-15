@@ -35,8 +35,14 @@ void AudioOutput::start()
     m_output = new QAudioOutput(m_format, this);
     m_output->setBufferSize(65536);
     m_audioBuffer = m_output->start();
-    //connect(m_output, &QAudioOutput::stateChanged, this,
-    //        [this](QAudio::State state){ if(state == QAudio::IdleState) this->update(); });
+
+    QObject::connect(m_output, &QAudioOutput::stateChanged, this,
+            [this](QAudio::State state){ if(state == QAudio::IdleState)
+                {
+                    this->stop();
+                    this->start();
+                }
+            });
 }
 
 void AudioOutput::pause(bool pause)
