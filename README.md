@@ -20,13 +20,13 @@ English | [简体中文](./README.CN.md)
 * Complier : `Microsoft Visual C++ 2019` , `GCC 10`
 
 ## Build
-* Need `Qt5` and `FFmpeg` environment.
+* Require `Qt5` and `FFmpeg`.
 ```shell
 # Arch Linux
 sudo pacman -S qt5
 sudo pacman -S ffmpeg
 ```
-* Clone the repository and compile from source.
+* Clone this repository and build from source.
 ```shell
 git clone https://github.com/ho229v3666/QtDemos.git
      # or https://gitee.com/ho229/QtDemos.git
