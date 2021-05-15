@@ -2,7 +2,7 @@
 English | [简体中文](./README.CN.md)
 
 ![windows](https://img.shields.io/badge/Windows-passing-green.svg?style=flat-square)
-![linux](https://img.shields.io/badge/Linux-unknow-red.svg?style=flat-square)
+![linux](https://img.shields.io/badge/Linux-passing-green.svg?style=flat-square)
 
 
 * This is a small project about `Qt5`. More controls will be added in the future. Welcome to try it out and leave your comments.
@@ -20,9 +20,11 @@ English | [简体中文](./README.CN.md)
 * Complier : `Microsoft Visual C++ 2019` , `GCC 10`
 
 ## Build
-* Need `Qt5` environment.
+* Need `Qt5` and `FFmpeg` environment.
 ```shell
-sudo pacman -S qt5  # Arch Linux
+# Arch Linux
+sudo pacman -S qt5
+sudo pacman -S ffmpeg
 ```
 * Clone the repository and compile from source.
 ```shell

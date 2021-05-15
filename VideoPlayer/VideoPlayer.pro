@@ -1,4 +1,4 @@
-QT += quick multimedia
+QT += widgets quick multimedia
 
 CONFIG += c++11
 
@@ -26,6 +26,14 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
-win32: LIBS += -L$$PWD/ffmpeg/win64/lib/ -lavutil -lavcodec -lavformat -lswresample
-INCLUDEPATH += $$PWD/ffmpeg/win64/include
-DEPENDPATH += $$PWD/ffmpeg/win64/include
+win32 {
+    LIBS += -L$$PWD/ffmpeg/win64/lib/ -lavutil -lavcodec -lavformat -lswresample
+    INCLUDEPATH += $$PWD/ffmpeg/win64/include
+    DEPENDPATH += $$PWD/ffmpeg/win64/include
+}
+
+unix {
+    LIBS += -L/usr/lib/ -lavutil -lavcodec -lavformat -lswresample
+    INCLUDEPATH += /usr/include
+    DEPENDPATH += /usr/include
+}

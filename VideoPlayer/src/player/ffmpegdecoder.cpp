@@ -203,7 +203,7 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
 
 const QByteArray FFmpegDecoder::takeAudioData(int len)
 {
-    if(m_audioBuffer.isEmpty())
+    if(m_state == Closed || m_audioBuffer.isEmpty())
         return QByteArray();
 
     m_mutex.lock();

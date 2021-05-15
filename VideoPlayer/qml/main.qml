@@ -243,11 +243,13 @@ Window {
         id: openFileDialog
         title: "Please choose a Video file"
 
-        nameFilters: [ "MP4 files (*.mp4)", "YUV files(*.yuv)" ]
+        nameFilters: [ "Video files (*.mp4 *mkv)", "YUV files(*.yuv)" ]
 
         onAccepted: {
             videoPlayer.source = file;
             videoPlayer.playing = true;
         }
     }
+
+    onClosing: videoPlayer.playing = false;
 }
