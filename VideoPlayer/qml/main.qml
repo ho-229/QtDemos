@@ -26,6 +26,10 @@ Window {
         onPositionChanged: playSlider.value = position
     }
 
+    function onPlay() { playBtn.clicked() }
+    function onBack() { backBtn.clicked() }
+    function onGoahead() { goaheadBtn.clicked() }
+
     MouseArea {
         anchors.fill: parent
 
@@ -182,8 +186,11 @@ Window {
         Text {
             id: progressText
 
-            text: parseInt(videoPlayer.position / 60) + ":" + videoPlayer.position % 60
-                  + " / " + parseInt(videoPlayer.duration / 60) + ":" + videoPlayer.duration % 60;
+            function toMS(secs) {
+                return parseInt(secs / 60) + ":" + secs % 60;
+            }
+
+            text: toMS(videoPlayer.position) + " / " + toMS(videoPlayer.duration);
 
             anchors.right: backBtn.left
             anchors.verticalCenter: parent.verticalCenter
@@ -192,6 +199,7 @@ Window {
             color: "white"
 
             font.pointSize: 12
+
         }
 
         Button {
@@ -239,6 +247,8 @@ Window {
         text: qsTr("<font color='white'>Open file</font>")
         font.pointSize: 16
 
+        focusPolicy: Qt.NoFocus
+
         anchors.centerIn: parent
 
         visible: !videoPlayer.playing
@@ -258,7 +268,7 @@ Window {
         id: openFileDialog
         title: "Please choose a Video file"
 
-        nameFilters: [ "Video files (*.mp4 *mkv)", "YUV files(*.yuv)" ]
+        nameFilters: [ "Video files (*.mp4 *.mkv)", "YUV files(*.yuv)" ]
 
         onAccepted: {
             videoPlayer.source = file;

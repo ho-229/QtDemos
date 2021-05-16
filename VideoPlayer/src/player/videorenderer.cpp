@@ -92,7 +92,7 @@ void VideoRenderer::updateTextureInfo()
         m_textureV->setSize(info.first.width() / 2, info.first.height() / 2);
         m_textureV->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
         break;
-    /*case AV_PIX_FMT_YUV420P10LE:    // YUV 420P 15bpp
+    /*case AV_PIX_FMT_YUV420P10LE:    // YUV 420P 15bpp(like 24bpp)
         mTexY->setSize(info.first.width(), info.first.height());
         mTexY->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt16);
 
