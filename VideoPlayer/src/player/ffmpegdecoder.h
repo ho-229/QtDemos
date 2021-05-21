@@ -86,10 +86,13 @@ public:
 
 signals:
     void callDecodec();
+    void callSeek();
+
     void decodeFinished();
 
 public slots:
     void decode();
+    void seek();
 
 protected:
     State m_state = Closed;
@@ -98,7 +101,6 @@ private:
     char m_errorBuf[512];
 
     mutable QMutex m_mutex;
-    mutable QWaitCondition m_condition;
 
     QUrl m_url;
 
@@ -121,10 +123,12 @@ private:
 
     bool m_isSeeked = false;
     bool m_isResume = false;
+    bool m_run = false;
 
     bool m_isDecodeFinished = false;
 
     int m_position = 0;
+    int m_targetPosition = 0;
 
     inline void clearCache();
     inline void printErrorString(int errnum);

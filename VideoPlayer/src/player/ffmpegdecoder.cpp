@@ -16,6 +16,8 @@ FFmpegDecoder::FFmpegDecoder(QObject *parent) :
 
     QObject::connect(this, &FFmpegDecoder::callDecodec, this,
                      &FFmpegDecoder::decode);
+    QObject::connect(this, &FFmpegDecoder::callSeek, this,
+                     QOverload<>::of(&FFmpegDecoder::seek));
 }
 
 FFmpegDecoder::~FFmpegDecoder()
@@ -75,7 +77,10 @@ bool FFmpegDecoder::load()
     if(!(m_hasVideo || m_hasAudio))     // If there is no video and audio
         return false;
 
+    m_isDecodeFinished = false;
     m_state = Opened;
+    m_run = true;
+
     emit callDecodec();                 // Asynchronous call FFmpegDecoder::decode()
 
     return true;
@@ -86,13 +91,12 @@ void FFmpegDecoder::release()
     if(m_state == Closed)
         return;
 
-    m_mutex.lock();
     m_state = Closed;
-    m_mutex.unlock();
+    m_run = false;
 
-    m_condition.wakeOne();
-
+    m_mutex.lock();
     this->clearCache();
+    m_mutex.unlock();
 
     avcodec_free_context(&m_videoCodecContext);
     avcodec_free_context(&m_audioCodecContext);
@@ -102,6 +106,7 @@ void FFmpegDecoder::release()
     avformat_close_input(&m_formatContext);
 
     m_position = 0;
+    m_targetPosition = 0;
 
     m_videoStream = nullptr;
     m_audioStream = nullptr;
@@ -118,21 +123,29 @@ void FFmpegDecoder::seek(int position)
     if(m_state == Closed || position == this->position())
         return;
 
-    m_mutex.lock();
+    m_targetPosition = position;
+    m_run = false;
 
-    m_isSeeked = true;
+    emit callSeek();
+}
+
+void FFmpegDecoder::seek()
+{
+    m_mutex.lock();
+    this->clearCache();
+    m_mutex.unlock();
 
     av_seek_frame(m_formatContext, m_videoStream->index, static_cast<qint64>
-                  (position / av_q2d(m_videoStream->time_base)),
+                  (m_targetPosition / av_q2d(m_videoStream->time_base)),
                   /*AVSEEK_FLAG_BACKWARD |*/ AVSEEK_FLAG_FRAME);
+
     avcodec_flush_buffers(m_videoCodecContext);
     avcodec_flush_buffers(m_audioCodecContext);
 
-    this->clearCache();
+    m_isSeeked = true;
+    m_run = true;
 
-    m_mutex.unlock();
-
-    m_condition.wakeOne();
+    this->decode();
 }
 
 AVFrame *FFmpegDecoder::takeVideoFrame()
@@ -196,7 +209,7 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
     m_mutex.unlock();
 
     if(m_videoCache.count() <= CACHE_SIZE / 2)
-        m_condition.wakeOne();
+        emit callDecodec();
 
     return frame;
 }
@@ -211,7 +224,7 @@ const QByteArray FFmpegDecoder::takeAudioData(int len)
     m_mutex.unlock();
 
     if(m_audioBuffer.size() < 8192)
-        m_condition.wakeOne();
+        emit callDecodec();
 
     return ret;
 }
@@ -238,14 +251,15 @@ void FFmpegDecoder::decode()
 {
     AVPacket* packet = nullptr;
 
-    m_isDecodeFinished = false;
-    while(m_state == Opened && (packet = av_packet_alloc()))
+    while(m_state == Opened && !m_videoCache.isFull() && m_run
+           && (packet = av_packet_alloc()))
     {
-        m_mutex.lock();
-
         if(av_read_frame(m_formatContext, packet))      // Read frame
         {
-            m_mutex.unlock();
+            av_packet_free(&packet);
+
+            m_isDecodeFinished = true;
+            emit decodeFinished();
             break;
         }
 
@@ -256,7 +270,11 @@ void FFmpegDecoder::decode()
             AVFrame *frame = av_frame_alloc();
 
             if(!avcodec_receive_frame(m_videoCodecContext, frame))
+            {
+                m_mutex.lock();
                 m_videoCache.append(frame);
+                m_mutex.unlock();
+            }
             else
                 av_frame_free(&frame);
         }
@@ -286,27 +304,24 @@ void FFmpegDecoder::decode()
                                 reinterpret_cast<const uint8_t **>(frame),
                                 frame->nb_samples);
 
+                    m_mutex.lock();
                     m_audioBuffer.append(pcm);
+                    m_mutex.unlock();
                 }
                 else
+                {
+                    m_mutex.lock();
                     m_audioBuffer.append(reinterpret_cast<char *>(frame->data[0]),
                                          size);
+                    m_mutex.unlock();
+                }
             }
 
             av_frame_free(&frame);
         }
 
-        if(m_videoCache.isFull() && m_audioBuffer.size())
-            m_condition.wait(&m_mutex);
-
-        m_mutex.unlock();
-
         av_packet_free(&packet);
     }
-
-    m_isDecodeFinished = true;
-
-    emit decodeFinished();
 }
 
 void FFmpegDecoder::clearCache()
