@@ -43,7 +43,7 @@ QOpenGLFramebufferObject *VideoRenderer::createFramebufferObject(const QSize &si
 {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(4);
+    format.setSamples(32);
 
     m_size = size;
     this->resize();
@@ -135,7 +135,7 @@ void VideoRenderer::updateTextureData(AVFrame *frame)
     m_textureV->setData(QOpenGLTexture::Luminance, QOpenGLTexture::UInt8,
                    reinterpret_cast<const void *>(frame->data[2]), &options);
 
-    av_frame_free(&frame);
+    av_frame_unref(frame);
 }
 
 void VideoRenderer::paint()
