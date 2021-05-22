@@ -29,6 +29,9 @@ bool KeyboardControllor::eventFilter(QObject *obj, QEvent *event)
         case Qt::Key_Right:
             emit goahead();
             break;
+        case Qt::Key_Escape:
+            emit escape();
+            break;
         }
     }
 

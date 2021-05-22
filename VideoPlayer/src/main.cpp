@@ -47,6 +47,8 @@ int main(int argc, char *argv[])
                      SLOT(onBack()));
     QObject::connect(&qmlKey, SIGNAL(goahead()), objList.first(),
                      SLOT(onGoahead()));
+    QObject::connect(&qmlKey, SIGNAL(escape()), objList.first(),
+                     SLOT(onEscape()));
 
     return app.exec();
 }

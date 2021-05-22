@@ -18,6 +18,7 @@ signals:
     void play();
     void goahead();
     void back();
+    void escape();
 
 private:
     bool eventFilter(QObject *obj, QEvent *event) Q_DECL_OVERRIDE;

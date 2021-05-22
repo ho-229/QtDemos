@@ -17,14 +17,18 @@
 #include <QContiguousCache>
 
 #include "ffmpeg.h"
-#include "playtime.h"
 
-#define CACHE_SIZE 128
+#define VIDEO_CACHE_SIZE 128
+#define AUDIO_CACHE_SIZE VIDEO_CACHE_SIZE * 2
 #define ALLOW_DIFF 0.04         // 40ms
 
 typedef QPair<QSize,            // Size
               AVPixelFormat>    // Format
     VideoInfo;
+
+typedef QPair<qint64,           // PTS
+              QByteArray>       // PCM data
+    AudioFrame;
 
 class FFmpegDecoder : public QObject
 {
@@ -52,15 +56,12 @@ public:
 
     bool isDecodeFinished() const { return m_isDecodeFinished; }
 
-    void resetPlayTime(){ m_startTimer.restart(); }
-    void resume(){ m_isResume = true; }
-
     /**
      * @return duration of the media in seconds.
      */
     int duration() const { return m_formatContext ?
                           static_cast<int>(
-                              m_formatContext->duration / 1000000) : 0; }
+                              m_formatContext->duration / AV_TIME_BASE) : 0; }
 
     int position() const { return m_position; }
 
@@ -69,7 +70,7 @@ public:
     bool hasVideoFrame() const { return !m_videoCache.isEmpty(); }
     AVFrame* takeVideoFrame();
 
-    VideoInfo videoInfo() const { return m_videoCodecContext ?
+    VideoInfo videoInfo() const { return m_hasVideo ?
                                    VideoInfo({ m_videoCodecContext->width,
                                               m_videoCodecContext->height },
                                              m_videoCodecContext->pix_fmt) :
@@ -83,6 +84,9 @@ public:
     qreal fps() const { return m_hasVideo ?
                              (av_q2d(m_videoStream->avg_frame_rate))
                              : -1; }
+
+    inline static qreal second(const qint64 time, const AVRational timebase)
+    { return static_cast<qreal>(time) * av_q2d(timebase); }
 
 signals:
     void callDecodec();
@@ -113,22 +117,21 @@ private:
     AVCodecContext *m_audioCodecContext = nullptr;
     SwrContext *m_swrContext = nullptr;
 
-    QContiguousCache<AVFrame *> m_videoCache;
-    QByteArray m_audioBuffer;
-
-    PLayTime m_startTimer;
+    QContiguousCache<AVFrame *>  m_videoCache;
+    QContiguousCache<AudioFrame> m_audioCache;
 
     bool m_hasVideo = false;
     bool m_hasAudio = false;
 
     bool m_isSeeked = false;
-    bool m_isResume = false;
     bool m_run = false;
 
     bool m_isDecodeFinished = false;
 
     int m_position = 0;
     int m_targetPosition = 0;
+
+    qint64 m_audioPts = 0;
 
     inline void clearCache();
     inline void printErrorString(int errnum);

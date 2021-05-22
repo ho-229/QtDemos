@@ -93,7 +93,6 @@ void VideoPlayer::play(bool playing)
 
         d->timerId = this->startTimer(static_cast<int>(1000 / d->decoder->fps()));
         d->audioOutput->start();
-        d->decoder->resetPlayTime();
     }
     else
     {
@@ -129,10 +128,7 @@ void VideoPlayer::pause(bool paused)
     if(paused)
         this->killTimer(d->timerId);
     else
-    {
-        d->decoder->resume();
         d->timerId = this->startTimer(static_cast<int>(1000 / d->decoder->fps()));
-    }
 
     d->audioOutput->pause(paused);
 
@@ -169,8 +165,8 @@ void VideoPlayer::timerEvent(QTimerEvent *event)
     if(event->timerId() == d->timerId)
     {
         d->isUpdated = true;
-        d->audioOutput->update();
         this->update();
+        d->audioOutput->update();
 
         if(d->decoder->position() != d->position)
         {

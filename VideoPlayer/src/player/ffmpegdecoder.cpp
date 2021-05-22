@@ -12,7 +12,8 @@ FFmpegDecoder::FFmpegDecoder(QObject *parent) :
     //avformat_network_init();
     av_log_set_level(AV_LOG_INFO);
 
-    m_videoCache.setCapacity(CACHE_SIZE);
+    m_videoCache.setCapacity(VIDEO_CACHE_SIZE);
+    m_audioCache.setCapacity(AUDIO_CACHE_SIZE);
 
     QObject::connect(this, &FFmpegDecoder::callDecodec, this,
                      &FFmpegDecoder::decode);
@@ -158,32 +159,15 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
         return nullptr;
     }
 
-    if(m_isSeeked)
-    {
-        m_startTimer.synchronize(static_cast<qint64>(
-            static_cast<qreal>(m_videoCache.first()->pts)
-            * av_q2d(m_videoStream->time_base) * 1000));
-
-        m_isSeeked = false;
-    }
-
-    // Update the system clock when resume
-    if(m_isResume)
-    {
-        m_startTimer.synchronize(static_cast<qint64>(
-            static_cast<qreal>(m_videoCache.first()->pts)
-            * av_q2d(m_videoStream->time_base) * 1000));
-
-        m_isResume = false;
-    }
-
-    // Synchronize the video clock to the system clock
+    // Synchronize the video clock to the audio clock if has audio
     qreal diff = 0;
     do
     {
-        diff = static_cast<qreal>(m_startTimer.elapsed()) / 1000
-               - static_cast<qreal>(m_videoCache.first()->pts)
-                     * av_q2d(m_videoStream->time_base);
+        if(m_isSeeked || !m_hasAudio)
+            break;
+
+        diff = second(m_audioPts, m_audioStream->time_base)
+               - second(m_videoCache.first()->pts, m_videoStream->time_base);
 
         if(diff > ALLOW_DIFF)         // Too slow
         {
@@ -193,10 +177,10 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
         else if(diff < -ALLOW_DIFF)   // Too quick
         {
             AVFrame *frame = m_videoCache.first();
-            AVFrame *newFrame = av_frame_alloc();
+            AVFrame *newFrame = av_frame_clone(frame);
 
-            av_frame_copy(newFrame, frame);
-            newFrame->pts -= qint64(diff / 2);
+            newFrame->pts = frame->pts
+                            - qint64(-diff / av_q2d(m_videoStream->time_base) / 2);
             m_videoCache.prepend(newFrame);
         }
     }
@@ -204,11 +188,10 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
 
     AVFrame *frame = m_videoCache.takeFirst();
 
-    m_position = static_cast<int>(static_cast<double>(frame->pts)
-                                  * av_q2d(m_videoStream->time_base));
+    m_position = static_cast<int>(second(frame->pts, m_videoStream->time_base));
     m_mutex.unlock();
 
-    if(m_videoCache.count() <= CACHE_SIZE / 2)
+    if(m_videoCache.count() <= VIDEO_CACHE_SIZE / 2)
         emit callDecodec();
 
     return frame;
@@ -216,14 +199,27 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
 
 const QByteArray FFmpegDecoder::takeAudioData(int len)
 {
-    if(m_state == Closed || m_audioBuffer.isEmpty())
+    if(m_state == Closed || m_audioCache.isEmpty())
         return QByteArray();
 
+    if(m_isSeeked)
+        m_isSeeked = false;
+
+    int free = len;
+    QByteArray ret;
+
     m_mutex.lock();
-    const QByteArray ret = m_audioBuffer.remove(0, len);
+    while(!m_audioCache.isEmpty() && m_audioCache.first().second.size() < free)
+    {
+        const AudioFrame frame = m_audioCache.takeFirst();
+
+        m_audioPts = frame.first;
+        ret.append(frame.second);
+        free -= frame.second.size();
+    }
     m_mutex.unlock();
 
-    if(m_audioBuffer.size() < 8192)
+    if(m_audioCache.size() < AUDIO_CACHE_SIZE / 2)
         emit callDecodec();
 
     return ret;
@@ -305,14 +301,14 @@ void FFmpegDecoder::decode()
                                 frame->nb_samples);
 
                     m_mutex.lock();
-                    m_audioBuffer.append(pcm);
+                    m_audioCache.append({frame->pts, pcm});
                     m_mutex.unlock();
                 }
                 else
                 {
                     m_mutex.lock();
-                    m_audioBuffer.append(reinterpret_cast<char *>(frame->data[0]),
-                                         size);
+                    m_audioCache.append({frame->pts, {reinterpret_cast<char *>
+                                                      (frame->data[0]), size}});
                     m_mutex.unlock();
                 }
             }
@@ -335,8 +331,8 @@ void FFmpegDecoder::clearCache()
     }
 
     // Clear audio cache
-    if(!m_audioBuffer.isEmpty())
-        m_audioBuffer.clear();
+    if(!m_audioCache.isEmpty())
+        m_audioCache.clear();
 }
 
 void FFmpegDecoder::printErrorString(int errnum)

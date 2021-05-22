@@ -5,7 +5,6 @@ HEADERS += \
    $$PWD/audiooutput.h \
    $$PWD/ffmpeg.h \
    $$PWD/ffmpegdecoder.h \
-   $$PWD/playtime.h \
    $$PWD/videoplayer.h \
    $$PWD/videoplayer_p.h \
    $$PWD/videorenderer.h

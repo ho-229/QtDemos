@@ -29,6 +29,7 @@ Window {
     function onPlay() { playBtn.clicked() }
     function onBack() { backBtn.clicked() }
     function onGoahead() { goaheadBtn.clicked() }
+    function onEscape() { fullScreen = false; }
 
     MouseArea {
         anchors.fill: parent
@@ -103,6 +104,8 @@ Window {
             icon.width: 20
             icon.height: 20
 
+            focusPolicy: Qt.NoFocus
+
             background: Rectangle {
                 color: "transparent"
 
@@ -138,6 +141,8 @@ Window {
             icon.source: "qrc:/image/goahead.png"
             icon.color: "white"
 
+            focusPolicy: Qt.NoFocus
+
             background: Rectangle {
                 color: "transparent"
 
@@ -167,6 +172,8 @@ Window {
             icon.height: 15
             icon.source: "qrc:/image/back.png"
             icon.color: "white"
+
+            focusPolicy: Qt.NoFocus
 
             background: Rectangle {
                 color: "transparent"
@@ -214,6 +221,8 @@ Window {
             icon.color: "white"
             icon.source: root.fullScreen ? "qrc:/image/exit_full_screen.png"
                                     : "qrc:/image/full_screen.png"
+
+            focusPolicy: Qt.NoFocus
 
             onClicked: root.fullScreen = !root.fullScreen;
         }
