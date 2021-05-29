@@ -141,6 +141,18 @@ bool VideoPlayer::isPaused() const
     return d_ptr->isPaused;
 }
 
+void VideoPlayer::setVolume(qreal volume)
+{
+    Q_D(VideoPlayer);
+    d->audioOutput->setVolume(volume);
+    emit volumeChanged(volume);
+}
+
+qreal VideoPlayer::volume() const
+{
+    return d_ptr->audioOutput->volume();
+}
+
 int VideoPlayer::duration() const
 {
     return d_ptr->decoder->duration();

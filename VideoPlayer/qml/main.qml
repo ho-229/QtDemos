@@ -21,6 +21,8 @@ Window {
         id: videoPlayer
         anchors.fill: parent
 
+        volume: volumeSlider.value
+
         onSourceChanged: urlTitle.toast()
 
         onPositionChanged: playSlider.value = position
@@ -159,6 +161,54 @@ Window {
         }
 
         Button {
+            id: volumeBtn
+
+            property bool hasVolume: true
+            property real oldVolume
+
+            width: 37
+            height: 37
+
+            anchors.left: goaheadBtn.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: 18
+
+            icon.source: hasVolume ? "qrc:/image/volume.png" : "qrc:/image/non-volume.png"
+            icon.color: "white"
+            icon.width: 26
+            icon.height: 26
+
+            focusPolicy: Qt.NoFocus
+
+            background: Rectangle { color: "transparent" }
+
+            onClicked: hasVolume = !hasVolume
+
+            onHasVolumeChanged: {
+                if(hasVolume)
+                    volumeSlider.value = oldVolume;
+                else
+                {
+                    oldVolume = volumeSlider.value;
+                    volumeSlider.value = 0;
+                }
+            }
+        }
+
+        PlaySlider {
+            id: volumeSlider
+
+            width: 90
+
+            anchors.left: volumeBtn.right
+            anchors.verticalCenter: parent.verticalCenter
+
+            focusPolicy: Qt.NoFocus
+
+            value: 1
+        }
+
+        Button {
             id: backBtn
 
             width: 37
@@ -190,6 +240,37 @@ Window {
             }
         }
 
+        Button {
+            id: stopBtn
+
+            width: 29
+            height: 29
+
+            enabled: videoPlayer.playing
+
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.right: backBtn.left
+            anchors.rightMargin: 18
+
+            icon.source: "qrc:/image/stop.png"
+            icon.color: "white"
+            icon.width: 11
+            icon.height: 11
+
+            focusPolicy: Qt.NoFocus
+
+            background: Rectangle {
+                color: "transparent"
+
+                radius: 90
+
+                border.width: 2
+                border.color: "white"
+            }
+
+            onClicked: videoPlayer.playing = false
+        }
+
         Text {
             id: progressText
 
@@ -203,9 +284,9 @@ Window {
 
             text: toMMSS(videoPlayer.position) + " / " + toMMSS(videoPlayer.duration);
 
-            anchors.right: backBtn.left
+            anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
-            anchors.rightMargin: 17
+            anchors.margins: 28
 
             color: "white"
 

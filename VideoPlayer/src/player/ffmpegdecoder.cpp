@@ -119,6 +119,9 @@ void FFmpegDecoder::release()
     while(m_isRunning)
         QThread::currentThread()->msleep(50);
 
+    avcodec_flush_buffers(m_videoCodecContext);
+    avcodec_flush_buffers(m_audioCodecContext);
+
     avcodec_free_context(&m_videoCodecContext);
     avcodec_free_context(&m_audioCodecContext);
 

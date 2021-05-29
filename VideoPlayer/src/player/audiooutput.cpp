@@ -30,6 +30,19 @@ void AudioOutput::setAudioFormat(const QAudioFormat format)
     m_format = format;
 }
 
+void AudioOutput::setVolume(qreal volume)
+{
+    if(!m_output)
+        return;
+
+    m_output->setVolume(volume);
+}
+
+qreal AudioOutput::volume() const
+{
+    return m_output ? m_output->volume() : 0;
+}
+
 void AudioOutput::start()
 {
     m_output = new QAudioOutput(m_format, this);

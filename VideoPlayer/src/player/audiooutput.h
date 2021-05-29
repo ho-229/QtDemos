@@ -23,6 +23,9 @@ public:
     void setAudioFormat(const QAudioFormat format);
     QAudioFormat format() const { return m_format; }
 
+    void setVolume(qreal volume);
+    qreal volume() const;
+
     void start();
     void pause(bool pause);
     void stop();

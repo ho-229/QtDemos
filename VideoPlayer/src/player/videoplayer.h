@@ -18,6 +18,7 @@ class VideoPlayer : public QQuickFramebufferObject
     Q_PROPERTY(QUrl source READ source WRITE setSource NOTIFY sourceChanged)
     Q_PROPERTY(bool playing READ isPlaying WRITE play NOTIFY playingChanged)
     Q_PROPERTY(bool paused READ isPaused WRITE pause NOTIFY pausedChanged)
+    Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
 
     // Read only property
     Q_PROPERTY(int position READ position NOTIFY positionChanged)
@@ -38,6 +39,9 @@ public:
     void pause(bool paused = true);
     bool isPaused() const;
 
+    void setVolume(qreal volume);
+    qreal volume() const;
+
     /**
      * @return duration of the media in seconds.
      */
@@ -53,6 +57,7 @@ signals:
     void pausedChanged(bool paused);
     void durationChanged(int duration);
     void positionChanged(int position);
+    void volumeChanged(qreal volume);
 
 private:
     VideoPlayerPrivate * const d_ptr;
