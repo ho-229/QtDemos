@@ -174,7 +174,7 @@ void VideoPlayer::timerEvent(QTimerEvent *event)
             emit positionChanged(d->position);
         }
 
-        if(!d->decoder->hasVideoFrame() && d->decoder->isDecodeFinished())
+        if(!d->decoder->hasFrame() && d->decoder->isDecodeFinished())
             this->play(false);
     }
 }

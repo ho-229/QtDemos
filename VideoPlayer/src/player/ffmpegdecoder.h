@@ -13,13 +13,12 @@
 #include <QMutex>
 #include <QObject>
 #include <QAudioFormat>
-#include <QWaitCondition>
 #include <QContiguousCache>
 
 #include "ffmpeg.h"
 
 #define VIDEO_CACHE_SIZE 128
-#define AUDIO_CACHE_SIZE VIDEO_CACHE_SIZE * 2
+#define AUDIO_CACHE_SIZE 512
 #define ALLOW_DIFF 0.04         // 40ms
 
 typedef QPair<QSize,            // Size
@@ -29,6 +28,16 @@ typedef QPair<QSize,            // Size
 typedef QPair<qint64,           // PTS
               QByteArray>       // PCM data
     AudioFrame;
+
+class IsRunning
+{
+public:
+    IsRunning(bool& isRunning) : m_isRunning(isRunning) { m_isRunning = true; }
+    ~IsRunning() { m_isRunning = false; }
+
+private:
+    bool& m_isRunning;
+};
 
 class FFmpegDecoder : public QObject
 {
@@ -54,7 +63,11 @@ public:
     bool hasVideo() const { return m_hasVideo; }
     bool hasAudio() const { return m_hasAudio; }
 
+    bool hasFrame() const { return m_videoCache.count() || m_audioCache.count(); }
+
     bool isDecodeFinished() const { return m_isDecodeFinished; }
+
+    bool isCacheFull() const { return m_videoCache.isFull() || m_audioCache.isFull(); }
 
     /**
      * @return duration of the media in seconds.
@@ -67,16 +80,14 @@ public:
 
     void seek(int position);
 
-    bool hasVideoFrame() const { return !m_videoCache.isEmpty(); }
-    AVFrame* takeVideoFrame();
-
     VideoInfo videoInfo() const { return m_hasVideo ?
                                    VideoInfo({ m_videoCodecContext->width,
                                               m_videoCodecContext->height },
                                              m_videoCodecContext->pix_fmt) :
                                    VideoInfo({}, AV_PIX_FMT_NONE); }
 
-    bool hasAudioData() const;
+    AVFrame* takeVideoFrame();
+
     const QByteArray takeAudioData(int len);
 
     const QAudioFormat audioFormat() const;
@@ -89,12 +100,12 @@ public:
     { return static_cast<qreal>(time) * av_q2d(timebase); }
 
 signals:
-    void callDecodec();
-    void callSeek();
+    void callDecodec();         // Asynchronous call FFmpegDecoder::decode()
+    void callSeek();            // Asynchronous call FFmpegDecoder::seek()
 
     void decodeFinished();
 
-public slots:
+private slots:
     void decode();
     void seek();
 
@@ -115,6 +126,7 @@ private:
 
     AVStream *m_audioStream = nullptr;
     AVCodecContext *m_audioCodecContext = nullptr;
+
     SwrContext *m_swrContext = nullptr;
 
     QContiguousCache<AVFrame *>  m_videoCache;
@@ -124,7 +136,9 @@ private:
     bool m_hasAudio = false;
 
     bool m_isSeeked = false;
-    bool m_run = false;
+
+    bool m_run = false;             // Is FFmpegDecoder::decode could run
+    bool m_isRunning = false;
 
     bool m_isDecodeFinished = false;
 
