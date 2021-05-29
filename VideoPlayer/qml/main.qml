@@ -193,11 +193,15 @@ Window {
         Text {
             id: progressText
 
-            function toMS(secs) {
-                return parseInt(secs / 60) + ":" + secs % 60;
+            function prefixZero(num, n) {
+                return (Array(n).join(0) + num).slice(-n);
             }
 
-            text: toMS(videoPlayer.position) + " / " + toMS(videoPlayer.duration);
+            function toMMSS(secs) {
+                return parseInt(secs / 60) + ":" + prefixZero(secs % 60, 2);
+            }
+
+            text: toMMSS(videoPlayer.position) + " / " + toMMSS(videoPlayer.duration);
 
             anchors.right: backBtn.left
             anchors.verticalCenter: parent.verticalCenter
@@ -277,7 +281,7 @@ Window {
         id: openFileDialog
         title: "Please choose a Video file"
 
-        nameFilters: [ "Video files (*.mp4 *.mkv)", "YUV files(*.yuv)" ]
+        nameFilters: [ "Video files (*.mp4 *.mkv *.flv)", "YUV files(*.yuv)" ]
 
         onAccepted: {
             videoPlayer.source = file;

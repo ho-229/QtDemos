@@ -21,6 +21,13 @@ Rectangle {
         showAnimation.start();
     }
 
+    MouseArea {
+        id: area
+        anchors.fill: parent
+
+        hoverEnabled: true
+    }
+
     OpacityAnimator {
         id: showAnimation
 
@@ -48,6 +55,11 @@ Rectangle {
 
         interval: 2500
 
-        onTriggered: hideAnimation.start()
+        onTriggered: {
+            if(area.containsMouse)
+                pauseTimer.restart();
+            else
+                hideAnimation.start()
+        }
     }
 }

@@ -22,9 +22,12 @@ extern "C"
 #define UINT64_C(c) (c ## ULL)
 #endif
 
+#include <libavutil/avutil.h>
+#include <libavutil/imgutils.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswresample/swresample.h>
+#include <libswscale/swscale.h>
 }
 
 #endif // FFMPEG_H

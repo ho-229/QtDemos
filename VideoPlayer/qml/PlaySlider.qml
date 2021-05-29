@@ -9,12 +9,12 @@ Slider {
         y: slider.topPadding + slider.availableHeight / 2 - height / 2
 
         implicitWidth: 200
-        implicitHeight: 4
+        implicitHeight: 5
 
         width: slider.availableWidth
         height: implicitHeight
 
-        radius: 2
+        radius: 3
         color: "#bdbebf"
 
         Rectangle {
@@ -28,8 +28,8 @@ Slider {
     handle: Rectangle {
         x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
         y: slider.topPadding + slider.availableHeight / 2 - height / 2
-        implicitWidth: 16
-        implicitHeight: 16
+        implicitWidth: 18
+        implicitHeight: 18
         radius: 13
         color: slider.pressed ? "#f0f0f0" : "#f6f6f6"
         border.color: "#bdbebf"

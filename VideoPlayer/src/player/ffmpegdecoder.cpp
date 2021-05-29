@@ -55,8 +55,21 @@ bool FFmpegDecoder::load()
     av_dump_format(m_formatContext, 0, m_formatContext->url, 0);
 
     // Initialize video codec context
-    m_hasVideo = openCodecContext(m_formatContext, &m_videoStream,
-                                  &m_videoCodecContext, AVMEDIA_TYPE_VIDEO);
+    if((m_hasVideo = openCodecContext(m_formatContext, &m_videoStream,
+                                       &m_videoCodecContext, AVMEDIA_TYPE_VIDEO)))
+    {
+        if(m_videoCodecContext->pix_fmt != AV_PIX_FMT_YUV420P &&
+            m_videoCodecContext->pix_fmt != AV_PIX_FMT_YUV444P)
+        {
+            m_swsContext = sws_getContext(m_videoCodecContext->width,
+                                          m_videoCodecContext->height,
+                                          m_videoCodecContext->pix_fmt,
+                                          m_videoCodecContext->width,
+                                          m_videoCodecContext->height,
+                                          AV_PIX_FMT_YUV420P,
+                                          SWS_BICUBIC, nullptr, nullptr, nullptr);
+        }
+    }
 
     // Initialize audio codec context
     if((m_hasAudio = openCodecContext(m_formatContext, &m_audioStream,
@@ -83,7 +96,7 @@ bool FFmpegDecoder::load()
 
     m_isDecodeFinished = false;
     m_state = Opened;
-    m_run = true;
+    m_runnable = true;
 
     emit callDecodec();                 // Asynchronous call FFmpegDecoder::decode()
 
@@ -96,7 +109,7 @@ void FFmpegDecoder::release()
         return;
 
     m_state = Closed;
-    m_run = false;
+    m_runnable = false;
 
     m_mutex.lock();
     this->clearCache();
@@ -109,15 +122,22 @@ void FFmpegDecoder::release()
     avcodec_free_context(&m_videoCodecContext);
     avcodec_free_context(&m_audioCodecContext);
 
-    swr_close(m_swrContext);
+    if(m_swrContext)
+    {
+        swr_close(m_swrContext);
+        m_swrContext = nullptr;
+    }
+
+    if(m_swsContext)
+    {
+        sws_freeContext(m_swsContext);
+        m_swsContext = nullptr;
+    }
 
     avformat_close_input(&m_formatContext);
 
     m_position = 0;
     m_targetPosition = 0;
-
-    m_videoStream = nullptr;
-    m_audioStream = nullptr;
 
     m_videoStream = nullptr;
     m_audioStream = nullptr;
@@ -133,9 +153,24 @@ void FFmpegDecoder::seek(int position)
         return;
 
     m_targetPosition = position;
-    m_run = false;
+    m_runnable = false;
 
     emit callSeek();
+}
+
+VideoInfo FFmpegDecoder::videoInfo() const
+{
+    if(!m_hasVideo && !m_videoCodecContext)
+        return {{}, {AV_PIX_FMT_NONE}};
+
+    AVPixelFormat format;
+    if(m_videoCodecContext->pix_fmt != AV_PIX_FMT_YUV420P &&
+        m_videoCodecContext->pix_fmt != AV_PIX_FMT_YUV444P)
+        format = AV_PIX_FMT_YUV420P;
+    else
+        format = m_videoCodecContext->pix_fmt;
+
+    return {{m_videoCodecContext->width, m_videoCodecContext->height}, format};
 }
 
 void FFmpegDecoder::seek()
@@ -144,7 +179,7 @@ void FFmpegDecoder::seek()
 
     av_seek_frame(m_formatContext, m_videoStream->index, static_cast<qint64>
                   (m_targetPosition / av_q2d(m_videoStream->time_base)),
-                  AVSEEK_FLAG_BACKWARD /*| AVSEEK_FLAG_FRAME*/);
+                  /*AVSEEK_FLAG_BACKWARD |*/ AVSEEK_FLAG_FRAME);
 
     m_mutex.lock();
     this->clearCache();
@@ -154,7 +189,7 @@ void FFmpegDecoder::seek()
     avcodec_flush_buffers(m_audioCodecContext);
 
     m_isSeeked = true;
-    m_run = true;
+    m_runnable = true;
 
     this->decode();
 }
@@ -183,12 +218,8 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
         }
         else if(diff < -ALLOW_DIFF)   // Too quick
         {
-            AVFrame *frame = m_videoCache.first();
-            AVFrame *newFrame = av_frame_clone(frame);
-
-            newFrame->pts = frame->pts
-                            - qint64(ALLOW_DIFF / 2 / av_q2d(m_videoStream->time_base));
-            m_videoCache.prepend(newFrame);
+            m_mutex.unlock();
+            return nullptr;
         }
         else
             break;
@@ -261,7 +292,7 @@ void FFmpegDecoder::decode()
     AVPacket* packet = nullptr;
     IsRunning running(m_isRunning);
 
-    while(m_state == Opened && !this->isCacheFull() && m_run
+    while(m_state == Opened && !this->isCacheFull() && m_runnable
            && (packet = av_packet_alloc()))
     {
         if(av_read_frame(m_formatContext, packet))      // Read frame
@@ -280,9 +311,33 @@ void FFmpegDecoder::decode()
             AVFrame *frame = av_frame_alloc();
             if(frame && !avcodec_receive_frame(m_videoCodecContext, frame))
             {
-                m_mutex.lock();
-                m_videoCache.append(frame);
-                m_mutex.unlock();
+                if(m_swsContext)
+                {
+                    AVFrame *swsFrame = av_frame_alloc();
+
+                    swsFrame->pts = frame->pts;
+                    swsFrame->width = m_videoCodecContext->width;
+                    swsFrame->height = m_videoCodecContext->height;
+                    swsFrame->format = AV_PIX_FMT_YUV420P;
+
+                    av_frame_get_buffer(swsFrame, 0);
+
+                    sws_scale(m_swsContext, frame->data, frame->linesize, 0,
+                              m_videoCodecContext->height, swsFrame->data,
+                              swsFrame->linesize);
+
+                    av_frame_free(&frame);
+
+                    m_mutex.lock();
+                    m_videoCache.append(swsFrame);
+                    m_mutex.unlock();
+                }
+                else
+                {
+                    m_mutex.lock();
+                    m_videoCache.append(frame);
+                    m_mutex.unlock();
+                }
             }
             else
                 av_frame_free(&frame);

@@ -27,13 +27,13 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 win32 {
-    LIBS += -L$$PWD/ffmpeg/win64/lib/ -lavutil -lavcodec -lavformat -lswresample
+    LIBS += -L$$PWD/ffmpeg/win64/lib/ -lavutil -lavcodec -lavformat -lswresample -lswscale
     INCLUDEPATH += $$PWD/ffmpeg/win64/include
     DEPENDPATH += $$PWD/ffmpeg/win64/include
 }
 
 unix {
-    LIBS += -L/usr/lib/ -lavutil -lavcodec -lavformat -lswresample
+    LIBS += -L/usr/lib/ -lavutil -lavcodec -lavformat -lswresample --lswscale
     INCLUDEPATH += /usr/include
     DEPENDPATH += /usr/include
 }

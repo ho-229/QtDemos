@@ -37,12 +37,13 @@ void AudioOutput::start()
     m_audioBuffer = m_output->start();
 
     QObject::connect(m_output, &QAudioOutput::stateChanged, this,
-            [this](QAudio::State state){ if(state == QAudio::IdleState)
-                {
-                    this->stop();
-                    this->start();
-                }
-            });
+                     [this](QAudio::State state) {
+                         if(state == QAudio::IdleState && m_decoder->hasFrame())
+                         {
+                             this->stop();
+                             this->start();
+                         }
+                     });
 }
 
 void AudioOutput::pause(bool pause)

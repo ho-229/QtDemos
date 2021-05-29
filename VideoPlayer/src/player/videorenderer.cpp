@@ -53,6 +53,7 @@ QOpenGLFramebufferObject *VideoRenderer::createFramebufferObject(const QSize &si
 
 void VideoRenderer::synchronize(QQuickFramebufferObject *)
 {
+    // Update video info
     if(m_player_p->isVideoInfoChanged)
     {
         this->updateTextureInfo();
@@ -92,16 +93,6 @@ void VideoRenderer::updateTextureInfo()
         m_textureV->setSize(info.first.width() / 2, info.first.height() / 2);
         m_textureV->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
         break;
-    /*case AV_PIX_FMT_YUV420P10LE:    // YUV 420P 15bpp(like 24bpp)
-        mTexY->setSize(info.first.width(), info.first.height());
-        mTexY->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt16);
-
-        mTexU->setSize(info.first.width() / 2, info.first.height() / 2);
-        mTexU->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt16);
-
-        mTexV->setSize(info.first.width() / 2, info.first.height() / 2);
-        mTexV->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt16);
-        break;*/
     case AV_PIX_FMT_YUV444P:        // YUV 444P 24bpp
         m_textureY->setSize(info.first.width(), info.first.height());
         m_textureY->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);

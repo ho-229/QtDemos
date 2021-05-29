@@ -19,7 +19,7 @@
 
 #define VIDEO_CACHE_SIZE 128
 #define AUDIO_CACHE_SIZE 512
-#define ALLOW_DIFF 0.04         // 40ms
+#define ALLOW_DIFF 0.05         // 50ms
 
 typedef QPair<QSize,            // Size
               AVPixelFormat>    // Format
@@ -80,11 +80,7 @@ public:
 
     void seek(int position);
 
-    VideoInfo videoInfo() const { return m_hasVideo ?
-                                   VideoInfo({ m_videoCodecContext->width,
-                                              m_videoCodecContext->height },
-                                             m_videoCodecContext->pix_fmt) :
-                                   VideoInfo({}, AV_PIX_FMT_NONE); }
+    VideoInfo videoInfo() const;
 
     AVFrame* takeVideoFrame();
 
@@ -92,9 +88,7 @@ public:
 
     const QAudioFormat audioFormat() const;
 
-    qreal fps() const { return m_hasVideo ?
-                             (av_q2d(m_videoStream->avg_frame_rate))
-                             : -1; }
+    qreal fps() const { return m_hasVideo ? (av_q2d(m_videoStream->avg_frame_rate)) : -1; }
 
     inline static qreal second(const qint64 time, const AVRational timebase)
     { return static_cast<qreal>(time) * av_q2d(timebase); }
@@ -128,6 +122,7 @@ private:
     AVCodecContext *m_audioCodecContext = nullptr;
 
     SwrContext *m_swrContext = nullptr;
+    SwsContext *m_swsContext = nullptr;
 
     QContiguousCache<AVFrame *>  m_videoCache;
     QContiguousCache<AudioFrame> m_audioCache;
@@ -137,7 +132,7 @@ private:
 
     bool m_isSeeked = false;
 
-    bool m_run = false;             // Is FFmpegDecoder::decode could run
+    bool m_runnable  = false;             // Is FFmpegDecoder::decode() could run
     bool m_isRunning = false;
 
     bool m_isDecodeFinished = false;
