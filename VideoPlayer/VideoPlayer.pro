@@ -33,7 +33,7 @@ win32 {
 }
 
 unix {
-    LIBS += -L/usr/lib/ -lavutil -lavcodec -lavformat -lswresample --lswscale
+    LIBS += -L/usr/lib/ -lavutil -lavcodec -lavformat -lswresample -lswscale
     INCLUDEPATH += /usr/include
     DEPENDPATH += /usr/include
 }

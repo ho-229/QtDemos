@@ -19,12 +19,11 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
     Q_D(VideoPlayer);
 
     d->decodeThread = new QThread(this);
+
     d->decoder = new FFmpegDecoder(nullptr);
-
-    d->audioOutput = new AudioOutput(d->decoder, this);
-
     d->decoder->moveToThread(d->decodeThread);
-    d->decodeThread->start();
+
+    d->audioOutput = new AudioOutput(d->decoder, this);    
 }
 
 VideoPlayer::~VideoPlayer()
@@ -33,9 +32,6 @@ VideoPlayer::~VideoPlayer()
 
     if(d->isPlaying)
         this->play(false);
-
-    if(d->decodeThread->isRunning())
-        d->decodeThread->terminate();
 
     d->decoder->deleteLater();
 
@@ -55,14 +51,14 @@ void VideoPlayer::setSource(const QUrl &source)
     if(!source.isValid())
         return;
 
-    d->decoder->setFileName(source);
+    d->decoder->setUrl(source);
 
     emit sourceChanged(source);
 }
 
 QUrl VideoPlayer::source() const
 {
-    return d_ptr->decoder->fileName();
+    return d_ptr->decoder->url();
 }
 
 void VideoPlayer::play(bool playing)

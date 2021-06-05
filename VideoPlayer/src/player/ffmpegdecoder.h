@@ -55,8 +55,8 @@ public:
     bool load();
     void release();
 
-    void setFileName(const QUrl& url){ m_url = url; }
-    QUrl fileName() const { return m_url; }
+    void setUrl(const QUrl& url){ m_url = url; }
+    QUrl url() const { return m_url; }
 
     State state() const { return m_state; }
 

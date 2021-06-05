@@ -94,6 +94,8 @@ bool FFmpegDecoder::load()
     if(!(m_hasVideo || m_hasAudio))     // If there is no video and audio
         return false;
 
+    this->thread()->start();            // Start the decode thread
+
     m_isDecodeFinished = false;
     m_state = Opened;
     m_runnable = true;
@@ -111,13 +113,15 @@ void FFmpegDecoder::release()
     m_state = Closed;
     m_runnable = false;
 
+    this->thread()->quit();             // Tell the thread exit
+
     m_mutex.lock();
     this->clearCache();
     m_mutex.unlock();
 
     // Wait for finished
-    while(m_isRunning)
-        QThread::currentThread()->msleep(50);
+    if(this->thread()->wait())
+        qCritical() << __FUNCTION__ << ": Decode thread exit failed";
 
     avcodec_flush_buffers(m_videoCodecContext);
     avcodec_flush_buffers(m_audioCodecContext);

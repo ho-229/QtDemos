@@ -1,6 +1,6 @@
 ﻿import QtQuick 2.15
 import QtQuick.Window 2.15
-import Qt.labs.platform 1.1
+import QtQuick.Dialogs 1.2
 import QtQuick.Controls 2.15
 
 import com.multimedia.videoplayer 1.0
@@ -32,6 +32,14 @@ Window {
     function onBack() { backBtn.clicked() }
     function onGoahead() { goaheadBtn.clicked() }
     function onEscape() { fullScreen = false; }
+
+    function prefixZero(num, n) {
+        return (Array(n).join(0) + num).slice(-n);
+    }
+
+    function toMMSS(secs) {
+        return parseInt(secs / 60) + ":" + prefixZero(secs % 60, 2);
+    }
 
     MouseArea {
         anchors.fill: parent
@@ -206,6 +214,12 @@ Window {
             focusPolicy: Qt.NoFocus
 
             value: 1
+
+            ToolTip {
+                parent: volumeSlider.handle
+                visible: volumeSlider.hovered
+                text: qsTr("Volume:") + volumeSlider.value * 100
+            }
         }
 
         Button {
@@ -274,14 +288,6 @@ Window {
         Text {
             id: progressText
 
-            function prefixZero(num, n) {
-                return (Array(n).join(0) + num).slice(-n);
-            }
-
-            function toMMSS(secs) {
-                return parseInt(secs / 60) + ":" + prefixZero(secs % 60, 2);
-            }
-
             text: toMMSS(videoPlayer.position) + " / " + toMMSS(videoPlayer.duration);
 
             anchors.left: parent.left
@@ -326,12 +332,18 @@ Window {
             anchors.right: parent.right
             anchors.margins: 9
 
+            live: false
+
             onPressedChanged: {
                 if(!pressed)
                     videoPlayer.seek(value);
             }
 
-            live: false
+            ToolTip {
+                parent: playSlider.handle
+                visible: playSlider.hovered
+                text: toMMSS(videoPlayer.position)
+            }
         }
     }
 
@@ -365,7 +377,7 @@ Window {
         nameFilters: [ "Video files (*.mp4 *.mkv *.flv)", "YUV files(*.yuv)" ]
 
         onAccepted: {
-            videoPlayer.source = file;
+            videoPlayer.source = fileUrl;
             videoPlayer.playing = true;
         }
     }

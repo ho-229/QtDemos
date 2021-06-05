@@ -23,6 +23,9 @@ int main(int argc, char *argv[])
     app.setFont(QFont("Microsoft YaHei", 9));
 #endif
 
+    app.setOrganizationName("Ho229");
+    app.setOrganizationDomain("https://github.com/ho229v3666/");
+
     qmlRegisterType<VideoPlayer>("com.multimedia.videoplayer", 1, 0, "VideoPlayer");
 
     KeyboardControllor qmlKey;
