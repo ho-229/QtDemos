@@ -18,6 +18,10 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
 {
     Q_D(VideoPlayer);
 
+    d->updater = new QTimer(this);
+    QObject::connect(d->updater, &QTimer::timeout, this,
+                     &VideoPlayer::updateFrame);
+
     d->decodeThread = new QThread(this);
 
     d->decoder = new FFmpegDecoder(nullptr);
@@ -86,14 +90,17 @@ void VideoPlayer::play(bool playing)
         }
 
         qDebug() << "fps:" << d->decoder->fps();
+        d->interval = static_cast<int>(1000 / d->decoder->fps());
 
-        d->timerId = this->startTimer(static_cast<int>(1000 / d->decoder->fps()));
+        this->updateFrame();
+
+        d->updater->start(d->interval);
         d->audioOutput->start();
     }
     else
     {
         if(!d->isPaused)
-            this->killTimer(d->timerId);
+            d->updater->stop();
 
         d->audioOutput->stop();
         d->decoder->release();
@@ -122,9 +129,9 @@ void VideoPlayer::pause(bool paused)
         return;
 
     if(paused)
-        this->killTimer(d->timerId);
+        d->updater->stop();
     else
-        d->timerId = this->startTimer(static_cast<int>(1000 / d->decoder->fps()));
+        d->updater->start(d->interval);
 
     d->audioOutput->pause(paused);
 
@@ -166,23 +173,39 @@ void VideoPlayer::seek(int position)
     emit positionChanged(position);
 }
 
-void VideoPlayer::timerEvent(QTimerEvent *event)
+void VideoPlayer::updateFrame()
 {
     Q_D(VideoPlayer);
 
-    if(event->timerId() == d->timerId)
+    d->isUpdated = true;
+    d->audioOutput->update();
+    this->update();
+
+    if(d->decoder->position() != d->position)
     {
-        d->isUpdated = true;
-        this->update();
-        d->audioOutput->update();
+        d->position = d->decoder->position();
+        emit positionChanged(d->position);
+    }
 
-        if(d->decoder->position() != d->position)
+    if(!d->decoder->hasFrame() && d->decoder->isDecodeFinished())
+    {
+        this->play(false);
+        return;
+    }
+
+    // Synchronize the video clock to the audio clock if has audio
+    const qreal diff = d->decoder->diff();
+
+    qreal step = (qAbs(diff) - ALLOW_DIFF) * d->interval;
+    if(step >= 0)
+    {
+        if(diff > 1.75 * ALLOW_DIFF)
         {
-            d->position = d->decoder->position();
-            emit positionChanged(d->position);
+            AVFrame *frame = d->decoder->takeVideoFrame();
+            av_frame_free(&frame);
         }
-
-        if(!d->decoder->hasFrame() && d->decoder->isDecodeFinished())
-            this->play(false);
+        else
+        d->updater->setInterval(
+                static_cast<int>(diff > 0 ? d->interval - step : d->interval + step));
     }
 }

@@ -120,7 +120,7 @@ void FFmpegDecoder::release()
     m_mutex.unlock();
 
     // Wait for finished
-    if(this->thread()->wait())
+    if(!this->thread()->wait())
         qCritical() << __FUNCTION__ << ": Decode thread exit failed";
 
     avcodec_flush_buffers(m_videoCodecContext);
@@ -211,30 +211,14 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
         return nullptr;
     }
 
-    // Synchronize the video clock to the audio clock if has audio
-    qreal diff = 0;
-    while(!m_isSeeked && m_hasAudio && m_videoCache.count() > 1)
-    {
-        diff = second(m_audioPts, m_audioStream->time_base)
-               - second(m_videoCache.first()->pts, m_videoStream->time_base);
-
-        if(diff > ALLOW_DIFF)         // Too slow
-        {
-            AVFrame *frame = m_videoCache.takeFirst();
-            av_frame_free(&frame);
-        }
-        else if(diff < -ALLOW_DIFF)   // Too quick
-        {
-            m_mutex.unlock();
-            return nullptr;
-        }
-        else
-            break;
-    }
-
     AVFrame *frame = m_videoCache.takeFirst();
 
-    m_position = static_cast<int>(second(frame->pts, m_videoStream->time_base));
+    const qreal videoTime = second(frame->pts, m_videoStream->time_base);
+
+    if(!m_isSeeked)
+        m_diff = second(m_audioPts, m_audioStream->time_base) - videoTime;
+
+    m_position = static_cast<int>(videoTime);
 
     m_mutex.unlock();
 

@@ -9,6 +9,8 @@
 
 #include <QQuickFramebufferObject>
 
+#define ALLOW_DIFF 0.04         // 40ms
+
 class VideoPlayerPrivate;
 
 class VideoPlayer : public QQuickFramebufferObject
@@ -59,12 +61,13 @@ signals:
     void positionChanged(int position);
     void volumeChanged(qreal volume);
 
+private slots:
+    void updateFrame();
+
 private:
     VideoPlayerPrivate * const d_ptr;
 
     Q_DECLARE_PRIVATE(VideoPlayer)
-
-    void timerEvent(QTimerEvent *event) Q_DECL_OVERRIDE;
 
 };
 

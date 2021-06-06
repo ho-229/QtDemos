@@ -41,7 +41,7 @@ private:
     QOpenGLTexture *m_textureU = nullptr;
     QOpenGLTexture *m_textureV = nullptr;
 
-    VideoPlayerPrivate *m_player_p = nullptr;
+    VideoPlayerPrivate * const m_player_p = nullptr;
 
     QOpenGLShaderProgram m_program;
 

@@ -19,7 +19,6 @@
 
 #define VIDEO_CACHE_SIZE 128
 #define AUDIO_CACHE_SIZE 512
-#define ALLOW_DIFF 0.05         // 50ms
 
 typedef QPair<QSize,            // Size
               AVPixelFormat>    // Format
@@ -90,6 +89,8 @@ public:
 
     qreal fps() const { return m_hasVideo ? (av_q2d(m_videoStream->avg_frame_rate)) : -1; }
 
+    qreal diff() const { return m_isSeeked ? 0.0 : m_diff; }
+
     inline static qreal second(const qint64 time, const AVRational timebase)
     { return static_cast<qreal>(time) * av_q2d(timebase); }
 
@@ -141,6 +142,8 @@ private:
     int m_targetPosition = 0;
 
     qint64 m_audioPts = 0;
+
+    qreal m_diff = 0.0;
 
     inline void clearCache();
     inline void printErrorString(int errnum);
