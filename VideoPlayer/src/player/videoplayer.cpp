@@ -199,13 +199,13 @@ void VideoPlayer::updateFrame()
     qreal step = (qAbs(diff) - ALLOW_DIFF) * d->interval;
     if(step >= 0)
     {
-        if(diff > 1.75 * ALLOW_DIFF)
+        if(diff > 0.3)
         {
             AVFrame *frame = d->decoder->takeVideoFrame();
             av_frame_free(&frame);
         }
         else
-        d->updater->setInterval(
+            d->updater->setInterval(
                 static_cast<int>(diff > 0 ? d->interval - step : d->interval + step));
     }
 }
