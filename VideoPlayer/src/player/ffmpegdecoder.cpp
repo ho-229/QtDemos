@@ -181,8 +181,7 @@ void FFmpegDecoder::release()
 
 void FFmpegDecoder::seek(int position)
 {
-    if(m_state == Closed || position == this->position() ||
-        (!m_isPtsUpdated && position == m_targetPosition))
+    if(m_state == Closed || position == m_position)
         return;
 
     m_targetPosition = position;
@@ -208,10 +207,15 @@ VideoInfo FFmpegDecoder::videoInfo() const
 
 void FFmpegDecoder::seek()
 {
+    if(m_state == Closed || m_position == m_targetPosition)
+        return;
+
     const AVStream *seekStream = m_videoStream ? m_videoStream : m_audioStream;
     av_seek_frame(m_formatContext, seekStream->index, static_cast<qint64>
                   (m_targetPosition / av_q2d(seekStream->time_base)),
                   /*AVSEEK_FLAG_BACKWARD |*/ AVSEEK_FLAG_FRAME);
+
+    m_position = m_targetPosition;
 
     // Clear frame cache
     m_mutex.lock();
@@ -272,9 +276,15 @@ void FFmpegDecoder::loadSubtitle(int index)
 
         const QDir subtitleDir(fileInfo.absoluteDir());
 
-        QString subtitleFileName = subtitleDir.absolutePath() + '/'
-                                   + subtitleDir.entryList({{"*.ass"}, {"*.srt"}, {"*.lrc"}},
-                                    QDir::Files).filter(fileInfo.baseName())[index];
+        const QStringList subtitleList =
+            subtitleDir.entryList({{"*.ass"}, {"*.srt"}, {"*.lrc"}},
+                                  QDir::Files).filter(fileInfo.baseName());
+
+        if(subtitleList.size() <= index)
+            return;
+
+        QString subtitleFileName = subtitleDir.absolutePath()
+                                   + '/' + subtitleList.at(index);
 
         if(QFileInfo::exists(subtitleFileName))
         {
@@ -608,7 +618,7 @@ bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
     // Create in filter using "arg"
     if (avfilter_graph_create_filter(&buffersrcContext, buffersrc, "in",
                                      args.toLocal8Bit().data(), nullptr, filterGraph) < 0) {
-        qDebug() << "Has Error: line =" << __LINE__;
+        FUNC_ERROR << "Has Error: line =" << __LINE__;
         release();
         return false;
     }
@@ -616,7 +626,7 @@ bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
     // Create out filter
     if (avfilter_graph_create_filter(&buffersinkContext, buffersink, "out",
                                      nullptr, nullptr, filterGraph) < 0) {
-        qDebug() << "Has Error: line =" << __LINE__;
+        FUNC_ERROR << "Has Error: line =" << __LINE__;
         release();
         return false;
     }
@@ -633,13 +643,13 @@ bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
 
     if (avfilter_graph_parse_ptr(filterGraph, filterDesc.toLocal8Bit().data(),
                                  &input, &output, nullptr) < 0) {
-        qDebug() << "Has Error: line =" << __LINE__;
+        FUNC_ERROR << "Has Error: line =" << __LINE__;
         release();
         return false;
     }
 
     if (avfilter_graph_config(filterGraph, nullptr) < 0) {
-        qDebug() << "Has Error: line =" << __LINE__;
+        FUNC_ERROR << "Has Error: line =" << __LINE__;
         release();
         return false;
     }
