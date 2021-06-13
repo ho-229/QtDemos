@@ -6,7 +6,9 @@
 
 #include "ffmpegdecoder.h"
 
+#include <QDir>
 #include <QThread>
+#include <QFileInfo>
 
 FFmpegDecoder::FFmpegDecoder(QObject *parent) :
     QObject(parent)
@@ -16,6 +18,7 @@ FFmpegDecoder::FFmpegDecoder(QObject *parent) :
 
     m_videoCache.setCapacity(VIDEO_CACHE_SIZE);
     m_audioCache.setCapacity(AUDIO_CACHE_SIZE);
+    m_subtitleCache.setCapacity(SUBTITLE_CACHE_SIZE);
 
     QObject::connect(this, &FFmpegDecoder::callDecodec, this,
                      &FFmpegDecoder::decode);
@@ -94,6 +97,8 @@ bool FFmpegDecoder::load()
     if(!(m_hasVideo || m_hasAudio))     // If there is no video and audio
         return false;
 
+    this->loadSubtitle();
+
     this->thread()->start();            // Start the decode thread
 
     m_isDecodeFinished = false;
@@ -113,7 +118,7 @@ void FFmpegDecoder::release()
     m_state = Closed;
     m_runnable = false;
 
-    this->thread()->quit();             // Tell the thread exit
+    this->thread()->quit();             // Tell the decode thread exit
 
     m_mutex.lock();
     this->clearCache();
@@ -121,13 +126,34 @@ void FFmpegDecoder::release()
 
     // Wait for finished
     if(!this->thread()->wait())
-        qCritical() << __FUNCTION__ << ": Decode thread exit failed";
+        FUNC_ERROR << ": Decode thread exit failed";
 
-    avcodec_flush_buffers(m_videoCodecContext);
-    avcodec_flush_buffers(m_audioCodecContext);
+    auto releaseContext = [](AVCodecContext *&context) {
+        avcodec_flush_buffers(context);
+        avcodec_free_context(&context);
 
-    avcodec_free_context(&m_videoCodecContext);
-    avcodec_free_context(&m_audioCodecContext);
+        context = nullptr;
+    };
+
+    auto relaseFilter = [](AVFilterContext *&context) {
+        avfilter_free(context);
+        context = nullptr;
+    };
+
+    if(m_hasVideo)
+        releaseContext(m_videoCodecContext);
+
+    if(m_hasAudio)
+        releaseContext(m_audioCodecContext);
+
+    if(m_subtitleCodecContext)
+        releaseContext(m_subtitleCodecContext);
+
+    if(m_buffersrcContext)
+        relaseFilter(m_buffersrcContext);
+
+    if(m_buffersinkContext)
+        relaseFilter(m_buffersinkContext);
 
     if(m_swrContext)
     {
@@ -146,17 +172,17 @@ void FFmpegDecoder::release()
     m_position = 0;
     m_targetPosition = 0;
 
+    m_isPtsUpdated = false;
+
     m_videoStream = nullptr;
     m_audioStream = nullptr;
-
-    m_videoCodecContext = nullptr;
-    m_audioCodecContext = nullptr;
+    m_subtitleStream = nullptr;
 }
 
 void FFmpegDecoder::seek(int position)
 {
     if(m_state == Closed || position == this->position() ||
-        (m_isSeeked && position == m_targetPosition))
+        (!m_isPtsUpdated && position == m_targetPosition))
         return;
 
     m_targetPosition = position;
@@ -182,23 +208,81 @@ VideoInfo FFmpegDecoder::videoInfo() const
 
 void FFmpegDecoder::seek()
 {
-    IsRunning running(m_isRunning);
-
-    av_seek_frame(m_formatContext, m_videoStream->index, static_cast<qint64>
-                  (m_targetPosition / av_q2d(m_videoStream->time_base)),
+    const AVStream *seekStream = m_videoStream ? m_videoStream : m_audioStream;
+    av_seek_frame(m_formatContext, seekStream->index, static_cast<qint64>
+                  (m_targetPosition / av_q2d(seekStream->time_base)),
                   /*AVSEEK_FLAG_BACKWARD |*/ AVSEEK_FLAG_FRAME);
 
+    // Clear frame cache
     m_mutex.lock();
     this->clearCache();
     m_mutex.unlock();
 
-    avcodec_flush_buffers(m_videoCodecContext);
-    avcodec_flush_buffers(m_audioCodecContext);
+    // Flush buffers
+    if(m_videoCodecContext)
+        avcodec_flush_buffers(m_videoCodecContext);
+    if(m_audioCodecContext)
+        avcodec_flush_buffers(m_audioCodecContext);
 
-    m_isSeeked = true;
+    m_isPtsUpdated = false;
     m_runnable = true;
 
     this->decode();
+}
+
+void FFmpegDecoder::loadSubtitle(int index)
+{
+    if((m_hasSubtitle = openCodecContext(m_formatContext, &m_subtitleStream,
+                                          &m_subtitleCodecContext,
+                                          AVMEDIA_TYPE_SUBTITLE, index)))
+        return;
+
+    // Initialize filter
+    const AVRational timeBase = m_videoStream->time_base;
+    const AVRational pixelAspect = m_videoCodecContext->sample_aspect_ratio;
+
+    const QString args = QString::asprintf(
+        "video_size=%dx%d:pix_fmt=%d:time_base=%d/%d:pixel_aspect=%d/%d",
+        m_videoCodecContext->width, m_videoCodecContext->height,
+        m_videoCodecContext->pix_fmt, timeBase.num, timeBase.den,
+        pixelAspect.num, pixelAspect.den);
+
+    auto makeFilterDesc = [this](const QString fileName) -> QString {
+        return QString("subtitles=filename='%1':original_size=%2x%3")
+            .arg(fileName)
+            .arg(m_videoCodecContext->width)
+            .arg(m_videoCodecContext->height);
+    };
+
+    auto toFFmpegFormat = [](QString &fileName) -> QString& {
+        fileName.replace('/', "\\\\");
+        return fileName.insert(fileName.indexOf(":\\"), char('\\'));
+    };
+
+    if(m_hasSubtitle)
+    {
+        QString subtitleFileName = m_url.toLocalFile();
+
+        m_hasSubtitle = initSubtitleFilter(m_buffersrcContext, m_buffersinkContext, args,
+                                           makeFilterDesc(toFFmpegFormat(subtitleFileName)));
+    }
+    else            // If no found subtitle stream in video file
+    {
+        const QFileInfo fileInfo(m_url.toLocalFile());
+
+        const QDir subtitleDir(fileInfo.absoluteDir());
+
+        QString subtitleFileName = subtitleDir.absolutePath() + '/'
+                                   + subtitleDir.entryList({{"*.ass"}, {"*.srt"}, {"*.lrc"}},
+                                    QDir::Files).filter(fileInfo.baseName())[index];
+
+        if(QFileInfo::exists(subtitleFileName))
+        {
+            m_hasSubtitle = initSubtitleFilter(
+                m_buffersrcContext, m_buffersinkContext, args,
+                makeFilterDesc(toFFmpegFormat(subtitleFileName)));
+        }
+    }
 }
 
 AVFrame *FFmpegDecoder::takeVideoFrame()
@@ -215,7 +299,7 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
 
     const qreal videoTime = second(frame->pts, m_videoStream->time_base);
 
-    if(!m_isSeeked)
+    if(m_isPtsUpdated)
         m_diff = second(m_audioPts, m_audioStream->time_base) - videoTime;
 
     m_position = static_cast<int>(videoTime);
@@ -238,9 +322,6 @@ const QByteArray FFmpegDecoder::takeAudioData(int len)
         return QByteArray();
     }
 
-    if(m_isSeeked)
-        m_isSeeked = false;
-
     int free = len;
     QByteArray ret;
 
@@ -254,6 +335,8 @@ const QByteArray FFmpegDecoder::takeAudioData(int len)
         free -= frame.second.size();
     }
     m_mutex.unlock();
+
+    m_isPtsUpdated = true;
 
     if(m_audioCache.size() < AUDIO_CACHE_SIZE / 2)
         emit callDecodec();
@@ -281,7 +364,6 @@ const QAudioFormat FFmpegDecoder::audioFormat() const
 void FFmpegDecoder::decode()
 {
     AVPacket* packet = nullptr;
-    IsRunning running(m_isRunning);
 
     while(m_state == Opened && !this->isCacheFull() && m_runnable
            && (packet = av_packet_alloc()))
@@ -296,12 +378,27 @@ void FFmpegDecoder::decode()
         }
 
         // Video frame decode
-        if(packet->stream_index == m_videoStream->index &&
+        if(m_hasVideo && packet->stream_index == m_videoStream->index &&
             !avcodec_send_packet(m_videoCodecContext, packet))
         {
             AVFrame *frame = av_frame_alloc();
+            AVFrame *filterFrame = av_frame_alloc();
+
             if(frame && !avcodec_receive_frame(m_videoCodecContext, frame))
             {
+                if(m_buffersrcContext && m_buffersinkContext)
+                {
+                    if(av_buffersrc_add_frame_flags(
+                            m_buffersrcContext, frame, AV_BUFFERSRC_FLAG_KEEP_REF) >= 0
+                        && av_buffersink_get_frame(m_buffersinkContext, filterFrame) >= 0)
+                    {
+                        av_frame_free(&frame);
+                        frame = filterFrame;
+                    }
+                    else
+                        av_frame_free(&filterFrame);
+                }
+
                 if(m_swsContext)
                 {
                     AVFrame *swsFrame = av_frame_alloc();
@@ -334,8 +431,8 @@ void FFmpegDecoder::decode()
                 av_frame_free(&frame);
         }
 
-        // Audio frames decode
-        else if(packet->stream_index == m_audioStream->index &&
+        // Audio frame decode
+        else if(m_hasAudio && packet->stream_index == m_audioStream->index &&
                  !avcodec_send_packet(m_audioCodecContext, packet))
         {
             AVFrame *frame = av_frame_alloc();
@@ -375,6 +472,41 @@ void FFmpegDecoder::decode()
             av_frame_free(&frame);
         }
 
+        // Subtitle frame decode
+        /*else if(m_subtitleCodecContext && packet->stream_index == m_subtitleStream->index)
+        {
+            qDebug()<<"packet is sub";
+            int isGet = 0;
+            AVSubtitle subtitle;
+            if(avcodec_decode_subtitle2(m_subtitleCodecContext, &subtitle, &isGet, packet) > 0)
+            {
+                if(isGet)
+                {
+                    m_subtitleCache.append({{subtitle}, {}});
+                    qDebug()<<"isGet"<<m_subtitleCache.count();
+                }
+                else
+                {
+                    SubtitleFrame frame;
+
+                    frame.subtitle.format = 1;
+                    frame.subtitle.pts = packet->pts;
+                    frame.subtitle.start_display_time = uint32_t(
+                        second(packet->pts, m_subtitleStream->time_base) * 1000);
+                    frame.subtitle.end_display_time
+                        = frame.subtitle.start_display_time
+                          + uint32_t(second(packet->duration, m_subtitleStream->time_base)
+                                     * 1000);
+
+                    frame.text = reinterpret_cast<const char *>(packet->data);
+
+                    m_subtitleCache.append(frame);
+                }
+            }
+            else
+                qDebug()<<"Decode failed";
+        }*/
+
         av_packet_free(&packet);
     }
 }
@@ -402,14 +534,15 @@ void FFmpegDecoder::printErrorString(int errnum)
 }
 
 bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **stream,
-                                     AVCodecContext **codecContext, AVMediaType type)
+                                     AVCodecContext **codecContext, AVMediaType type,
+                                     int index)
 {
     // Find stream
     int ret = 0;
     if ((ret = av_find_best_stream(formatContext,
-                                   type, -1, -1, nullptr, 0)) < 0)
+                                   type, -1, index, nullptr, 0)) < 0)
     {
-        qCritical() << "Could not find stream " << av_get_media_type_string(type);
+        FUNC_ERROR << "Could not find stream " << av_get_media_type_string(type);
         return false;
     }
     *stream = formatContext->streams[ret];
@@ -418,14 +551,14 @@ bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **
     AVCodec *codec = avcodec_find_decoder((*stream)->codecpar->codec_id);
     if (!codec)
     {
-        qCritical() << "Cound not find codec " << av_get_media_type_string(type);
+        FUNC_ERROR << "Cound not find codec " << av_get_media_type_string(type);
         return false;
     }
 
     // Allocate codec context
     if(!(*codecContext = avcodec_alloc_context3(codec)))
     {
-        qCritical() << "Failed to allocate codec context";
+        FUNC_ERROR << "Failed to allocate codec context";
         return false;
     }
 
@@ -435,7 +568,7 @@ bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **
     ret = avcodec_parameters_to_context(*codecContext, (*stream)->codecpar);
     if (ret < 0)
     {
-        qWarning() << "Failed to copy codec parameters to decoder context"
+        FUNC_ERROR << "Failed to copy codec parameters to decoder context"
                    << av_get_media_type_string(type);
         return ret;
     }
@@ -444,9 +577,73 @@ bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **
     // Open codec and get the context
     if (avcodec_open2(*codecContext, codec, &opts) < 0)
     {
-        qCritical() << "Failed to open codec " << av_get_media_type_string(type);
+        FUNC_ERROR << "Failed to open codec " << av_get_media_type_string(type);
         return false;
     }
 
+    return true;
+}
+
+bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
+                                       AVFilterContext *&buffersinkContext,
+                                       const QString args, const QString filterDesc)
+{
+    const AVFilter *buffersrc = avfilter_get_by_name("buffer");
+    const AVFilter *buffersink = avfilter_get_by_name("buffersink");
+
+    AVFilterInOut *output = avfilter_inout_alloc();
+    AVFilterInOut *input = avfilter_inout_alloc();
+    AVFilterGraph *filterGraph = avfilter_graph_alloc();
+
+    auto release = [&output, &input] {
+        avfilter_inout_free(&output);
+        avfilter_inout_free(&input);
+    };
+
+    if (!output || !input || !filterGraph) {
+        release();
+        return false;
+    }
+
+    // Create in filter using "arg"
+    if (avfilter_graph_create_filter(&buffersrcContext, buffersrc, "in",
+                                     args.toLocal8Bit().data(), nullptr, filterGraph) < 0) {
+        qDebug() << "Has Error: line =" << __LINE__;
+        release();
+        return false;
+    }
+
+    // Create out filter
+    if (avfilter_graph_create_filter(&buffersinkContext, buffersink, "out",
+                                     nullptr, nullptr, filterGraph) < 0) {
+        qDebug() << "Has Error: line =" << __LINE__;
+        release();
+        return false;
+    }
+
+    output->name = av_strdup("in");
+    output->next = nullptr;
+    output->pad_idx = 0;
+    output->filter_ctx = buffersrcContext;
+
+    input->name = av_strdup("out");
+    input->next = nullptr;
+    input->pad_idx = 0;
+    input->filter_ctx = buffersinkContext;
+
+    if (avfilter_graph_parse_ptr(filterGraph, filterDesc.toLocal8Bit().data(),
+                                 &input, &output, nullptr) < 0) {
+        qDebug() << "Has Error: line =" << __LINE__;
+        release();
+        return false;
+    }
+
+    if (avfilter_graph_config(filterGraph, nullptr) < 0) {
+        qDebug() << "Has Error: line =" << __LINE__;
+        release();
+        return false;
+    }
+
+    release();
     return true;
 }

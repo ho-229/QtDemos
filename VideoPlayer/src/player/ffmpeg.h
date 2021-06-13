@@ -11,9 +11,9 @@ extern "C"
 {
 #ifdef __cplusplus
 # define __STDC_CONSTANT_MACROS
-# ifdef _STDINT_H
-#  undef _STDINT_H
-# endif
+#  ifdef _STDINT_H
+#   undef _STDINT_H
+#  endif
 # include "stdint.h"
 #endif
 
@@ -25,9 +25,12 @@ extern "C"
 #include <libavutil/avutil.h>
 #include <libavutil/imgutils.h>
 #include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
+#include <libavformat/avformat.h>
+#include <libavfilter/avfilter.h>
+#include <libavfilter/buffersrc.h>
+#include <libavfilter/buffersink.h>
+#include <libswresample/swresample.h>
 }
 
 #endif // FFMPEG_H

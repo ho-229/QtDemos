@@ -95,6 +95,7 @@ void VideoPlayer::play(bool playing)
         this->updateFrame();
 
         d->updater->start(d->interval);
+
         d->audioOutput->start();
     }
     else
@@ -197,7 +198,7 @@ void VideoPlayer::updateFrame()
     const qreal diff = d->decoder->diff();
 
     qreal step = (qAbs(diff) - ALLOW_DIFF) * d->interval;
-    if(step >= 0)
+    if(qAbs(step) >= 5)
     {
         if(diff > 0.3)
         {

@@ -19,14 +19,6 @@ AudioOutput::AudioOutput(FFmpegDecoder *decoder, QObject *parent) :
 
 void AudioOutput::setAudioFormat(const QAudioFormat format)
 {
-    QAudioDeviceInfo info(QAudioDeviceInfo::defaultOutputDevice());
-    if (!info.isFormatSupported(format))
-    {
-        qCritical() << __FUNCTION__
-                    << ": Raw audio format not supported by backend, cannot play audio.";
-        return;
-    }
-
     m_format = format;
 }
 
@@ -45,6 +37,14 @@ qreal AudioOutput::volume() const
 
 void AudioOutput::start()
 {
+    QAudioDeviceInfo info(QAudioDeviceInfo::defaultOutputDevice());
+    if (!m_decoder->hasAudio() || !info.isFormatSupported(m_format))
+    {
+        qCritical() << __FUNCTION__
+                    << ": Raw audio format not supported by backend, cannot play audio.";
+        return;
+    }
+
     m_output = new QAudioOutput(m_format, this);
     m_output->setBufferSize(65536);
     m_audioBuffer = m_output->start();

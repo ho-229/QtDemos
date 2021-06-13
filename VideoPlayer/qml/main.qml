@@ -350,8 +350,8 @@ Window {
     Button {
         id: openBtn
 
-        text: qsTr("<font color='white'>Open file</font>")
-        font.pointSize: 16
+        text: qsTr("<font color='white'>Open file<br>or drop here</font>")
+        font.pointSize: 14
 
         focusPolicy: Qt.NoFocus
 
@@ -366,8 +366,31 @@ Window {
 
         icon.source: "qrc:/image/file.png"
         icon.color: "white"
+        icon.height: 50
+        icon.width: 50
 
         onClicked: openFileDialog.open();
+
+        DropArea {
+            id: dropArea
+
+            anchors.fill: parent
+
+            onDropped: {
+                if(drop.hasUrls) {
+                    videoPlayer.source = drop.urls[0];
+                    videoPlayer.playing = true;
+
+                    openBtn.text
+                            = qsTr("<font color='white'>Open file<br>Or drop here</font>")
+                }
+            }
+
+            onEntered: openBtn.text
+                       = qsTr("<font color='white'>Release to open file</font>");
+            onExited: openBtn.text
+                      = qsTr("<font color='white'>Open file<br>Or drop here</font>")
+        }        
     }
 
     FileDialog {

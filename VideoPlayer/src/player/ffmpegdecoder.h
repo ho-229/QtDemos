@@ -19,6 +19,9 @@
 
 #define VIDEO_CACHE_SIZE 128
 #define AUDIO_CACHE_SIZE 512
+#define SUBTITLE_CACHE_SIZE 128
+
+#define FUNC_ERROR qCritical() << __FUNCTION__
 
 typedef QPair<QSize,            // Size
               AVPixelFormat>    // Format
@@ -28,15 +31,11 @@ typedef QPair<qint64,           // PTS
               QByteArray>       // PCM data
     AudioFrame;
 
-class IsRunning
+typedef struct
 {
-public:
-    IsRunning(bool& isRunning) : m_isRunning(isRunning) { m_isRunning = true; }
-    ~IsRunning() { m_isRunning = false; }
-
-private:
-    bool& m_isRunning;
-};
+    AVSubtitle subtitle;
+    QString text;
+} SubtitleFrame;
 
 class FFmpegDecoder : public QObject
 {
@@ -61,6 +60,7 @@ public:
 
     bool hasVideo() const { return m_hasVideo; }
     bool hasAudio() const { return m_hasAudio; }
+    bool hasSubtitle() const { return m_hasSubtitle; }
 
     bool hasFrame() const { return m_videoCache.count() || m_audioCache.count(); }
 
@@ -89,7 +89,7 @@ public:
 
     qreal fps() const { return m_hasVideo ? (av_q2d(m_videoStream->avg_frame_rate)) : -1; }
 
-    qreal diff() const { return m_isSeeked ? 0.0 : m_diff; }
+    qreal diff() const { return m_isPtsUpdated ? m_diff : 0.0; }
 
     inline static qreal second(const qint64 time, const AVRational timebase)
     { return static_cast<qreal>(time) * av_q2d(timebase); }
@@ -122,19 +122,26 @@ private:
     AVStream *m_audioStream = nullptr;
     AVCodecContext *m_audioCodecContext = nullptr;
 
+    AVStream *m_subtitleStream = nullptr;
+    AVCodecContext *m_subtitleCodecContext = nullptr;
+
+    AVFilterContext *m_buffersrcContext  = nullptr;
+    AVFilterContext *m_buffersinkContext = nullptr;
+
     SwrContext *m_swrContext = nullptr;
     SwsContext *m_swsContext = nullptr;
 
-    QContiguousCache<AVFrame *>  m_videoCache;
-    QContiguousCache<AudioFrame> m_audioCache;
+    QContiguousCache<AVFrame *>     m_videoCache;
+    QContiguousCache<AudioFrame>    m_audioCache;
+    QContiguousCache<SubtitleFrame> m_subtitleCache;
 
     bool m_hasVideo = false;
     bool m_hasAudio = false;
+    bool m_hasSubtitle = false;
 
-    bool m_isSeeked = false;
+    bool m_isPtsUpdated = false;
 
     bool m_runnable  = false;             // Is FFmpegDecoder::decode() could run
-    bool m_isRunning = false;
 
     bool m_isDecodeFinished = false;
 
@@ -145,12 +152,19 @@ private:
 
     qreal m_diff = 0.0;
 
+    void loadSubtitle(int index = 0);
+
     inline void clearCache();
     inline void printErrorString(int errnum);
-    inline static bool openCodecContext(AVFormatContext *formatContext,
-                                        AVStream **stream,
-                                        AVCodecContext **codecContext,
-                                        AVMediaType type);
+
+    static bool openCodecContext(AVFormatContext *formatContext,
+                                 AVStream **stream,
+                                 AVCodecContext **codecContext,
+                                 AVMediaType type, int index = 0);
+
+    static bool initSubtitleFilter(AVFilterContext * &buffersrcContext,
+                                   AVFilterContext * &buffersinkContext,
+                                   const QString args, const QString filterDesc);
 };
 
 #endif // FFMPEGDECODER_H
