@@ -15,6 +15,9 @@
 VideoRenderer::VideoRenderer(VideoPlayerPrivate * const player_p)
     : m_player_p(player_p)
 {
+    if(!m_player_p)
+        return;
+
     this->initializeOpenGLFunctions();
 
     m_decoder = m_player_p->decoder;
@@ -67,8 +70,6 @@ void VideoRenderer::synchronize(QQuickFramebufferObject *)
         this->updateTextureData(m_decoder->takeVideoFrame());
         m_player_p->isUpdated = false;
     }
-
-    m_textureAlloced = m_player_p->isPlaying;
 }
 
 void VideoRenderer::updateTextureInfo()
@@ -78,6 +79,7 @@ void VideoRenderer::updateTextureInfo()
     destoryTexture(m_textureY);
     destoryTexture(m_textureU);
     destoryTexture(m_textureV);
+    m_textureAlloced = false;
 
     this->initTexture();
 
@@ -92,6 +94,8 @@ void VideoRenderer::updateTextureInfo()
 
         m_textureV->setSize(info.first.width() / 2, info.first.height() / 2);
         m_textureV->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
+
+        m_textureAlloced = true;
         break;
     case AV_PIX_FMT_YUV444P:        // YUV 444P 24bpp
         m_textureY->setSize(info.first.width(), info.first.height());
@@ -102,9 +106,10 @@ void VideoRenderer::updateTextureInfo()
 
         m_textureV->setSize(info.first.width(), info.first.height());
         m_textureV->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
+        m_textureAlloced = true;
         break;
     default:
-        qCritical() << __FUNCTION__ << ": Unknow pixel format" << info.second;
+        FUNC_ERROR << ": Unknow pixel format" << info.second;
     }
 }
 
@@ -126,7 +131,7 @@ void VideoRenderer::updateTextureData(AVFrame *frame)
     m_textureV->setData(QOpenGLTexture::Luminance, QOpenGLTexture::UInt8,
                    reinterpret_cast<const void *>(frame->data[2]), &options);
 
-    av_frame_unref(frame);
+    av_frame_free(&frame);
 }
 
 void VideoRenderer::paint()
@@ -134,7 +139,7 @@ void VideoRenderer::paint()
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if (!m_textureAlloced)
+    if(!m_player_p->isPlaying && !m_textureAlloced)
         return;
 
     glViewport(m_viewRect.x(), m_viewRect.y(),
@@ -147,11 +152,12 @@ void VideoRenderer::paint()
     m_projectMatHandle = m_program.uniformLocation("u_projectMatrix");
     m_verticesHandle = m_program.attributeLocation("qt_Vertex");
     m_texCoordHandle = m_program.attributeLocation("texCoord");
-    //顶点
+
+    // 顶点
     m_program.enableAttributeArray(m_verticesHandle);
     m_program.setAttributeArray(m_verticesHandle, m_vertices.constData());
 
-    //纹理坐标
+    // 纹理坐标
     m_program.enableAttributeArray(m_texCoordHandle);
     m_program.setAttributeArray(m_texCoordHandle, m_texcoords.constData());
 
@@ -163,7 +169,7 @@ void VideoRenderer::paint()
     // pixFmt
     m_program.setUniformValue("pixFmt", m_pixFmt);
 
-    //纹理
+    // Texture
     // Y
     glActiveTexture(GL_TEXTURE0);
     m_textureY->bind();
@@ -194,7 +200,7 @@ void VideoRenderer::initShader()
         !m_program.addShaderFromSourceFile(
             QOpenGLShader::Fragment, ":/fragment.fsh"))
     {
-        qCritical() << __FUNCTION__ << ": Add shader file failed.";
+        FUNC_ERROR << ": Add shader file failed.";
         return;
     }
 
@@ -207,7 +213,7 @@ void VideoRenderer::initShader()
 
 void VideoRenderer::initTexture()
 {
-    // yuv420p
+    // YUV 420p
     m_textureY = new QOpenGLTexture(QOpenGLTexture::Target2D);
     m_textureY->setFormat(QOpenGLTexture::LuminanceFormat);
     //    mTexY->setFixedSamplePositions(false);
@@ -253,8 +259,12 @@ void VideoRenderer::initGeometry()
 void VideoRenderer::resize()
 {
     const QRect screenRect(QPoint(0, 0), m_size);
-    m_viewRect.setSize(m_decoder->videoInfo().first.scaled(m_size,
-                                 Qt::KeepAspectRatio));
+    const QSize videoSize(m_decoder->videoInfo().first);
+
+    if(!videoSize.isValid())
+        return;
+
+    m_viewRect.setSize(videoSize.scaled(m_size, Qt::KeepAspectRatio));
     m_viewRect.moveCenter(screenRect.center());
 }
 

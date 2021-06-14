@@ -217,8 +217,8 @@ Window {
 
             ToolTip {
                 parent: volumeSlider.handle
-                visible: volumeSlider.hovered
-                text: qsTr("Volume:") + volumeSlider.value * 100
+                visible: volumeSlider.pressed
+                text: qsTr("Volume:") + parseInt(volumeSlider.value * 100)
             }
         }
 

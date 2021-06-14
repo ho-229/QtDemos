@@ -177,6 +177,10 @@ void FFmpegDecoder::release()
     m_videoStream = nullptr;
     m_audioStream = nullptr;
     m_subtitleStream = nullptr;
+
+    m_hasAudio = false;
+    m_hasVideo = false;
+    m_hasSubtitle = false;
 }
 
 void FFmpegDecoder::seek(int position)
@@ -552,7 +556,7 @@ bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **
     if ((ret = av_find_best_stream(formatContext,
                                    type, -1, index, nullptr, 0)) < 0)
     {
-        FUNC_ERROR << "Could not find stream " << av_get_media_type_string(type);
+        FUNC_ERROR << "Could not find stream" << av_get_media_type_string(type);
         return false;
     }
     *stream = formatContext->streams[ret];
@@ -596,7 +600,7 @@ bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **
 
 bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
                                        AVFilterContext *&buffersinkContext,
-                                       const QString args, const QString filterDesc)
+                                       const QString& args, const QString& filterDesc)
 {
     const AVFilter *buffersrc = avfilter_get_by_name("buffer");
     const AVFilter *buffersink = avfilter_get_by_name("buffersink");
@@ -610,14 +614,16 @@ bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
         avfilter_inout_free(&input);
     };
 
-    if (!output || !input || !filterGraph) {
+    if (!output || !input || !filterGraph)
+    {
         release();
         return false;
     }
 
     // Create in filter using "arg"
     if (avfilter_graph_create_filter(&buffersrcContext, buffersrc, "in",
-                                     args.toLocal8Bit().data(), nullptr, filterGraph) < 0) {
+                                     args.toLocal8Bit().data(), nullptr, filterGraph) < 0)
+    {
         FUNC_ERROR << "Has Error: line =" << __LINE__;
         release();
         return false;
@@ -625,7 +631,8 @@ bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
 
     // Create out filter
     if (avfilter_graph_create_filter(&buffersinkContext, buffersink, "out",
-                                     nullptr, nullptr, filterGraph) < 0) {
+                                     nullptr, nullptr, filterGraph) < 0)
+    {
         FUNC_ERROR << "Has Error: line =" << __LINE__;
         release();
         return false;
@@ -641,14 +648,16 @@ bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
     input->pad_idx = 0;
     input->filter_ctx = buffersinkContext;
 
-    if (avfilter_graph_parse_ptr(filterGraph, filterDesc.toLocal8Bit().data(),
-                                 &input, &output, nullptr) < 0) {
+    if(avfilter_graph_parse_ptr(filterGraph, filterDesc.toLocal8Bit().data(),
+                                 &input, &output, nullptr) < 0)
+    {
         FUNC_ERROR << "Has Error: line =" << __LINE__;
         release();
         return false;
     }
 
-    if (avfilter_graph_config(filterGraph, nullptr) < 0) {
+    if(avfilter_graph_config(filterGraph, nullptr) < 0)
+    {
         FUNC_ERROR << "Has Error: line =" << __LINE__;
         release();
         return false;

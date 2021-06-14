@@ -19,7 +19,7 @@
 
 #define VIDEO_CACHE_SIZE 128
 #define AUDIO_CACHE_SIZE 512
-#define SUBTITLE_CACHE_SIZE 128
+#define SUBTITLE_CACHE_SIZE 64
 
 #define FUNC_ERROR qCritical() << __FUNCTION__
 
@@ -141,7 +141,7 @@ private:
 
     bool m_isPtsUpdated = false;
 
-    bool m_runnable  = false;             // Is FFmpegDecoder::decode() could run
+    bool m_runnable = false;             // Is FFmpegDecoder::decode() could run
 
     bool m_isDecodeFinished = false;
 
@@ -164,7 +164,7 @@ private:
 
     static bool initSubtitleFilter(AVFilterContext * &buffersrcContext,
                                    AVFilterContext * &buffersinkContext,
-                                   const QString args, const QString filterDesc);
+                                   const QString &args, const QString &filterDesc);
 };
 
 #endif // FFMPEGDECODER_H
