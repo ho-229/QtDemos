@@ -328,6 +328,8 @@ Window {
 
             value: 0
 
+            enabled: videoPlayer.playing
+
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.margins: 9

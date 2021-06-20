@@ -80,7 +80,10 @@ void VideoPlayer::play(bool playing)
             {
                 d->isVideoInfoChanged = true;
                 d->audioOutput->setAudioFormat(d->decoder->audioFormat());
+
                 emit durationChanged(this->duration());
+                emit hasVideoChanged(d->decoder->hasVideo());
+                emit hasAudioChanged(d->decoder->hasAudio());
             }
             else
             {
@@ -165,6 +168,16 @@ int VideoPlayer::duration() const
 int VideoPlayer::position() const
 {
     return d_ptr->position;
+}
+
+bool VideoPlayer::hasVideo() const
+{
+    return d_ptr->decoder->hasVideo();
+}
+
+bool VideoPlayer::hasAudio() const
+{
+    return d_ptr->decoder->hasAudio();
 }
 
 void VideoPlayer::seek(int position)

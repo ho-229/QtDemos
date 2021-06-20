@@ -81,8 +81,7 @@ bool FFmpegDecoder::load()
         if(m_audioCodecContext->sample_fmt != AV_SAMPLE_FMT_S16)
         {
             m_swrContext = swr_alloc_set_opts(m_swrContext,
-                                              av_get_default_channel_layout(
-                                                  2),
+                                              av_get_default_channel_layout(2),
                                               AV_SAMPLE_FMT_S16,
                                               m_audioCodecContext->sample_rate,
                                               av_get_default_channel_layout(
@@ -240,12 +239,6 @@ void FFmpegDecoder::seek()
 
 void FFmpegDecoder::loadSubtitle(int index)
 {
-    if((m_hasSubtitle = openCodecContext(m_formatContext, &m_subtitleStream,
-                                          &m_subtitleCodecContext,
-                                          AVMEDIA_TYPE_SUBTITLE, index)))
-        return;
-
-    // Initialize filter
     const AVRational timeBase = m_videoStream->time_base;
     const AVRational pixelAspect = m_videoCodecContext->sample_aspect_ratio;
 
@@ -255,11 +248,12 @@ void FFmpegDecoder::loadSubtitle(int index)
         m_videoCodecContext->pix_fmt, timeBase.num, timeBase.den,
         pixelAspect.num, pixelAspect.den);
 
-    auto makeFilterDesc = [this](const QString fileName) -> QString {
-        return QString("subtitles=filename='%1':original_size=%2x%3")
+    auto makeFilterDesc = [this, &index](const QString fileName) -> QString {
+        return QString("subtitles=filename='%1':original_size=%2x%3:si=%4")
             .arg(fileName)
             .arg(m_videoCodecContext->width)
-            .arg(m_videoCodecContext->height);
+            .arg(m_videoCodecContext->height)
+            .arg(index);
     };
 
     auto toFFmpegFormat = [](QString &fileName) -> QString& {
@@ -267,14 +261,25 @@ void FFmpegDecoder::loadSubtitle(int index)
         return fileName.insert(fileName.indexOf(":\\"), char('\\'));
     };
 
-    if(m_hasSubtitle)
+    if(av_find_best_stream(m_formatContext, AVMEDIA_TYPE_SUBTITLE,
+                            -1, index, nullptr, 0) >= 0)
     {
         QString subtitleFileName = m_url.toLocalFile();
 
-        m_hasSubtitle = initSubtitleFilter(m_buffersrcContext, m_buffersinkContext, args,
-                                           makeFilterDesc(toFFmpegFormat(subtitleFileName)));
+        if((m_hasSubtitle = initSubtitleFilter(m_buffersrcContext,
+                                                m_buffersinkContext, args,
+                                                makeFilterDesc(toFFmpegFormat(
+                                                    subtitleFileName)))))
+            return;
+
+        // If is not text based subtitles
+        m_hasSubtitle = openCodecContext(m_formatContext, &m_subtitleStream,
+                                         &m_subtitleCodecContext,
+                                         AVMEDIA_TYPE_SUBTITLE, index);
     }
-    else            // If no found subtitle stream in video file
+
+    // If no found subtitle stream in video file
+    else
     {
         const QFileInfo fileInfo(m_url.toLocalFile());
 
@@ -284,7 +289,7 @@ void FFmpegDecoder::loadSubtitle(int index)
             subtitleDir.entryList({{"*.ass"}, {"*.srt"}, {"*.lrc"}},
                                   QDir::Files).filter(fileInfo.baseName());
 
-        if(subtitleList.size() <= index)
+        if(subtitleList.size() <= index)    // Out of range
             return;
 
         QString subtitleFileName = subtitleDir.absolutePath()
@@ -489,10 +494,10 @@ void FFmpegDecoder::decode()
         // Subtitle frame decode
         /*else if(m_subtitleCodecContext && packet->stream_index == m_subtitleStream->index)
         {
-            qDebug()<<"packet is sub";
             int isGet = 0;
             AVSubtitle subtitle;
-            if(avcodec_decode_subtitle2(m_subtitleCodecContext, &subtitle, &isGet, packet) > 0)
+            if(avcodec_decode_subtitle2(m_subtitleCodecContext,
+                                         &subtitle, &isGet, packet) > 0)
             {
                 if(isGet)
                 {
@@ -626,6 +631,10 @@ bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
     {
         FUNC_ERROR << "Has Error: line =" << __LINE__;
         release();
+
+        buffersrcContext = nullptr;
+        buffersinkContext = nullptr;
+
         return false;
     }
 
@@ -635,6 +644,10 @@ bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
     {
         FUNC_ERROR << "Has Error: line =" << __LINE__;
         release();
+
+        buffersrcContext = nullptr;
+        buffersinkContext = nullptr;
+
         return false;
     }
 
@@ -653,6 +666,10 @@ bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
     {
         FUNC_ERROR << "Has Error: line =" << __LINE__;
         release();
+
+        buffersrcContext = nullptr;
+        buffersinkContext = nullptr;
+
         return false;
     }
 
@@ -660,6 +677,10 @@ bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
     {
         FUNC_ERROR << "Has Error: line =" << __LINE__;
         release();
+
+        buffersrcContext = nullptr;
+        buffersinkContext = nullptr;
+
         return false;
     }
 

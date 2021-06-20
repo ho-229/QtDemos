@@ -25,6 +25,8 @@ class VideoPlayer : public QQuickFramebufferObject
     // Read only property
     Q_PROPERTY(int position READ position NOTIFY positionChanged)
     Q_PROPERTY(int duration READ duration NOTIFY durationChanged)
+    Q_PROPERTY(bool hasVideo READ hasVideo NOTIFY hasVideoChanged)
+    Q_PROPERTY(bool hasAudio READ hasAudio NOTIFY hasAudioChanged)
 
 public:
     VideoPlayer(QQuickItem *parent = nullptr);
@@ -51,6 +53,10 @@ public:
 
     int position() const;
 
+    bool hasVideo() const;
+
+    bool hasAudio() const;
+
     Q_INVOKABLE void seek(int position);
 
 signals:
@@ -60,6 +66,8 @@ signals:
     void durationChanged(int duration);
     void positionChanged(int position);
     void volumeChanged(qreal volume);
+    void hasVideoChanged(bool hasVideo);
+    void hasAudioChanged(bool hasAudio);
 
 private slots:
     void updateFrame();
