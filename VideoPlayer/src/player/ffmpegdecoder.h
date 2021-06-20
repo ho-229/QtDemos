@@ -23,6 +23,9 @@
 
 #define FUNC_ERROR qCritical() << __FUNCTION__
 
+#define FFMPEG_ERROR(x) FUNC_ERROR << ": line" << __LINE__ \
+                    << ":" << av_make_error_string(m_errorBuf, sizeof (m_errorBuf), x)
+
 typedef QPair<QSize,            // Size
               AVPixelFormat>    // Format
     VideoInfo;
@@ -87,7 +90,7 @@ public:
 
     const QAudioFormat audioFormat() const;
 
-    qreal fps() const { return m_hasVideo ? (av_q2d(m_videoStream->avg_frame_rate)) : -1; }
+    qreal fps() const;
 
     qreal diff() const { return m_isPtsUpdated ? m_diff : 0.0; }
 
@@ -155,7 +158,6 @@ private:
     void loadSubtitle(int index = 0);
 
     inline void clearCache();
-    inline void printErrorString(int errnum);
 
     static bool openCodecContext(AVFormatContext *formatContext,
                                  AVStream **stream,

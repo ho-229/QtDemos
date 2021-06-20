@@ -43,14 +43,14 @@ bool FFmpegDecoder::load()
              &m_formatContext, m_url.toLocalFile().toLocal8Bit().data(),
              nullptr, nullptr)) < 0)
     {
-        this->printErrorString(ret);
+        FFMPEG_ERROR(ret);
         return false;
     }
 
     // Find stream info
     if((ret = avformat_find_stream_info(m_formatContext, nullptr)) < 0)
     {
-        this->printErrorString(ret);
+        FFMPEG_ERROR(ret);
         return false;
     }
 
@@ -213,10 +213,10 @@ void FFmpegDecoder::seek()
     if(m_state == Closed || m_position == m_targetPosition)
         return;
 
-    const AVStream *seekStream = m_videoStream ? m_videoStream : m_audioStream;
+    const AVStream *seekStream = m_hasVideo ? m_videoStream : m_audioStream;
     av_seek_frame(m_formatContext, seekStream->index, static_cast<qint64>
                   (m_targetPosition / av_q2d(seekStream->time_base)),
-                  /*AVSEEK_FLAG_BACKWARD |*/ AVSEEK_FLAG_FRAME);
+                  AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
 
     m_position = m_targetPosition;
 
@@ -225,7 +225,7 @@ void FFmpegDecoder::seek()
     this->clearCache();
     m_mutex.unlock();
 
-    // Flush buffers
+    // Flush the codec buffers
     if(m_videoCodecContext)
         avcodec_flush_buffers(m_videoCodecContext);
     if(m_audioCodecContext)
@@ -378,6 +378,14 @@ const QAudioFormat FFmpegDecoder::audioFormat() const
     }
 
     return format;
+}
+
+qreal FFmpegDecoder::fps() const
+{
+    if(m_state == Closed)
+        return 0.0;
+
+    return av_q2d((m_hasVideo ? m_videoStream : m_audioStream)->avg_frame_rate);
 }
 
 void FFmpegDecoder::decode()
@@ -543,13 +551,6 @@ void FFmpegDecoder::clearCache()
     // Clear audio cache
     if(!m_audioCache.isEmpty())
         m_audioCache.clear();
-}
-
-void FFmpegDecoder::printErrorString(int errnum)
-{
-    qCritical() << "FFmpeg: "
-                << av_make_error_string(m_errorBuf,
-                                        sizeof (m_errorBuf), errnum);
 }
 
 bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **stream,
