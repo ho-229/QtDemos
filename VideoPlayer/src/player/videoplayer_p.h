@@ -33,7 +33,7 @@ public:
     bool isVideoInfoChanged = false;
 
     int position = 0;
-    int interval = 0;
+    qreal interval = 0;
 
     QQuickWindow* window() const { return q_ptr->window(); }
 

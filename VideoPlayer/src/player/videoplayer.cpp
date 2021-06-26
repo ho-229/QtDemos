@@ -93,11 +93,11 @@ void VideoPlayer::play(bool playing)
         }
 
         qDebug() << "fps:" << d->decoder->fps();
-        d->interval = static_cast<int>(1000 / d->decoder->fps());
+        d->interval = 1000 / d->decoder->fps();
 
         this->updateFrame();
 
-        d->updater->start(d->interval);
+        d->updater->start(static_cast<int>(d->interval));
 
         d->audioOutput->start();
     }
@@ -135,7 +135,7 @@ void VideoPlayer::pause(bool paused)
     if(paused)
         d->updater->stop();
     else
-        d->updater->start(d->interval);
+        d->updater->start(static_cast<int>(d->interval));
 
     d->audioOutput->pause(paused);
 
@@ -207,19 +207,27 @@ void VideoPlayer::updateFrame()
         return;
     }
 
-    // Synchronize the video clock to the audio clock if has audio
     const qreal diff = d->decoder->diff();
+    static qreal oldDiff = 0;
 
-    qreal step = (qAbs(diff) - ALLOW_DIFF) * d->interval;
-    if(qAbs(step) >= 5)
+    if(diff >= ALLOW_DIFF)          // Too slow
     {
-        if(diff > 0.3)
+        if(d->updater->interval() < 2)
         {
             AVFrame *frame = d->decoder->takeVideoFrame();
             av_frame_free(&frame);
         }
         else
-            d->updater->setInterval(
-                static_cast<int>(diff > 0 ? d->interval - step : d->interval + step));
+        {
+            if(diff > oldDiff)
+                d->updater->setInterval(d->updater->interval() - 1);
+        }
     }
+    else if(diff <= -ALLOW_DIFF)    // Too quick
+    {
+        if(diff < oldDiff && d->updater->interval() >= 2)
+            d->updater->setInterval(d->updater->interval() + 1);
+    }
+
+    oldDiff = diff;
 }

@@ -325,7 +325,7 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
 
     m_mutex.unlock();
 
-    if(m_videoCache.count() <= VIDEO_CACHE_SIZE / 2)
+    if(m_videoCache.count() <= VIDEO_CACHE_SIZE / 2 && !m_isDecodeFinished)
         emit callDecodec();
 
     return frame;
@@ -357,7 +357,7 @@ const QByteArray FFmpegDecoder::takeAudioData(int len)
 
     m_isPtsUpdated = true;
 
-    if(m_audioCache.size() < AUDIO_CACHE_SIZE / 2)
+    if(m_audioCache.size() < AUDIO_CACHE_SIZE / 2 && !m_isDecodeFinished)
         emit callDecodec();
 
     return ret;
@@ -382,10 +382,10 @@ const QAudioFormat FFmpegDecoder::audioFormat() const
 
 qreal FFmpegDecoder::fps() const
 {
-    if(m_state == Closed)
-        return 0.0;
+    if(m_hasVideo)
+        return av_q2d(m_videoStream->avg_frame_rate);
 
-    return av_q2d((m_hasVideo ? m_videoStream : m_audioStream)->avg_frame_rate);
+    return 0.0;
 }
 
 void FFmpegDecoder::decode()
