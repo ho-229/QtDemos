@@ -208,7 +208,7 @@ void VideoPlayer::updateFrame()
     }
 
     const qreal diff = d->decoder->diff();
-    static qreal oldDiff = 0;
+    static qreal lastDiff = 0;
 
     if(diff >= ALLOW_DIFF)          // Too slow
     {
@@ -219,15 +219,15 @@ void VideoPlayer::updateFrame()
         }
         else
         {
-            if(diff > oldDiff)
+            if(diff - lastDiff > ALLOW_DIFF / 2)
                 d->updater->setInterval(d->updater->interval() - 1);
         }
     }
     else if(diff <= -ALLOW_DIFF)    // Too quick
     {
-        if(diff < oldDiff && d->updater->interval() >= 2)
+        if(diff - lastDiff < ALLOW_DIFF / 2)
             d->updater->setInterval(d->updater->interval() + 1);
     }
 
-    oldDiff = diff;
+    lastDiff = diff;
 }
