@@ -9,8 +9,6 @@
 
 #include "videoplayer.h"
 
-#include <QTimer>
-
 class AudioOutput;
 class VideoRenderer;
 class FFmpegDecoder;
@@ -19,8 +17,6 @@ class VideoPlayerPrivate
 {
 public:
     VideoPlayerPrivate(VideoPlayer *parent) : q_ptr(parent) {}
-
-    QTimer *updater = nullptr;
 
     QThread *decodeThread  = nullptr;
     FFmpegDecoder *decoder = nullptr;
@@ -33,7 +29,9 @@ public:
     bool isVideoInfoChanged = false;
 
     int position = 0;
-    qreal interval = 0;
+
+    int interval = 0;
+    int timerId = -1;
 
     QQuickWindow* window() const { return q_ptr->window(); }
 

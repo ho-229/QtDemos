@@ -18,10 +18,6 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
 {
     Q_D(VideoPlayer);
 
-    d->updater = new QTimer(this);
-    QObject::connect(d->updater, &QTimer::timeout, this,
-                     &VideoPlayer::updateFrame);
-
     d->decodeThread = new QThread(this);
 
     d->decoder = new FFmpegDecoder(nullptr);
@@ -93,18 +89,16 @@ void VideoPlayer::play(bool playing)
         }
 
         qDebug() << "fps:" << d->decoder->fps();
-        d->interval = 1000 / d->decoder->fps();
+        d->interval = static_cast<int>(1000 / d->decoder->fps());
 
-        this->updateFrame();
-
-        d->updater->start(static_cast<int>(d->interval));
+        d->timerId = this->startTimer(d->interval);
 
         d->audioOutput->start();
     }
     else
     {
         if(!d->isPaused)
-            d->updater->stop();
+            this->killTimer(d->timerId);
 
         d->audioOutput->stop();
         d->decoder->release();
@@ -133,9 +127,9 @@ void VideoPlayer::pause(bool paused)
         return;
 
     if(paused)
-        d->updater->stop();
+        this->killTimer(d->timerId);
     else
-        d->updater->start(static_cast<int>(d->interval));
+        d->timerId = this->startTimer(d->interval);
 
     d->audioOutput->pause(paused);
 
@@ -187,7 +181,7 @@ void VideoPlayer::seek(int position)
     emit positionChanged(position);
 }
 
-void VideoPlayer::updateFrame()
+void VideoPlayer::timerEvent(QTimerEvent *)
 {
     Q_D(VideoPlayer);
 
@@ -212,22 +206,36 @@ void VideoPlayer::updateFrame()
 
     if(diff >= ALLOW_DIFF)          // Too slow
     {
-        if(d->updater->interval() < 2)
+        if(d->interval <= 10)
         {
             AVFrame *frame = d->decoder->takeVideoFrame();
             av_frame_free(&frame);
         }
         else
         {
-            if(diff - lastDiff > ALLOW_DIFF / 2)
-                d->updater->setInterval(d->updater->interval() - 1);
+            if(diff > lastDiff)
+            {
+                --d->interval;
+                this->updateTimer();
+            }
         }
     }
     else if(diff <= -ALLOW_DIFF)    // Too quick
     {
-        if(diff - lastDiff < ALLOW_DIFF / 2)
-            d->updater->setInterval(d->updater->interval() + 1);
+        if(diff < lastDiff)
+        {
+            ++d->interval;
+            this->updateTimer();
+        }
     }
 
     lastDiff = diff;
+}
+
+void VideoPlayer::updateTimer()
+{
+    Q_D(VideoPlayer);
+
+    this->killTimer(d->timerId);
+    d->timerId = this->startTimer(d->interval);
 }

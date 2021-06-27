@@ -69,13 +69,14 @@ signals:
     void hasVideoChanged(bool hasVideo);
     void hasAudioChanged(bool hasAudio);
 
-private slots:
-    void updateFrame();
-
 private:
     VideoPlayerPrivate * const d_ptr;
 
     Q_DECLARE_PRIVATE(VideoPlayer)
+
+    void timerEvent(QTimerEvent *) Q_DECL_OVERRIDE;
+
+    inline void updateTimer();
 
 };
 
