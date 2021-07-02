@@ -33,6 +33,8 @@ public:
     int interval = 0;
     int timerId = -1;
 
+    qreal lastDiff = 0, totalStep = 0;
+
     QQuickWindow* window() const { return q_ptr->window(); }
 
 private:

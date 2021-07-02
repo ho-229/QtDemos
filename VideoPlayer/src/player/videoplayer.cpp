@@ -89,9 +89,11 @@ void VideoPlayer::play(bool playing)
         }
 
         qDebug() << "fps:" << d->decoder->fps();
-        d->interval = static_cast<int>(1000 / d->decoder->fps());
 
+        d->interval = static_cast<int>(1000 / d->decoder->fps());
         d->timerId = this->startTimer(d->interval);
+        d->lastDiff = 0;
+        d->totalStep = 0;
 
         d->audioOutput->start();
     }
@@ -202,19 +204,19 @@ void VideoPlayer::timerEvent(QTimerEvent *)
     }
 
     const qreal diff = d->decoder->diff();
-    static qreal lastDiff = 0;
 
     if(diff >= ALLOW_DIFF)          // Too slow
     {
-        if(d->interval <= 10)
+        if(d->interval <= 10 || diff > ALLOW_DIFF * 2)
         {
             AVFrame *frame = d->decoder->takeVideoFrame();
             av_frame_free(&frame);
         }
         else
         {
-            if(diff > lastDiff)
+            if(diff - d->lastDiff > ALLOW_DIFF / 2 && d->totalStep < 9)
             {
+                ++d->totalStep;
                 --d->interval;
                 this->updateTimer();
             }
@@ -222,14 +224,15 @@ void VideoPlayer::timerEvent(QTimerEvent *)
     }
     else if(diff <= -ALLOW_DIFF)    // Too quick
     {
-        if(diff < lastDiff)
+        if(d->lastDiff - diff > ALLOW_DIFF / 2 && d->totalStep > -4)
         {
+            --d->totalStep;
             ++d->interval;
             this->updateTimer();
         }
     }
 
-    lastDiff = diff;
+    d->lastDiff = diff;
 }
 
 void VideoPlayer::updateTimer()
