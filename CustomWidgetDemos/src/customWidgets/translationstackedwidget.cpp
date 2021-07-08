@@ -15,8 +15,8 @@ TranslationStackedWidget::TranslationStackedWidget(QWidget *parent) :
     QStackedWidget(parent),
     m_animation(new QVariantAnimation(this))
 {
-    m_animation->setDuration(400);
-    m_animation->setEasingCurve(QEasingCurve::InOutQuart);
+    m_animation->setDuration(500);
+    m_animation->setEasingCurve(QEasingCurve::OutQuint);
 
     connect(m_animation, &QVariantAnimation::finished, this,
             &TranslationStackedWidget::on_finished);
@@ -126,14 +126,14 @@ void TranslationStackedWidget::updateAnimation()
     if(m_nextIndex < this->currentIndex())
     {
         // Last page
-        m_animation->setStartValue(0 - this->width());
+        m_animation->setStartValue(-this->width() + 1);
         m_animation->setEndValue(0);
     }
     else
     {
         // Next page
         m_animation->setStartValue(0);
-        m_animation->setEndValue(0 - this->width());
+        m_animation->setEndValue(-this->width() - 1);
     }
 }
 
