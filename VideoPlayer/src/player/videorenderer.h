@@ -30,10 +30,6 @@ public:
 
     void synchronize(QQuickFramebufferObject *) Q_DECL_OVERRIDE;
 
-    void updateTextureInfo();
-
-    void updateTextureData(AVFrame *frame);
-
 private:
     FFmpegDecoder *m_decoder = nullptr;
 
@@ -61,6 +57,9 @@ private:
 
     GLint m_pixFmt = 0;
     bool m_textureAlloced = false;
+
+    void updateTextureInfo();
+    void updateTextureData(AVFrame *frame);
 
     inline void initShader();
     inline void initTexture();

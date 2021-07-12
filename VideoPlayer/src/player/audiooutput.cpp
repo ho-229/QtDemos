@@ -10,78 +10,78 @@
 #include <QAudioOutput>
 
 AudioOutput::AudioOutput(FFmpegDecoder *decoder, QObject *parent) :
-    QObject(parent),
-    m_decoder(decoder)
+    QObject(parent)
 {
-    if(!m_decoder)
+    if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_TIMER) < 0)
+        FUNC_ERROR << "Could not initialize SDL2:" << SDL_GetError();
+
+    if(!decoder)
         qCritical() << __FUNCTION__ << ": Decoder is not valid";
+
+    m_userData.decoder = decoder;
 }
 
-void AudioOutput::setAudioFormat(const QAudioFormat format)
+void AudioOutput::setAudioFormat(const SDL_AudioSpec format)
 {
-    m_format = format;
+    m_audioBuffer = format;
+
+    if(!m_audioBuffer.format)
+        FUNC_ERROR << ": This format is not support";
 }
 
 void AudioOutput::setVolume(qreal volume)
 {
-    if(!m_output)
-        return;
-
-    m_output->setVolume(volume);
+    m_userData.volume = int(volume * SDL_MIX_MAXVOLUME);
 }
 
 qreal AudioOutput::volume() const
 {
-    return m_output ? m_output->volume() : 0;
+    return m_userData.volume / SDL_MIX_MAXVOLUME;
 }
 
-void AudioOutput::start()
+void AudioOutput::play()
 {
-    QAudioDeviceInfo info(QAudioDeviceInfo::defaultOutputDevice());
-    if (!m_decoder->hasAudio() || !info.isFormatSupported(m_format))
+    m_audioBuffer.userdata = &m_userData;
+    m_audioBuffer.callback = fillBuffer;
+
+    if(SDL_OpenAudio(&m_audioBuffer, nullptr) < 0)
     {
-        qCritical() << __FUNCTION__
-                    << ": Raw audio format not supported by backend, cannot play audio.";
+        FUNC_ERROR << ":Can not open audio";
         return;
     }
 
-    m_output = new QAudioOutput(m_format, this);
-    m_output->setBufferSize(65536);
-    m_audioBuffer = m_output->start();
-
-    QObject::connect(m_output, &QAudioOutput::stateChanged, this,
-                     [this](QAudio::State state) {
-                         if(state == QAudio::IdleState && m_decoder->hasFrame())
-                         {
-                             this->stop();
-                             this->start();
-                         }
-                     });
+    SDL_PauseAudio(false);
 }
 
-void AudioOutput::pause(bool pause)
+void AudioOutput::pause()
 {
-    if(!m_output)
-        return;
+    SDL_PauseAudio(true);
+}
 
-    if(pause)
-        m_output->suspend();
-    else
-        m_output->resume();
+void AudioOutput::resume()
+{
+    SDL_PauseAudio(false);
 }
 
 void AudioOutput::stop()
 {
-    if(!m_output)
-        return;
-
-    m_output->stop();
-    m_output->deleteLater();
-    m_output = nullptr;
+    SDL_PauseAudio(true);
+    SDL_CloseAudio();
 }
 
-void AudioOutput::update()
+void AudioOutput::fillBuffer(void *userdata, Uint8 *stream, int len)
 {
-    if(m_output && m_output->bytesFree() > 4096)
-        m_audioBuffer->write(m_decoder->takeAudioData(m_output->bytesFree()));
+    if(!len)
+        return;
+
+    SDL_memset(stream, 0, size_t(len));
+    AudioUserData *user = reinterpret_cast<AudioUserData *>(userdata);
+
+    const QByteArray data(user->decoder->takeAudioData(len));
+
+    if(data.isEmpty())
+        return;
+
+    SDL_MixAudio(stream, reinterpret_cast<const uint8_t *>(data.data()),
+                 static_cast<Uint32>(data.size()), user->volume);
 }

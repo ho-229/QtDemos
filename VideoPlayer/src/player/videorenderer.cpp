@@ -74,7 +74,7 @@ void VideoRenderer::synchronize(QQuickFramebufferObject *)
 
 void VideoRenderer::updateTextureInfo()
 {
-    VideoInfo info(m_decoder->videoInfo());
+    const VideoInfo info(m_decoder->videoInfo());
 
     destoryTexture(m_textureY);
     destoryTexture(m_textureU);
@@ -153,7 +153,7 @@ void VideoRenderer::paint()
     m_verticesHandle = m_program.attributeLocation("qt_Vertex");
     m_texCoordHandle = m_program.attributeLocation("texCoord");
 
-    // 顶点
+    // Vertex
     m_program.enableAttributeArray(m_verticesHandle);
     m_program.setAttributeArray(m_verticesHandle, m_vertices.constData());
 
@@ -185,6 +185,7 @@ void VideoRenderer::paint()
     m_program.setUniformValue("tex_y", 0);
     m_program.setUniformValue("tex_u", 1);
     m_program.setUniformValue("tex_v", 2);
+    m_program.setUniformValue("tex_sub", 3);
 
     glDrawArrays(GL_TRIANGLE_FAN, 0, m_vertices.size());
 
@@ -239,13 +240,14 @@ void VideoRenderer::initTexture()
 void VideoRenderer::initGeometry()
 {
     m_vertices << QVector3D(-1, 1, 0.0f)
-              << QVector3D(1, 1, 0.0f)
-              << QVector3D(1, -1, 0.0f)
-              << QVector3D(-1, -1, 0.0f);
-    m_texcoords<< QVector2D(0, 1)
-               << QVector2D(1, 1)
-               << QVector2D(1, 0)
-               << QVector2D(0, 0);
+               << QVector3D(1, 1, 0.0f)
+               << QVector3D(1, -1, 0.0f)
+               << QVector3D(-1, -1, 0.0f);
+
+    m_texcoords << QVector2D(0, 1)
+                << QVector2D(1, 1)
+                << QVector2D(1, 0)
+                << QVector2D(0, 0);
 
     m_viewMatrix.setToIdentity();
     m_viewMatrix.lookAt(QVector3D(0.0f, 0.0f, 1.001f), QVector3D(0.0f, 0.0f, -5.0f),

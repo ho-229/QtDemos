@@ -12,13 +12,17 @@
 #include <QDebug>
 #include <QMutex>
 #include <QObject>
-#include <QAudioFormat>
 #include <QContiguousCache>
 
 #include "ffmpeg.h"
 
+extern "C"          // Import SDL 2
+{
+#include <SDL.h>
+}
+
 #define VIDEO_CACHE_SIZE 128
-#define AUDIO_CACHE_SIZE 512
+#define AUDIO_CACHE_SIZE 256
 #define SUBTITLE_CACHE_SIZE 64
 
 #define FUNC_ERROR qCritical() << __FUNCTION__
@@ -33,12 +37,6 @@ typedef QPair<QSize,            // Size
 typedef QPair<qint64,           // PTS
               QByteArray>       // PCM data
     AudioFrame;
-
-typedef struct
-{
-    AVSubtitle subtitle;
-    QString text;
-} SubtitleFrame;
 
 class FFmpegDecoder : public QObject
 {
@@ -84,11 +82,17 @@ public:
 
     VideoInfo videoInfo() const;
 
+    QSize subtitleSize() const { return m_subtitleCodecContext ?
+                                      QSize(m_subtitleCodecContext->width,
+                                            m_subtitleCodecContext->height) : QSize(); }
+
     AVFrame* takeVideoFrame();
 
     const QByteArray takeAudioData(int len);
 
-    const QAudioFormat audioFormat() const;
+    AVFrame* takeSubtitleFrame();
+
+    const SDL_AudioSpec audioFormat() const;
 
     qreal fps() const;
 
@@ -134,9 +138,9 @@ private:
     SwrContext *m_swrContext = nullptr;
     SwsContext *m_swsContext = nullptr;
 
-    QContiguousCache<AVFrame *>     m_videoCache;
-    QContiguousCache<AudioFrame>    m_audioCache;
-    QContiguousCache<SubtitleFrame> m_subtitleCache;
+    QContiguousCache<AVFrame *>  m_videoCache;
+    QContiguousCache<AVFrame *>  m_subtitleCache;
+    QContiguousCache<AudioFrame> m_audioCache;
 
     bool m_hasVideo = false;
     bool m_hasAudio = false;
@@ -167,6 +171,12 @@ private:
     static bool initSubtitleFilter(AVFilterContext * &buffersrcContext,
                                    AVFilterContext * &buffersinkContext,
                                    const QString &args, const QString &filterDesc);
+
+    /**
+     * @ref ffmpeg.c line:181 : static void sub2video_copy_rect()
+     */
+    static void mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
+                              AVSubtitleRect *r);
 };
 
 #endif // FFMPEGDECODER_H

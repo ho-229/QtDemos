@@ -7,11 +7,13 @@
 #ifndef AUDIOOUTPUT_H
 #define AUDIOOUTPUT_H
 
-#include <QObject>
-#include <QAudioFormat>
+extern "C"
+{
+#include <SDL.h>
+}
 
-class QIODevice;
-class QAudioOutput;
+#include <QObject>
+
 class FFmpegDecoder;
 
 class AudioOutput : public QObject
@@ -20,27 +22,29 @@ class AudioOutput : public QObject
 public:
     explicit AudioOutput(FFmpegDecoder * decoder, QObject *parent = nullptr);
 
-    void setAudioFormat(const QAudioFormat format);
-    QAudioFormat format() const { return m_format; }
+    void setAudioFormat(const SDL_AudioSpec format);
 
     void setVolume(qreal volume);
     qreal volume() const;
 
-    void start();
-    void pause(bool pause);
+    void play();
+    void pause();
+    void resume();
     void stop();
-
-    void update();
 
 signals:
 
 private:
-    QAudioFormat m_format;
-    QAudioOutput *m_output = nullptr;
+    struct AudioUserData
+    {
+        FFmpegDecoder *decoder = nullptr;
+        int volume = SDL_MIX_MAXVOLUME;
+    } m_userData;
 
-    QIODevice *m_audioBuffer = nullptr;
+    SDL_AudioSpec m_audioBuffer;
 
-    FFmpegDecoder *m_decoder = nullptr;
+    static void SDLCALL fillBuffer(void *userdata, Uint8 *stream,
+                                   int len);
 };
 
 #endif // AUDIOOUTPUT_H

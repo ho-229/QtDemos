@@ -9,6 +9,7 @@
 #include <QDir>
 #include <QThread>
 #include <QFileInfo>
+#include <QMutexLocker>
 
 FFmpegDecoder::FFmpegDecoder(QObject *parent) :
     QObject(parent)
@@ -334,7 +335,6 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
 const QByteArray FFmpegDecoder::takeAudioData(int len)
 {
     m_mutex.lock();
-
     if(m_state == Closed || m_audioCache.isEmpty() || !len)
     {
         m_mutex.unlock();
@@ -344,7 +344,7 @@ const QByteArray FFmpegDecoder::takeAudioData(int len)
     int free = len;
     QByteArray ret;
 
-    while(!m_audioCache.isEmpty() && m_audioCache.first().second.size() < free)
+    do
     {
         const AudioFrame frame = m_audioCache.takeFirst();
 
@@ -353,6 +353,8 @@ const QByteArray FFmpegDecoder::takeAudioData(int len)
 
         free -= frame.second.size();
     }
+    while(!m_audioCache.isEmpty() && m_audioCache.first().second.size() <= free);
+
     m_mutex.unlock();
 
     m_isPtsUpdated = true;
@@ -363,18 +365,29 @@ const QByteArray FFmpegDecoder::takeAudioData(int len)
     return ret;
 }
 
-const QAudioFormat FFmpegDecoder::audioFormat() const
+AVFrame *FFmpegDecoder::takeSubtitleFrame()
 {
-    QAudioFormat format;
+    QMutexLocker locker(&m_mutex);
+
+    if(m_subtitleCache.isEmpty())
+        return nullptr;
+
+    qDebug()<<m_subtitleCache.count();
+
+    return m_subtitleCache.takeFirst();
+}
+
+const SDL_AudioSpec FFmpegDecoder::audioFormat() const
+{
+    SDL_AudioSpec format;
 
     if(m_state == Opened && m_hasAudio)
     {
-        format.setSampleRate(m_audioCodecContext->sample_rate);
-        format.setChannelCount(2);
-        format.setSampleSize(16);
-        format.setSampleType(QAudioFormat::SignedInt);
-        format.setByteOrder(QAudioFormat::LittleEndian);
-        format.setCodec("audio/pcm");
+        format.freq = m_audioCodecContext->sample_rate;
+        format.channels = static_cast<uint8_t>(m_audioCodecContext->channels);
+        format.silence = 0;
+        format.samples = static_cast<Uint16>(m_audioCodecContext->frame_size);
+        format.format = AUDIO_S16;
     }
 
     return format;
@@ -500,39 +513,34 @@ void FFmpegDecoder::decode()
         }
 
         // Subtitle frame decode
-        /*else if(m_subtitleCodecContext && packet->stream_index == m_subtitleStream->index)
+        else if(m_subtitleCodecContext && packet->stream_index == m_subtitleStream->index)
         {
             int isGet = 0;
             AVSubtitle subtitle;
+            AVFrame *frame = av_frame_alloc();
             if(avcodec_decode_subtitle2(m_subtitleCodecContext,
-                                         &subtitle, &isGet, packet) > 0)
+                                         &subtitle, &isGet, packet) > 0 && isGet)
             {
-                if(isGet)
-                {
-                    m_subtitleCache.append({{subtitle}, {}});
-                    qDebug()<<"isGet"<<m_subtitleCache.count();
-                }
-                else
-                {
-                    SubtitleFrame frame;
+                frame->pts = subtitle.pts;
+                frame->width = m_subtitleCodecContext->width;
+                frame->height = m_subtitleCodecContext->height;
+                frame->format = AV_PIX_FMT_RGB32;
 
-                    frame.subtitle.format = 1;
-                    frame.subtitle.pts = packet->pts;
-                    frame.subtitle.start_display_time = uint32_t(
-                        second(packet->pts, m_subtitleStream->time_base) * 1000);
-                    frame.subtitle.end_display_time
-                        = frame.subtitle.start_display_time
-                          + uint32_t(second(packet->duration, m_subtitleStream->time_base)
-                                     * 1000);
+                av_frame_get_buffer(frame, 0);
 
-                    frame.text = reinterpret_cast<const char *>(packet->data);
+                for(uint i = 0; i < subtitle.num_rects; ++i)
+                    mergeSubtitle(frame->data[0], frame->linesize[0],
+                                  frame->width, frame->height, subtitle.rects[i]);
 
-                    m_subtitleCache.append(frame);
-                }
+                m_mutex.lock();
+                m_subtitleCache.append(frame);
+                m_mutex.unlock();
+
+                avsubtitle_free(&subtitle);
             }
             else
-                qDebug()<<"Decode failed";
-        }*/
+                av_frame_free(&frame);
+        }
 
         av_packet_free(&packet);
     }
@@ -687,4 +695,39 @@ bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
 
     release();
     return true;
+}
+
+void FFmpegDecoder::mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
+                                  AVSubtitleRect *r)
+{
+    uint32_t *pal, *dst2;
+    uint8_t *src, *src2;
+    int x, y;
+
+    if (r->type != SUBTITLE_BITMAP)
+    {
+        FUNC_ERROR << ": non-bitmap subtitle\n";
+        return;
+    }
+
+    if (r->x < 0 || r->x + r->w > w || r->y < 0 || r->y + r->h > h)
+    {
+        FUNC_ERROR << ": rectangle overflowing\n";
+        return;
+    }
+
+    dst += r->y * dst_linesize + r->x * 4;
+    src = r->data[0];
+    pal = reinterpret_cast<uint32_t *>(r->data[1]);
+    for (y = 0; y < r->h; y++)
+    {
+        dst2 = reinterpret_cast<uint32_t *>(dst);
+        src2 = src;
+
+        for (x = 0; x < r->w; x++)
+            *(dst2++) = pal[*(src2++)];
+
+        dst += dst_linesize;
+        src += r->linesize[0];
+    }
 }

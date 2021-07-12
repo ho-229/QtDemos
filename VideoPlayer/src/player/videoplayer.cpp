@@ -44,7 +44,7 @@ QQuickFramebufferObject::Renderer *VideoPlayer::createRenderer() const
     return new VideoRenderer(d_ptr);    // Create custom renderer
 }
 
-void VideoPlayer::setSource(const QUrl &source)
+void VideoPlayer::setSource(const QUrl& source)
 {
     Q_D(VideoPlayer);
 
@@ -95,7 +95,7 @@ void VideoPlayer::play(bool playing)
         d->lastDiff = 0;
         d->totalStep = 0;
 
-        d->audioOutput->start();
+        d->audioOutput->play();
     }
     else
     {
@@ -129,11 +129,15 @@ void VideoPlayer::pause(bool paused)
         return;
 
     if(paused)
+    {
         this->killTimer(d->timerId);
+        d->audioOutput->pause();
+    }
     else
+    {
         d->timerId = this->startTimer(d->interval);
-
-    d->audioOutput->pause(paused);
+        d->audioOutput->resume();
+    }
 
     d->isPaused = paused;
     emit pausedChanged(paused);
@@ -188,7 +192,6 @@ void VideoPlayer::timerEvent(QTimerEvent *)
     Q_D(VideoPlayer);
 
     d->isUpdated = true;
-    d->audioOutput->update();
     this->update();
 
     if(d->decoder->position() != d->position)
@@ -224,7 +227,7 @@ void VideoPlayer::timerEvent(QTimerEvent *)
     }
     else if(diff <= -ALLOW_DIFF)    // Too quick
     {
-        if(d->lastDiff - diff > ALLOW_DIFF / 2 && d->totalStep > -4)
+        if(diff - d->lastDiff > -ALLOW_DIFF / 2)
         {
             --d->totalStep;
             ++d->interval;
