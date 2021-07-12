@@ -25,10 +25,11 @@
   MultithreadedDownloader *downloader = new MultithreadedDownloader(this);
   downloader->setUrl("https://mirrors.tuna.tsinghua.edu.cn/qt/official_releases/qt/5.15/5.15.2/submodules/qtbase-everywhere-src-5.15.2.zip");
 
-  if(!downloader->initDownload())
-    return; // Failed to get resource.
+  if(!downloader->load())
+    return;                 // Failed to get resource.
   
-  downloader->start();
+  QDir::setCurrent("./");   // Set download path
+  downloader->start();      // Start download
   ```
 ------
 ### 原理介绍

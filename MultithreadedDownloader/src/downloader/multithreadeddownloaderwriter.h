@@ -25,13 +25,13 @@ public:
      * @brief 打开文件
      * @return 操作是否成功
      */
-    bool openFile()
+    bool open()
     { return m_downloadFile.open(QFile::WriteOnly) && m_downloadFile.resize(m_fileSize); }
 
     /**
      * @brief 关闭文件
      */
-    void closeFile()
+    void close()
     { m_downloadFile.close(); }
 
     /**
@@ -40,13 +40,6 @@ public:
      */
     void setFileName(const QString& name){ m_downloadFile.setFileName(name); }
     QString fileName() const { return m_downloadFile.fileName(); }
-
-    /**
-     * @brief 设置下载文件目录
-     * @param dir 下载文件目录
-     */
-    void setDownloadDir(const QString& dir){ QDir::setCurrent(dir); }
-    QString downloadDir() const { return QDir::currentPath(); }
 
     /**
      * @brief 设置下载文件大小

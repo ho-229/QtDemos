@@ -31,15 +31,15 @@ public:
      * @brief 设置下载线程数
      * @param num 下载线程数
      */
-    void setThreadNumber(int num){ m_threadNumber = num; }
-    int threadNumber() const { return m_threadNumber; }
+    void setThreadCount(int num){ m_threadCount = num; }
+    int threadCount() const { return m_threadCount; }
 
     /**
      * @brief 初始化下载
      * @note 获取下载文件大小，文件名
      * @return 是否成功
      */
-    bool initDownload();
+    bool load();
 
     /**
      * @brief 设置下载文件名
@@ -47,13 +47,6 @@ public:
      */
     void setFileName(const QString& name){ m_writer->setFileName(name); }
     QString fileName() const { return m_writer->fileName(); }
-
-    /**
-     * @brief 设置下载文件目录
-     * @param dir 下载文件目录
-     */
-    void setDownloadDir(const QString& dir){ m_writer->setDownloadDir(dir); }
-    QString downloadDir() const { return m_writer->downloadDir(); }
 
     /**
      * @return 下载文件大小
@@ -79,7 +72,7 @@ private:
     QNetworkAccessManager* m_manager = nullptr;
     MultithreadedDownloaderWriter *m_writer = nullptr;
 
-    int m_threadNumber = 0;
+    int m_threadCount = 0;
     int m_finishedCount = 0;
 
     int m_timerId = 0;

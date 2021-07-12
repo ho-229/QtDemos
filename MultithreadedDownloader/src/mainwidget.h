@@ -28,7 +28,7 @@ public:
     void initThreadNumber(int num)
     {
         if(num > 0)
-            m_downloader->setThreadNumber(num);
+            m_downloader->setThreadCount(num);
     }
 
     void initDownloadUrl(const QString& url);

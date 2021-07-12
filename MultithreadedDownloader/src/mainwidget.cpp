@@ -105,7 +105,7 @@ void MainWidget::on_downloadBtn_clicked()
     }
 
     m_downloader->setUrl(url);
-    if(m_downloader->initDownload())
+    if(m_downloader->load())
     {
         ui->failedLabel->hide();
 
@@ -123,7 +123,7 @@ void MainWidget::on_downloadBtn_clicked()
 
         ui->stackedWidget->moveToIndex(1);
 
-        m_downloader->setDownloadDir(dir);
+        QDir::setCurrent(dir);
         m_downloader->start();
     }
     else
