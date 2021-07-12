@@ -24,7 +24,8 @@ public:
 
     virtual ~AbstractMission() Q_DECL_OVERRIDE = default;
 
-    void setUrl(QUrl url)
+    template <typename T>
+    void setUrl(const T& url)
     {
         m_url = url;
         if(!m_url.isValid())
@@ -53,7 +54,9 @@ protected:
     inline void setFinished(const bool isFinished = true)
     {
         m_isFinished = isFinished;
-        if(isFinished)  emit finished();
+
+        if(isFinished)
+            emit finished();
     }
 
     QUrl m_url;
