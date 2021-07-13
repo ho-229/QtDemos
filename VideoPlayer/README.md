@@ -5,11 +5,11 @@
 ![image](./screenshot/run.png)
 
 ## Featrues
-- [ ] Play audio and video.
-- [ ] Play progress control.
-- [ ] Play volume control.
-- [x] Audio track select.
-- [x] Subtitle support.
-  - [ ] `.ass` subtitle support.
-  - [x] `Bitmap` subtitle support.
-- [x] Subtitle track select.
+- [x] Play audio and video.
+- [x] Play progress control.
+- [x] Play volume control.
+- [ ] Audio track select.
+- [ ] Subtitle support.
+  - [x] `.ass` subtitle support.
+  - [ ] `Bitmap` subtitle support.
+- [ ] Subtitle track select.
