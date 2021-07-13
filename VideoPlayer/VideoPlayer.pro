@@ -1,4 +1,4 @@
-QT += quick multimedia
+QT += quick
 
 CONFIG += c++11
 
@@ -28,16 +28,14 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 win32 {
     # FFmpeg
-    LIBS += -L$$PWD/ffmpeg/win64/lib/ -lavutil -lavcodec -lavformat -lavfilter -lswresample -lswscale
-    INCLUDEPATH += $$PWD/ffmpeg/win64/include
-    DEPENDPATH += $$PWD/ffmpeg/win64/include
+    LIBS += -L$$(FFMPEG_PATH)/lib/ -lavutil -lavcodec -lavformat -lavfilter -lswresample -lswscale
+    INCLUDEPATH += $$(FFMPEG_PATH)/include
+    DEPENDPATH += $$(FFMPEG_PATH)/include
 
     # SDL2
     LIBS += -L$$(SDL_PATH)/lib/x64/ -lSDL2
     INCLUDEPATH += $$(SDL_PATH)/include
     DEPENDPATH += $$(SDL_PATH)/include
-
-    message($$(PATH))
 }
 
 unix {
