@@ -7,18 +7,21 @@
 #include "audiooutput.h"
 #include "ffmpegdecoder.h"
 
-#include <QAudioOutput>
-
 AudioOutput::AudioOutput(FFmpegDecoder *decoder, QObject *parent) :
     QObject(parent)
 {
-    if(SDL_Init(SDL_INIT_AUDIO | SDL_INIT_TIMER) < 0)
-        FUNC_ERROR << "Could not initialize SDL2:" << SDL_GetError();
+    if(SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
+        FUNC_ERROR << "Could not initialize SDL2 AUDIO:" << SDL_GetError();
 
     if(!decoder)
         qCritical() << __FUNCTION__ << ": Decoder is not valid";
 
     m_userData.decoder = decoder;
+}
+
+AudioOutput::~AudioOutput()
+{
+    SDL_QuitSubSystem(SDL_INIT_AUDIO);
 }
 
 void AudioOutput::setAudioFormat(const SDL_AudioSpec format)

@@ -6,6 +6,7 @@
 
 #include "videorenderer.h"
 #include "videoplayer_p.h"
+#include "subtitlerenderer.h"
 
 #include <QQuickWindow>
 #include <QOpenGLTexture>
@@ -268,6 +269,10 @@ void VideoRenderer::resize()
 
     m_viewRect.setSize(videoSize.scaled(m_size, Qt::KeepAspectRatio));
     m_viewRect.moveCenter(screenRect.center());
+
+    m_player_p->subtitleRenderer->setX(m_viewRect.x());
+    m_player_p->subtitleRenderer->setY(m_viewRect.y());
+    m_player_p->subtitleRenderer->setSize(m_viewRect.size());
 }
 
 void VideoRenderer::destoryTexture(QOpenGLTexture *&texture)

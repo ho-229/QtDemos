@@ -8,6 +8,7 @@
 #include "videoplayer.h"
 #include "videoplayer_p.h"
 #include "videorenderer.h"
+#include "subtitlerenderer.h"
 
 #include <QThread>
 #include <QTimerEvent>
@@ -23,7 +24,10 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
     d->decoder = new FFmpegDecoder(nullptr);
     d->decoder->moveToThread(d->decodeThread);
 
-    d->audioOutput = new AudioOutput(d->decoder, this);    
+    d->audioOutput = new AudioOutput(d->decoder, this);
+
+    d->subtitleRenderer = new SubtitleRenderer(this);
+    d->subtitleRenderer->setRenderTarget(QQuickPaintedItem::FramebufferObject);
 }
 
 VideoPlayer::~VideoPlayer()
@@ -193,6 +197,9 @@ void VideoPlayer::timerEvent(QTimerEvent *)
 
     d->isUpdated = true;
     this->update();
+
+    d->subtitleRenderer->setSize(this->size());
+    d->subtitleRenderer->render(d->decoder->takeSubtitleFrame());
 
     if(d->decoder->position() != d->position)
     {

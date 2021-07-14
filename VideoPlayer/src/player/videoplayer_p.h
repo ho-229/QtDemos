@@ -10,8 +10,8 @@
 #include "videoplayer.h"
 
 class AudioOutput;
-class VideoRenderer;
 class FFmpegDecoder;
+class SubtitleRenderer;
 
 class VideoPlayerPrivate
 {
@@ -22,6 +22,8 @@ public:
     FFmpegDecoder *decoder = nullptr;
 
     AudioOutput *audioOutput = nullptr;
+
+    SubtitleRenderer *subtitleRenderer = nullptr;
 
     bool isPaused  = false;
     bool isPlaying = false;

@@ -317,12 +317,12 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
 
     AVFrame *frame = m_videoCache.takeFirst();
 
-    const qreal videoTime = second(frame->pts, m_videoStream->time_base);
+    m_videoTime = second(frame->pts, m_videoStream->time_base);
 
     if(m_isPtsUpdated)
-        m_diff = second(m_audioPts, m_audioStream->time_base) - videoTime;
+        m_diff = second(m_audioPts, m_audioStream->time_base) - m_videoTime;
 
-    m_position = static_cast<int>(videoTime);
+    m_position = static_cast<int>(m_videoTime);
 
     m_mutex.unlock();
 
@@ -365,14 +365,17 @@ const QByteArray FFmpegDecoder::takeAudioData(int len)
     return ret;
 }
 
-AVFrame *FFmpegDecoder::takeSubtitleFrame()
+SubtitleFrame FFmpegDecoder::takeSubtitleFrame()
 {
     QMutexLocker locker(&m_mutex);
 
-    if(m_subtitleCache.isEmpty())
-        return nullptr;
+    if(!m_subtitleCache.isEmpty() && m_subtitleCache.first().pts < m_videoTime)
+        m_subtitleCache.removeFirst();
 
-    qDebug()<<m_subtitleCache.count();
+    if(m_subtitleCache.isEmpty() ||
+        m_subtitleCache.first().pts < m_videoTime ||
+        m_subtitleCache.first().pts - m_videoTime > 0.04)
+        return {};
 
     return m_subtitleCache.takeFirst();
 }
@@ -516,12 +519,13 @@ void FFmpegDecoder::decode()
         else if(m_subtitleCodecContext && packet->stream_index == m_subtitleStream->index)
         {
             int isGet = 0;
+
             AVSubtitle subtitle;
-            AVFrame *frame = av_frame_alloc();
             if(avcodec_decode_subtitle2(m_subtitleCodecContext,
                                          &subtitle, &isGet, packet) > 0 && isGet)
             {
-                frame->pts = subtitle.pts;
+                AVFrame *frame = av_frame_alloc();
+
                 frame->width = m_subtitleCodecContext->width;
                 frame->height = m_subtitleCodecContext->height;
                 frame->format = AV_PIX_FMT_RGB32;
@@ -533,13 +537,13 @@ void FFmpegDecoder::decode()
                                   frame->width, frame->height, subtitle.rects[i]);
 
                 m_mutex.lock();
-                m_subtitleCache.append(frame);
+                m_subtitleCache.append({loadFromAVFrame(frame),
+                                        second(packet->pts, m_subtitleStream->time_base)});
                 m_mutex.unlock();
 
                 avsubtitle_free(&subtitle);
-            }
-            else
                 av_frame_free(&frame);
+            }
         }
 
         av_packet_free(&packet);
@@ -556,9 +560,9 @@ void FFmpegDecoder::clearCache()
         av_frame_free(&frame);
     }
 
-    // Clear audio cache
-    if(!m_audioCache.isEmpty())
-        m_audioCache.clear();
+    // Clear audio and subtitle cache
+    m_audioCache.clear();
+    m_subtitleCache.clear();
 }
 
 bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **stream,
@@ -730,4 +734,16 @@ void FFmpegDecoder::mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
         dst += dst_linesize;
         src += r->linesize[0];
     }
+}
+
+QImage FFmpegDecoder::loadFromAVFrame(const AVFrame *frame)
+{
+    QImage image(frame->width, frame->height, QImage::Format_ARGB32);
+    image.fill(Qt::transparent);
+
+    for(int y = 0; y < frame->height; ++y)
+        memcpy(image.scanLine(y), frame->data[0] + y * frame->linesize[0],
+               size_t(frame->width * 3));
+
+    return image;
 }

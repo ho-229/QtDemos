@@ -39,9 +39,13 @@ win32 {
 }
 
 unix {
-    LIBS += -L/usr/lib/ -lavutil -lavcodec -lavformat -lavfilter -lswresample -lswscale
-    INCLUDEPATH += /usr/include
-    DEPENDPATH += /usr/include
+    LIBS += -L/usr/lib64/ -lavutil -lavcodec -lavformat -lavfilter -lswresample -lswscale
+    INCLUDEPATH += /usr/include/ffmpeg
+    DEPENDPATH += /usr/include/ffmpeg
+
+    LIBS += -L/usr/lib64/ -lSDL2
+    INCLUDEPATH += /usr/include/SDL2
+    DEPENDPATH += /usr/include/SDL2
 }
 
 win32:

@@ -21,6 +21,7 @@ class AudioOutput : public QObject
     Q_OBJECT
 public:
     explicit AudioOutput(FFmpegDecoder * decoder, QObject *parent = nullptr);
+    ~AudioOutput() Q_DECL_OVERRIDE;
 
     void setAudioFormat(const SDL_AudioSpec format);
 
@@ -43,8 +44,7 @@ private:
 
     SDL_AudioSpec m_audioBuffer;
 
-    static void SDLCALL fillBuffer(void *userdata, Uint8 *stream,
-                                   int len);
+    static void SDLCALL fillBuffer(void *userdata, Uint8 *stream, int len);
 };
 
 #endif // AUDIOOUTPUT_H

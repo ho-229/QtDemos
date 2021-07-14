@@ -11,6 +11,7 @@
 #include <QSize>
 #include <QDebug>
 #include <QMutex>
+#include <QImage>
 #include <QObject>
 #include <QContiguousCache>
 
@@ -21,9 +22,9 @@ extern "C"          // Import SDL 2
 #include <SDL.h>
 }
 
-#define VIDEO_CACHE_SIZE 128
-#define AUDIO_CACHE_SIZE 256
-#define SUBTITLE_CACHE_SIZE 64
+#define VIDEO_CACHE_SIZE 256
+#define AUDIO_CACHE_SIZE 512
+#define SUBTITLE_CACHE_SIZE 512
 
 #define FUNC_ERROR qCritical() << __FUNCTION__
 
@@ -37,6 +38,12 @@ typedef QPair<QSize,            // Size
 typedef QPair<qint64,           // PTS
               QByteArray>       // PCM data
     AudioFrame;
+
+struct SubtitleFrame
+{
+    QImage image;
+    qreal pts = -1;      // In second
+};
 
 class FFmpegDecoder : public QObject
 {
@@ -90,7 +97,7 @@ public:
 
     const QByteArray takeAudioData(int len);
 
-    AVFrame* takeSubtitleFrame();
+    SubtitleFrame takeSubtitleFrame();
 
     const SDL_AudioSpec audioFormat() const;
 
@@ -106,6 +113,7 @@ signals:
     void callSeek();            // Asynchronous call FFmpegDecoder::seek()
 
     void decodeFinished();
+    void subtitleChanged(SubtitleFrame);
 
 private slots:
     void decode();
@@ -138,9 +146,11 @@ private:
     SwrContext *m_swrContext = nullptr;
     SwsContext *m_swsContext = nullptr;
 
-    QContiguousCache<AVFrame *>  m_videoCache;
-    QContiguousCache<AVFrame *>  m_subtitleCache;
-    QContiguousCache<AudioFrame> m_audioCache;
+    QContiguousCache<AVFrame *>     m_videoCache;
+    QContiguousCache<AudioFrame>    m_audioCache;
+    QContiguousCache<SubtitleFrame> m_subtitleCache;
+
+    SubtitleFrame m_currentSubtitle;
 
     bool m_hasVideo = false;
     bool m_hasAudio = false;
@@ -152,6 +162,7 @@ private:
 
     bool m_isDecodeFinished = false;
 
+    qreal m_videoTime = 0.0;
     int m_position = 0;
     int m_targetPosition = 0;
 
@@ -177,6 +188,10 @@ private:
      */
     static void mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
                               AVSubtitleRect *r);
+
+    static QImage loadFromAVFrame(const AVFrame *frame);
 };
+
+Q_DECLARE_METATYPE(SubtitleFrame)
 
 #endif // FFMPEGDECODER_H
