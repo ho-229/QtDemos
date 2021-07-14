@@ -9,7 +9,7 @@
 - [x] Play progress control.
 - [x] Play volume control.
 - [ ] Audio track select.
-- [ ] Subtitle support.
+- [x] Subtitle support.
   - [x] `.ass` subtitle support.
-  - [ ] `Bitmap` subtitle support.
+  - [x] `Bitmap` subtitle support.
 - [ ] Subtitle track select.
