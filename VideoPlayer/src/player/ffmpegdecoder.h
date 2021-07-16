@@ -24,7 +24,7 @@ extern "C"          // Import SDL 2
 
 #define VIDEO_CACHE_SIZE 256
 #define AUDIO_CACHE_SIZE 512
-#define SUBTITLE_CACHE_SIZE 512
+#define SUBTITLE_CACHE_SIZE 256
 
 #define FUNC_ERROR qCritical() << __FUNCTION__
 
@@ -82,6 +82,11 @@ public:
     int duration() const { return m_formatContext ?
                           static_cast<int>(
                               m_formatContext->duration / AV_TIME_BASE) : 0; }
+
+    void trackedAudio(int index);
+
+    int audioTrackCount() const { return m_state == Opened ? streamCount(
+            m_formatContext, AVMEDIA_TYPE_AUDIO) : 0; }
 
     int position() const { return m_position; }
 
@@ -174,10 +179,18 @@ private:
 
     inline void clearCache();
 
+    static inline void releaseContext(AVCodecContext *&context)
+    {
+        avcodec_flush_buffers(context);
+        avcodec_free_context(&context);
+
+        context = nullptr;
+    }
+
     static bool openCodecContext(AVFormatContext *formatContext,
                                  AVStream **stream,
                                  AVCodecContext **codecContext,
-                                 AVMediaType type, int index = 0);
+                                 AVMediaType type, int index = 1);
 
     static bool initSubtitleFilter(AVFilterContext * &buffersrcContext,
                                    AVFilterContext * &buffersinkContext,
@@ -190,6 +203,11 @@ private:
                               AVSubtitleRect *r);
 
     static QImage loadFromAVFrame(const AVFrame *frame);
+
+    static int streamCount(const AVFormatContext *format, AVMediaType type);
+
+    static int findRelativeStream(const AVFormatContext *format, int relativeIndex,
+                                  AVMediaType type);
 };
 
 Q_DECLARE_METATYPE(SubtitleFrame)

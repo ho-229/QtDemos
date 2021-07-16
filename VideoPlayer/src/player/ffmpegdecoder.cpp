@@ -128,13 +128,6 @@ void FFmpegDecoder::release()
     if(!this->thread()->wait())
         FUNC_ERROR << ": Decode thread exit failed";
 
-    auto releaseContext = [](AVCodecContext *&context) {
-        avcodec_flush_buffers(context);
-        avcodec_free_context(&context);
-
-        context = nullptr;
-    };
-
     auto relaseFilter = [](AVFilterContext *&context) {
         avfilter_free(context);
         context = nullptr;
@@ -181,6 +174,24 @@ void FFmpegDecoder::release()
     m_hasAudio = false;
     m_hasVideo = false;
     m_hasSubtitle = false;
+}
+
+void FFmpegDecoder::trackedAudio(int index)
+{
+    if(!m_hasAudio|| index < 0 || index > this->audioTrackCount() ||
+        index == m_audioStream->index)
+        return;
+
+    m_mutex.lock();
+
+    this->clearCache();
+    releaseContext(m_audioCodecContext);
+    openCodecContext(m_formatContext, &m_audioStream, &m_audioCodecContext,
+                     AVMEDIA_TYPE_AUDIO, index);
+
+    m_mutex.unlock();
+
+    emit callDecodec();
 }
 
 void FFmpegDecoder::seek(int position)
@@ -338,7 +349,7 @@ const QByteArray FFmpegDecoder::takeAudioData(int len)
     if(m_state == Closed || m_audioCache.isEmpty() || !len)
     {
         m_mutex.unlock();
-        return QByteArray();
+        return {};
     }
 
     int free = len;
@@ -387,7 +398,7 @@ const SDL_AudioSpec FFmpegDecoder::audioFormat() const
     if(m_state == Opened && m_hasAudio)
     {
         format.freq = m_audioCodecContext->sample_rate;
-        format.channels = static_cast<uint8_t>(m_audioCodecContext->channels);
+        format.channels = 2;
         format.silence = 0;
         format.samples = static_cast<Uint16>(m_audioCodecContext->frame_size);
         format.format = AUDIO_S16;
@@ -572,11 +583,16 @@ bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **
     // Find stream
     int ret = 0;
     if ((ret = av_find_best_stream(formatContext,
-                                   type, -1, index, nullptr, 0)) < 0)
+                                   type, findRelativeStream(
+                                       formatContext, index, type), -1, nullptr, 0)) < 0)
     {
         FUNC_ERROR << "Could not find stream" << av_get_media_type_string(type);
         return false;
     }
+
+    qDebug()<<"find"<<findRelativeStream(formatContext, index, type);
+    qDebug()<<"ret"<<ret;
+
     *stream = formatContext->streams[ret];
 
     // Find codec
@@ -746,4 +762,29 @@ QImage FFmpegDecoder::loadFromAVFrame(const AVFrame *frame)
                size_t(frame->width * 3));
 
     return image;
+}
+
+int FFmpegDecoder::streamCount(const AVFormatContext *format, AVMediaType type)
+{
+    int count = 0;
+
+    for(size_t i = 0; i < format->nb_streams; ++i)
+        if(format->streams[i]->codecpar->codec_type == type)
+            ++count;
+
+    return count;
+}
+
+int FFmpegDecoder::findRelativeStream(const AVFormatContext *format,
+                                      int relativeIndex, AVMediaType type)
+{
+    int count = 0;
+
+    if(relativeIndex >= 1)
+        for(size_t i = 0; i < format->nb_streams; ++i)
+            if(format->streams[i]->codecpar->codec_type == type)
+                if(relativeIndex == ++count)
+                    return int(i);
+
+    return AVERROR_STREAM_NOT_FOUND;
 }

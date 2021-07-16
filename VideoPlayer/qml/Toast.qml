@@ -5,6 +5,8 @@ Rectangle {
 
     visible: false
 
+    property bool closeAvailable: true
+
     function toast() {
         if(showAnimation.running)
             return;
@@ -19,13 +21,6 @@ Rectangle {
         opacity = 0;
         visible = true;
         showAnimation.start();
-    }
-
-    MouseArea {
-        id: area
-        anchors.fill: parent
-
-        hoverEnabled: true
     }
 
     OpacityAnimator {
@@ -53,10 +48,10 @@ Rectangle {
     Timer {
         id: pauseTimer
 
-        interval: 2500
+        interval: 3000
 
         onTriggered: {
-            if(area.containsMouse)
+            if(!closeAvailable)
                 pauseTimer.restart();
             else
                 hideAnimation.start()

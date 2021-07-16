@@ -347,6 +347,76 @@ Window {
                 text: toMMSS(videoPlayer.position)
             }
         }
+
+        Button {
+            id: settingsBtn
+
+            width: 37
+            height: 37
+
+            anchors.right: fullScreenBtn.left
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.margins: 21
+
+            background: Rectangle { color: "transparent" }
+
+            icon.source: "qrc:/image/settings.png"
+            icon.color: "white"
+            icon.width: 35
+            icon.height: 35
+
+            onClicked: settingsRect.toast()
+        }
+
+        Toast {
+            id: settingsRect
+
+            visible: false
+
+            anchors.bottom: settingsBtn.top
+            anchors.horizontalCenter: settingsBtn.horizontalCenter
+            anchors.margins: 12
+
+            height: 130
+            width: 150
+
+            color: "black"
+            radius: 11
+
+            Column {
+                anchors.fill: parent
+                padding: 6
+                spacing: 6
+
+                Text {
+                    text: qsTr("Settings")
+                    color: "white"
+
+                    font.pointSize: 16
+                }
+
+                Text {
+                    text: qsTr("Audio Track")
+                    color: "white"
+
+                    font.pointSize: 11
+                }
+
+                SpinBox {
+                    from: videoPlayer.hasAudio ? 1 : 0
+                    value: videoPlayer.hasAudio ? 1 : 0
+                    to: videoPlayer.audioTrackCount
+
+                    onValueChanged: videoPlayer.trackedAudio(value)
+                }
+            }
+
+            HoverHandler { onHoveredChanged: parent.closeAvailable = !hovered }
+        }
+
+        HoverHandler { id: hoverHandler }
+
+        closeAvailable: !hoverHandler.hovered && !settingsRect.visible
     }
 
     Button {

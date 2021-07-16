@@ -84,6 +84,7 @@ void VideoPlayer::play(bool playing)
                 emit durationChanged(this->duration());
                 emit hasVideoChanged(d->decoder->hasVideo());
                 emit hasAudioChanged(d->decoder->hasAudio());
+                emit audioTrackCountChanged(d->decoder->audioTrackCount());
             }
             else
             {
@@ -164,6 +165,11 @@ qreal VideoPlayer::volume() const
     return d_ptr->audioOutput->volume();
 }
 
+int VideoPlayer::audioTrackCount() const
+{
+    return d_ptr->decoder->audioTrackCount();
+}
+
 int VideoPlayer::duration() const
 {
     return d_ptr->decoder->duration();
@@ -189,6 +195,13 @@ void VideoPlayer::seek(int position)
     Q_D(VideoPlayer);
     d->decoder->seek(position);
     emit positionChanged(position);
+}
+
+void VideoPlayer::trackedAudio(int index)
+{
+    Q_D(VideoPlayer);
+    d->decoder->trackedAudio(index);
+    emit audioTrackIndexChanged(index);
 }
 
 void VideoPlayer::timerEvent(QTimerEvent *)

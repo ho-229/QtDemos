@@ -10,6 +10,7 @@
         <file>stop.png</file>
         <file>volume.png</file>
         <file>non-volume.png</file>
+        <file>settings.png</file>
     </qresource>
     <qresource prefix="/"/>
 </RCC>

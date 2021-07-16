@@ -28,6 +28,8 @@ class VideoPlayer : public QQuickFramebufferObject
     Q_PROPERTY(bool hasVideo READ hasVideo NOTIFY hasVideoChanged)
     Q_PROPERTY(bool hasAudio READ hasAudio NOTIFY hasAudioChanged)
 
+    Q_PROPERTY(int audioTrackCount READ audioTrackCount NOTIFY audioTrackCountChanged)
+
 public:
     VideoPlayer(QQuickItem *parent = nullptr);
     virtual ~VideoPlayer() Q_DECL_OVERRIDE;
@@ -46,6 +48,8 @@ public:
     void setVolume(qreal volume);
     qreal volume() const;
 
+    int audioTrackCount() const;
+
     /**
      * @return duration of the media in seconds.
      */
@@ -59,6 +63,8 @@ public:
 
     Q_INVOKABLE void seek(int position);
 
+    Q_INVOKABLE void trackedAudio(int index);
+
 signals:
     void sourceChanged(QUrl source);
     void playingChanged(bool playing);
@@ -68,6 +74,9 @@ signals:
     void volumeChanged(qreal volume);
     void hasVideoChanged(bool hasVideo);
     void hasAudioChanged(bool hasAudio);
+    void audioTrackCountChanged(int count);
+
+    void audioTrackIndexChanged(int index);
 
 private:
     VideoPlayerPrivate * const d_ptr;

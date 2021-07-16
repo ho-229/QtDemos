@@ -14,7 +14,7 @@ AudioOutput::AudioOutput(FFmpegDecoder *decoder, QObject *parent) :
         FUNC_ERROR << "Could not initialize SDL2 AUDIO:" << SDL_GetError();
 
     if(!decoder)
-        qCritical() << __FUNCTION__ << ": Decoder is not valid";
+        FUNC_ERROR << ": Decoder is not valid";
 
     m_userData.decoder = decoder;
 }
