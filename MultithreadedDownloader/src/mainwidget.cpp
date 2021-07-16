@@ -9,6 +9,32 @@
 
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QTimer>
+
+namespace {
+/**
+ * @brief readableFileSize
+ * @param value
+ * @param precision
+ * @return
+ */
+QString readableFileSize(const qint64 value, int precision = 2) {
+    qint64 kbSize = value/1024;
+    if (kbSize > 1024) {
+        double mbRet = static_cast<double>(kbSize)/1024.0;
+
+        if (mbRet - 1024.0 > 0.000001) {
+            double gbRet = mbRet/1024.0;
+            return QString("%1GB").arg(QString::number(gbRet, 'f', precision));
+        } else {
+            return QString("%1MB").arg(QString::number(mbRet, 'f', precision));
+        }
+    } else {
+        return QString("%1KB").arg(kbSize);
+    }
+}
+}
+
 
 MainWidget::MainWidget(QWidget *parent)
     : QWidget(parent)
@@ -18,8 +44,19 @@ MainWidget::MainWidget(QWidget *parent)
 {
     ui->setupUi(this);
 
+    m_progressed_bytes = 0;
+    m_old_progressed_bytes = 0;
+
     this->initUI();
     this->initSignalSlots();
+    m_timer = new QTimer(this);
+    connect(m_timer, &QTimer::timeout, this, [this]{
+        qint64 speed = m_progressed_bytes - m_old_progressed_bytes;
+        qDebug() << "download speed:" << readableFileSize(speed) <<"/s";
+        //TODO(NiceBlueChai 2020/07/16): show to Widget
+        m_old_progressed_bytes = m_progressed_bytes;
+    });
+
 }
 
 MainWidget::~MainWidget()
@@ -74,12 +111,15 @@ void MainWidget::initSignalSlots()
         switch (state)
         {
         case MultithreadedDownloader::Running:
+            m_timer->start();
             ui->stateLabel->setText(tr("Running"));
             break;
         case MultithreadedDownloader::Paused:
+            m_timer->stop();
             ui->stateLabel->setText(tr("Paused"));
             break;
         case MultithreadedDownloader::Stopped:
+            m_timer->stop();
             ui->stateLabel->setText(tr("Stopped"));
             break;
         }
@@ -87,15 +127,18 @@ void MainWidget::initSignalSlots()
 
     QObject::connect(m_downloader, &MultithreadedDownloader::downloadProgress, this,
                      [this](qint64 bytesReceived, qint64 bytesTotal){
+        m_progressed_bytes = bytesReceived;
         ui->progressBar->setValue(static_cast<int>
                                  (static_cast<qreal>(bytesReceived) / bytesTotal * 100));
-        ui->byteLabel->setText(tr("Received: %1 / Total: %2 (Byte)")
-                               .arg(bytesReceived).arg(bytesTotal));
+        ui->byteLabel->setText(tr("Received: %1 / Total: %2")
+                               .arg(::readableFileSize(bytesReceived))
+                               .arg(::readableFileSize(bytesTotal)));
     });
 }
 
 void MainWidget::on_downloadBtn_clicked()
 {
+
     ui->retranslateUi(this);
     QString url(ui->urlEdit->toPlainText());
     if(url.isEmpty())
@@ -125,6 +168,7 @@ void MainWidget::on_downloadBtn_clicked()
         ui->stackedWidget->moveToIndex(1);
 
         QDir::setCurrent(dir);
+        m_timer->start(1000);
         m_downloader->start();
     }
     else
@@ -136,7 +180,7 @@ void MainWidget::on_startBtn_clicked()
     ui->startBtn->setEnabled(false);
     ui->pauseBtn->setEnabled(true);
     ui->stopBtn->setEnabled(true);
-
+    m_timer->start(1000);
     m_downloader->start();
     m_toast->toast(tr("Download started."));
 }
