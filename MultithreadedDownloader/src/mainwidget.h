@@ -49,6 +49,12 @@ private:
 
     Toast *m_toast = nullptr;
 
+    qint64 m_old_progressed_bytes;
+
+    qint64 m_progressed_bytes;
+
+    QTimer* m_timer;
+
     inline void initUI();
     inline void initSignalSlots();
 };
