@@ -53,6 +53,12 @@ public:
      */
     qint64 downloadSize() const { return m_writer->size(); }
 
+    /**
+     * @return 目标服务器是否支持 Range Header
+     * @note 如果不支持 Range，多线程下载和暂停将不可用
+     */
+    bool isRangeSupport() const { return m_isRangeSupport; }
+
     QNetworkReply::NetworkError networkError() const { return m_networkError; }
     QString networkErrorString() const { return m_networkErrorString; }
 
@@ -76,6 +82,8 @@ private:
     int m_finishedCount = 0;
 
     int m_timerId = 0;
+
+    bool m_isRangeSupport = false;
 
     QList<DownloadMission *> m_missions;
 

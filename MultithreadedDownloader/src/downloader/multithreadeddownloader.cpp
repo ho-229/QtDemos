@@ -57,6 +57,8 @@ bool MultithreadedDownloader::load()
     else
         fileName = reply->url().fileName();
 
+    m_isRangeSupport = reply->rawHeader("Accept-Ranges") == "bytes";
+
     if(fileName.isEmpty() || (!ok) || size <= 0)
         return false;
     else
@@ -82,18 +84,24 @@ void MultithreadedDownloader::start()
             return;
         }
 
-        qint64 start, end;
-        qint64 segmentSize = m_writer->size() / m_threadCount;
-        for(int i = 0; i < m_threadCount; i++)
+        if(m_isRangeSupport)
         {
-            start = i * segmentSize;
-            if(i != m_threadCount - 1)
-                end = start + segmentSize -1;
-            else
-                end = m_writer->size();               // Last mission
+            qint64 start, end;
+            qint64 segmentSize = m_writer->size() / m_threadCount;
+            for(int i = 0; i < m_threadCount; i++)
+            {
+                start = i * segmentSize;
+                if(i != m_threadCount - 1)
+                    end = start + segmentSize -1;
+                else
+                    end = m_writer->size();               // Last mission
 
-            m_missions.push_back(this->createMission(start, end));
+                m_missions.push_back(this->createMission(start, end));
+            }
         }
+        else
+            m_missions.push_back(this->createMission(0, -1));
+
 
         this->setFinished(false);
     }
@@ -113,6 +121,12 @@ void MultithreadedDownloader::pause()
 {
     if(m_state == Running)
     {
+        if(!m_isRangeSupport)
+        {
+            qWarning() << __FUNCTION__ << ": Pause is not available";
+            return;
+        }
+
         const QList<DownloadMission *>& constlist = m_missions;
         for(DownloadMission *misson : constlist)
             if(!misson->isFinished())
@@ -166,13 +180,13 @@ void MultithreadedDownloader::on_finished()
 
     qDebug() << "MultithreadedDownloader: finishedCount:" << m_finishedCount;
 
-    if(m_finishedCount == m_threadCount)
-    {
-        this->updateProgress();
-        this->stop();
+    if(m_isRangeSupport && m_finishedCount != m_threadCount)
+        return;
 
-        emit finished();
-    }
+    this->updateProgress();
+    this->stop();
+
+    emit finished();
 }
 
 DownloadMission *MultithreadedDownloader::createMission(qint64 start, qint64 end)
@@ -210,7 +224,7 @@ void MultithreadedDownloader::updateProgress()
     qint64 bytesReceived = 0;
 
     const QList<DownloadMission *>& constlist = m_missions;
-    for(DownloadMission* mission : constlist)
+    for(const DownloadMission* mission : constlist)
         bytesReceived += mission->downloadedSize();
 
     emit downloadProgress(bytesReceived, m_writer->size());
@@ -218,10 +232,11 @@ void MultithreadedDownloader::updateProgress()
 
 void MultithreadedDownloader::reset()
 {
-    m_writer->setFileName(QString());
+    m_writer->setFileName({});
     m_writer->setSize(0);
 
     m_timerId = 0;
+    m_isRangeSupport = false;
 }
 
 void MultithreadedDownloader::timerEvent(QTimerEvent *event)

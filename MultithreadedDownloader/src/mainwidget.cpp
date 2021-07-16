@@ -117,8 +117,9 @@ void MainWidget::on_downloadBtn_clicked()
 
         ui->fileNameLabel->setText(m_downloader->fileName());
         ui->startBtn->setEnabled(false);
-        ui->pauseBtn->setEnabled(true);
+        ui->pauseBtn->setEnabled(m_downloader->isRangeSupport());
         ui->stopBtn->setEnabled(true);
+
         m_toast->toast(tr("Download started."));
 
         ui->stackedWidget->moveToIndex(1);

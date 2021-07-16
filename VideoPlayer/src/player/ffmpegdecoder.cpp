@@ -590,13 +590,10 @@ bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **
         return false;
     }
 
-    qDebug()<<"find"<<findRelativeStream(formatContext, index, type);
-    qDebug()<<"ret"<<ret;
-
     *stream = formatContext->streams[ret];
 
     // Find codec
-    AVCodec *codec = avcodec_find_decoder((*stream)->codecpar->codec_id);
+    const AVCodec *codec = avcodec_find_decoder((*stream)->codecpar->codec_id);
     if (!codec)
     {
         FUNC_ERROR << "Cound not find codec " << av_get_media_type_string(type);
