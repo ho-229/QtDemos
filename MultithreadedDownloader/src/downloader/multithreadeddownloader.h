@@ -59,6 +59,13 @@ public:
      */
     bool isRangeSupport() const { return m_isRangeSupport; }
 
+    /**
+     * @brief The interval at downloadProgress() will emit.
+     * @default 500
+     */
+    void setNotifyInterval(int interval) { m_notifyInterval = interval; }
+    int notifyInterval() const { return m_notifyInterval; }
+
     QNetworkReply::NetworkError networkError() const { return m_networkError; }
     QString networkErrorString() const { return m_networkErrorString; }
 
@@ -82,6 +89,8 @@ private:
     int m_finishedCount = 0;
 
     int m_timerId = 0;
+
+    int m_notifyInterval = 500;
 
     bool m_isRangeSupport = false;
 

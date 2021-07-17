@@ -51,9 +51,7 @@ private:
 
     qint64 m_old_progressed_bytes;
 
-    qint64 m_progressed_bytes;
-
-    QTimer* m_timer;
+    qint64 m_oldProgressedBytes;
 
     inline void initUI();
     inline void initSignalSlots();

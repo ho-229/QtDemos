@@ -113,7 +113,7 @@ void MultithreadedDownloader::start()
                 mission->start();
     }
 
-    m_timerId = this->startTimer(400);
+    m_timerId = this->startTimer(m_notifyInterval);
     this->updateState(Running);
 }
 
