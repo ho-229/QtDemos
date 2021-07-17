@@ -12,4 +12,4 @@
 - [x] Subtitle support.
   - [x] `.ass` subtitle support.
   - [x] `Bitmap` subtitle support.
-- [ ] Subtitle track select.
+- [x] Subtitle track select.
