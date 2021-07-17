@@ -67,16 +67,17 @@ public:
 
 signals:
     void sourceChanged(QUrl source);
-    void playingChanged(bool playing);
-    void pausedChanged(bool paused);
+
     void durationChanged(int duration);
     void positionChanged(int position);
-    void volumeChanged(qreal volume);
     void hasVideoChanged(bool hasVideo);
     void hasAudioChanged(bool hasAudio);
     void audioTrackCountChanged(int count);
 
+    void playingChanged(bool playing);
+    void pausedChanged(bool paused);
     void audioTrackIndexChanged(int index);
+    void volumeChanged(qreal volume);
 
 private:
     VideoPlayerPrivate * const d_ptr;

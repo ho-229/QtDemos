@@ -783,5 +783,5 @@ int FFmpegDecoder::findRelativeStream(const AVFormatContext *format,
                 if(relativeIndex == ++count)
                     return int(i);
 
-    return AVERROR_STREAM_NOT_FOUND;
+    return -1;
 }

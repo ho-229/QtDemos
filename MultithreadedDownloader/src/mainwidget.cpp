@@ -4,37 +4,13 @@
  * @date 2021/2/1
  */
 
+#include "until.h"
 #include "mainwidget.h"
 #include "ui_mainwidget.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QTimer>
-
-namespace {
-/**
- * @brief readableFileSize
- * @param value
- * @param precision
- * @return
- */
-QString readableFileSize(const qint64 value, int precision = 2) {
-    qint64 kbSize = value/1024;
-    if (kbSize > 1024) {
-        double mbRet = static_cast<double>(kbSize)/1024.0;
-
-        if (mbRet - 1024.0 > 0.000001) {
-            double gbRet = mbRet/1024.0;
-            return QString("%1GB").arg(QString::number(gbRet, 'f', precision));
-        } else {
-            return QString("%1MB").arg(QString::number(mbRet, 'f', precision));
-        }
-    } else {
-        return QString("%1KB").arg(kbSize);
-    }
-}
-}
-
 
 MainWidget::MainWidget(QWidget *parent)
     : QWidget(parent)
@@ -52,8 +28,8 @@ MainWidget::MainWidget(QWidget *parent)
     m_timer = new QTimer(this);
     connect(m_timer, &QTimer::timeout, this, [this]{
         qint64 speed = m_progressed_bytes - m_old_progressed_bytes;
-        qDebug() << "download speed:" << readableFileSize(speed) <<"/s";
-        //TODO(NiceBlueChai 2020/07/16): show to Widget
+        qDebug() << "download speed:" << Until::readableFileSize(speed) <<"/s";
+        // TODO(NiceBlueChai 2020/07/16): show to Widget
         m_old_progressed_bytes = m_progressed_bytes;
     });
 
@@ -128,11 +104,12 @@ void MainWidget::initSignalSlots()
     QObject::connect(m_downloader, &MultithreadedDownloader::downloadProgress, this,
                      [this](qint64 bytesReceived, qint64 bytesTotal){
         m_progressed_bytes = bytesReceived;
-        ui->progressBar->setValue(static_cast<int>
-                                 (static_cast<qreal>(bytesReceived) / bytesTotal * 100));
+        ui->progressBar->setValue(static_cast<int>(
+            static_cast<qreal>(bytesReceived) / bytesTotal * 100));
+
         ui->byteLabel->setText(tr("Received: %1 / Total: %2")
-                               .arg(::readableFileSize(bytesReceived))
-                               .arg(::readableFileSize(bytesTotal)));
+                               .arg(Until::readableFileSize(bytesReceived))
+                               .arg(Until::readableFileSize(bytesTotal)));
     });
 }
 
