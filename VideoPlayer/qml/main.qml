@@ -377,7 +377,7 @@ Window {
             anchors.horizontalCenter: settingsBtn.horizontalCenter
             anchors.margins: 12
 
-            height: 130
+            height: 190
             width: 150
 
             color: "black"
@@ -408,6 +408,21 @@ Window {
                     to: videoPlayer.audioTrackCount
 
                     onValueChanged: videoPlayer.trackedAudio(value)
+                }
+
+                Text {
+                    text: qsTr("Subtitle Track")
+                    color: "white"
+
+                    font.pointSize: 11
+                }
+
+                SpinBox {
+                    from: videoPlayer.subtitleTrackCount ? 1 : 0
+                    value: videoPlayer.subtitleTrackCount ? 1 : 0
+                    to: videoPlayer.subtitleTrackCount
+
+                    onValueChanged: videoPlayer.trackSubtitle(value)
                 }
             }
 

@@ -128,11 +128,6 @@ void FFmpegDecoder::release()
     if(!this->thread()->wait())
         FUNC_ERROR << ": Decode thread exit failed";
 
-    auto relaseFilter = [](AVFilterContext *&context) {
-        avfilter_free(context);
-        context = nullptr;
-    };
-
     if(m_hasVideo)
         releaseContext(m_videoCodecContext);
 
@@ -143,10 +138,10 @@ void FFmpegDecoder::release()
         releaseContext(m_subtitleCodecContext);
 
     if(m_buffersrcContext)
-        relaseFilter(m_buffersrcContext);
+        releaseFilter(m_buffersrcContext);
 
     if(m_buffersinkContext)
-        relaseFilter(m_buffersinkContext);
+        releaseFilter(m_buffersinkContext);
 
     if(m_swrContext)
     {
@@ -178,8 +173,7 @@ void FFmpegDecoder::release()
 
 void FFmpegDecoder::trackedAudio(int index)
 {
-    if(!m_hasAudio|| index < 0 || index > this->audioTrackCount() ||
-        index == m_audioStream->index)
+    if(index < 0 || index > this->audioTrackCount() || index == m_audioStream->index)
         return;
 
     m_mutex.lock();
@@ -192,6 +186,55 @@ void FFmpegDecoder::trackedAudio(int index)
     m_mutex.unlock();
 
     emit callDecodec();
+}
+
+void FFmpegDecoder::trackSubtitle(int index)
+{
+    if(index < 0 || index > this->subtitleTrackCount())
+        return;
+
+    QMutexLocker locker(&m_mutex);
+    if(m_subtitleCodecContext)
+    {
+        m_subtitleCache.clear();
+
+        releaseContext(m_subtitleCodecContext);
+        openCodecContext(m_formatContext, &m_subtitleStream, &m_subtitleCodecContext,
+                         AVMEDIA_TYPE_SUBTITLE, index);
+
+        //emit callSeek();
+    }
+    else
+    {
+        if(m_buffersrcContext && m_buffersinkContext)
+        {
+            releaseFilter(m_buffersrcContext);
+            releaseFilter(m_buffersinkContext);
+        }
+
+        this->loadSubtitle(index);
+    }
+}
+
+int FFmpegDecoder::subtitleTrackCount() const
+{
+    if(m_state == Closed)
+        return 0;
+
+    int ret = 0;
+
+    if((ret = streamCount(m_formatContext, AVMEDIA_TYPE_SUBTITLE)) > 0)
+        return ret;
+
+    const QFileInfo fileInfo(m_url.toLocalFile());
+
+    const QDir subtitleDir(fileInfo.absoluteDir());
+
+    const QStringList subtitleList =
+        subtitleDir.entryList({{"*.ass"}, {"*.srt"}, {"*.lrc"}},
+                              QDir::Files).filter(fileInfo.baseName());
+
+    return subtitleList.size();
 }
 
 void FFmpegDecoder::seek(int position)
@@ -260,7 +303,7 @@ void FFmpegDecoder::loadSubtitle(int index)
         m_videoCodecContext->pix_fmt, timeBase.num, timeBase.den,
         pixelAspect.num, pixelAspect.den);
 
-    auto makeFilterDesc = [this, &index](const QString fileName) -> QString {
+    auto makeFilterDesc = [this](const QString fileName, int index) -> QString {
         return QString("subtitles=filename='%1':original_size=%2x%3:si=%4")
             .arg(fileName)
             .arg(m_videoCodecContext->width)
@@ -274,14 +317,15 @@ void FFmpegDecoder::loadSubtitle(int index)
     };
 
     if(av_find_best_stream(m_formatContext, AVMEDIA_TYPE_SUBTITLE,
-                            -1, index, nullptr, 0) >= 0)
+                            findRelativeStream(m_formatContext, index,
+                              AVMEDIA_TYPE_SUBTITLE), -1, nullptr, 0) > 0)
     {
         QString subtitleFileName = m_url.toLocalFile();
 
         if((m_hasSubtitle = initSubtitleFilter(m_buffersrcContext,
                                                 m_buffersinkContext, args,
                                                 makeFilterDesc(toFFmpegFormat(
-                                                    subtitleFileName)))))
+                                                    subtitleFileName), index))))
             return;
 
         // If is not text based subtitles
@@ -301,17 +345,17 @@ void FFmpegDecoder::loadSubtitle(int index)
             subtitleDir.entryList({{"*.ass"}, {"*.srt"}, {"*.lrc"}},
                                   QDir::Files).filter(fileInfo.baseName());
 
-        if(subtitleList.size() <= index)    // Out of range
+        if(subtitleList.size() <= index - 1)    // Out of range
             return;
 
         QString subtitleFileName = subtitleDir.absolutePath()
-                                   + '/' + subtitleList.at(index);
+                                   + '/' + subtitleList.at(index - 1);
 
         if(QFileInfo::exists(subtitleFileName))
         {
             m_hasSubtitle = initSubtitleFilter(
                 m_buffersrcContext, m_buffersinkContext, args,
-                makeFilterDesc(toFFmpegFormat(subtitleFileName)));
+                makeFilterDesc(toFFmpegFormat(subtitleFileName), 0));
         }
     }
 }
@@ -440,6 +484,7 @@ void FFmpegDecoder::decode()
 
             if(frame && !avcodec_receive_frame(m_videoCodecContext, frame))
             {
+                m_mutex.lock();
                 if(m_buffersrcContext && m_buffersinkContext)
                 {
                     if(av_buffersrc_add_frame_flags(
@@ -452,6 +497,7 @@ void FFmpegDecoder::decode()
                     else
                         av_frame_free(&filterFrame);
                 }
+                m_mutex.unlock();
 
                 if(m_swsContext)
                 {

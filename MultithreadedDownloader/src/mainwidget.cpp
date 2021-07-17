@@ -40,13 +40,13 @@ void MainWidget::initDownloadUrl(const QString &url)
     this->on_downloadBtn_clicked();
 }
 
-void MainWidget::initUI()
+inline void MainWidget::initUI()
 {
     ui->failedLabel->hide();
     ui->retranslateUi(this);
 }
 
-void MainWidget::initSignalSlots()
+inline void MainWidget::initSignalSlots()
 {
     QObject::connect(m_downloader, &MultithreadedDownloader::finished, this,
                      [this]{
@@ -95,7 +95,7 @@ void MainWidget::initSignalSlots()
         ui->progressBar->setValue(static_cast<int>(
             static_cast<qreal>(bytesReceived) / bytesTotal * 100));
 
-        ui->byteLabel->setText(tr("Speed: %1   |   %2 / %3")
+        ui->byteLabel->setText(tr("Speed: %1/s   |   %2 / %3")
                                    .arg(Until::readableFileSize(
                                        static_cast<qint64>(
                                        static_cast<qreal>(bytesReceived - m_oldProgressedBytes)

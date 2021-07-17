@@ -88,6 +88,10 @@ public:
     int audioTrackCount() const { return m_state == Opened ? streamCount(
             m_formatContext, AVMEDIA_TYPE_AUDIO) : 0; }
 
+    void trackSubtitle(int index);
+
+    int subtitleTrackCount() const;
+
     int position() const { return m_position; }
 
     void seek(int position);
@@ -175,7 +179,7 @@ private:
 
     qreal m_diff = 0.0;
 
-    void loadSubtitle(int index = 0);
+    void loadSubtitle(int index = 1);
 
     inline void clearCache();
 
@@ -184,6 +188,12 @@ private:
         avcodec_flush_buffers(context);
         avcodec_free_context(&context);
 
+        context = nullptr;
+    }
+
+    static inline void releaseFilter(AVFilterContext *&context)
+    {
+        avfilter_free(context);
         context = nullptr;
     }
 

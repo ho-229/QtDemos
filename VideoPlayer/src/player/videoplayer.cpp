@@ -85,6 +85,7 @@ void VideoPlayer::play(bool playing)
                 emit hasVideoChanged(d->decoder->hasVideo());
                 emit hasAudioChanged(d->decoder->hasAudio());
                 emit audioTrackCountChanged(d->decoder->audioTrackCount());
+                emit subtitleTrackCountChanged(d->decoder->subtitleTrackCount());
             }
             else
             {
@@ -170,6 +171,11 @@ int VideoPlayer::audioTrackCount() const
     return d_ptr->decoder->audioTrackCount();
 }
 
+int VideoPlayer::subtitleTrackCount() const
+{
+    return d_ptr->decoder->subtitleTrackCount();
+}
+
 int VideoPlayer::duration() const
 {
     return d_ptr->decoder->duration();
@@ -201,7 +207,12 @@ void VideoPlayer::trackedAudio(int index)
 {
     Q_D(VideoPlayer);
     d->decoder->trackedAudio(index);
-    emit audioTrackIndexChanged(index);
+}
+
+void VideoPlayer::trackSubtitle(int index)
+{
+    Q_D(VideoPlayer);
+    d->decoder->trackSubtitle(index);
 }
 
 void VideoPlayer::timerEvent(QTimerEvent *)

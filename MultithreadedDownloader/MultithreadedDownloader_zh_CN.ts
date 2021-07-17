@@ -119,8 +119,9 @@ Retry ?</source>
     </message>
     <message>
         <location filename="src/mainwidget.cpp" line="98"/>
-        <source>Speed: %1   |   %2 / %3</source>
-        <translation>速度： %1   |   %2 / %3</translation>
+        <source>Speed: %1/s   |   %2 / %3</source>
+        <oldsource>Speed: %1   |   %2 / %3</oldsource>
+        <translation>速度： %1/s   |   %2 / %3</translation>
     </message>
     <message>
         <location filename="src/mainwidget.cpp" line="118"/>
