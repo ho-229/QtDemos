@@ -32,7 +32,7 @@ MainWidget::MainWidget(QWidget *parent)
     m_buttonGroup_1->addButton(ui->rotate_0, 0);
     m_buttonGroup_1->addButton(ui->rotate_1, 1);
     m_buttonGroup_1->addButton(ui->rotate_2, 2);
-#if QT_DEPRECATED_SINCE(5, 15)
+#if QT_VERSION >= QT_VERSION_CHECK(5,15,0)
     connect(m_buttonGroup_1, &QButtonGroup::idClicked, this,
             &MainWidget::on_buttonClicked);
 #else
@@ -43,7 +43,7 @@ MainWidget::MainWidget(QWidget *parent)
     m_buttonGroup_2->addButton(ui->translation_0, 0);
     m_buttonGroup_2->addButton(ui->translation_1, 1);
     m_buttonGroup_2->addButton(ui->translation_3, 2);
-#if QT_DEPRECATED_SINCE(5, 15)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     connect(m_buttonGroup_2, &QButtonGroup::idClicked, this,
             &MainWidget::on_buttonClicked);
 #else
@@ -53,7 +53,7 @@ MainWidget::MainWidget(QWidget *parent)
 
     m_langGroup->addButton(ui->EnBtn, 0);
     m_langGroup->addButton(ui->CnBtn, 1);
-#if QT_DEPRECATED_SINCE(5, 15)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     connect(m_langGroup, &QButtonGroup::idClicked, this,
             &MainWidget::on_buttonClicked);
 #else
@@ -65,7 +65,7 @@ MainWidget::MainWidget(QWidget *parent)
                                 standardIcon(QStyle::SP_MessageBoxInformation));
     ui->pushButton->setRightIcon(QApplication::style()->
                                  standardIcon(QStyle::SP_MessageBoxWarning));
-#if QT_DEPRECATED_SINCE(5, 15)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     connect(ui->sideMarginEdit, &QSpinBox::textChanged, this,
             [this](QString value){
         ui->pushButton->setSideMargin(value.toInt());
@@ -92,7 +92,7 @@ MainWidget::MainWidget(QWidget *parent)
 #endif
 
     ui->progressButton->setValue(25);
-#if QT_DEPRECATED_SINCE(5, 15)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     connect(ui->valueSpinBox, &QSpinBox::textChanged, this,
             [this](QString value){
         ui->progressButton->setValue(value.toInt());

@@ -39,7 +39,7 @@ void DownloadMission::start()
 
     QObject::connect(m_reply, &QNetworkReply::finished, this,
                      &DownloadMission::on_finished);
-#if QT_DEPRECATED_SINCE(5, 15)
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     QObject::connect(m_reply, &QNetworkReply::errorOccurred, this,
                      &DownloadMission::replyError);
 #else
