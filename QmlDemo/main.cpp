@@ -3,6 +3,8 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 
+#include "clickwaveeffect.h"
+
 int main(int argc, char *argv[])
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -21,6 +23,8 @@ int main(int argc, char *argv[])
         tr_CN.load(":/translate/QmlDemo_zh_CN.qm");
         app.installTranslator(&tr_CN);
     }
+
+    qmlRegisterType<ClickWaveEffect>("com.MyItems.Effect", 1, 0, "ClickWaveEffect");
 
     QQmlApplicationEngine engine;
     const QUrl url(QStringLiteral("qrc:/main.qml"));

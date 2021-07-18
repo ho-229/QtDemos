@@ -3,6 +3,8 @@ import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
 import QtQuick.Layouts 1.12
 
+import com.MyItems.Effect 1.0
+
 Window {
     id: root
     width: 550
@@ -111,18 +113,44 @@ Window {
             id: rowLayout
             Layout.preferredWidth: parent.width
 
-            MyButton {
+            Button {
                 id: myButton
                 text: qsTr("Push Button")
                 Layout.margins: 9
                 Layout.alignment: Qt.AlignLeft //| Qt.AlignHCenter
+
+                background: Rectangle {
+                    implicitWidth: 100
+                    implicitHeight: 40
+
+                    color: "#E0E0E0"
+
+                    ClickWaveEffect {
+                        target: myButton
+
+                        anchors.fill: parent
+                    }
+                }
             }
 
-            MyButton {
+            Button {
                 id: closeButton
                 text: qsTr("Close")
                 Layout.alignment: Qt.AlignRight //| Qt.AlignHCenter
                 Layout.margins: 9
+
+                background: Rectangle {
+                    implicitWidth: 100
+                    implicitHeight: 40
+
+                    color: "#E0E0E0"
+
+                    ClickWaveEffect {
+                        target: closeButton
+
+                        anchors.fill: parent
+                    }
+                }
 
                 onClicked: root.close()
             }

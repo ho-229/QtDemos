@@ -15,6 +15,8 @@ RESOURCES += qml.qrc \
 TRANSLATIONS += \
     QmlDemo_zh_CN.ts
 
+include($$_PRO_FILE_PWD_/src/src.pri)
+
 # Additional import path used to resolve QML modules in Qt Creator's code model
 QML_IMPORT_PATH =
 
