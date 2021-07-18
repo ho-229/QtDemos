@@ -17,17 +17,6 @@ Window {
 
     visibility: fullScreen ? Window.FullScreen : Window.Windowed
 
-    VideoPlayer {
-        id: videoPlayer
-        anchors.fill: parent
-
-        volume: volumeSlider.value
-
-        onSourceChanged: urlTitle.toast()
-
-        onPositionChanged: playSlider.value = position
-    }
-
     function onPlay() { playBtn.clicked() }
     function onBack() { backBtn.clicked() }
     function onGoahead() { goaheadBtn.clicked() }
@@ -39,6 +28,33 @@ Window {
 
     function toMMSS(secs) {
         return parseInt(secs / 60) + ":" + prefixZero(secs % 60, 2);
+    }
+
+    MessageDialog {
+        id: errorDialog
+
+        title: qsTr("Error")
+        text: qsTr("Resource load failed")
+    }
+
+    VideoPlayer {
+        id: videoPlayer
+        anchors.fill: parent
+
+        volume: volumeSlider.value
+
+        onSourceChanged: urlTitle.toast()
+
+        onPositionChanged: playSlider.value = position
+
+        onError: {
+            switch(error)
+            {
+            case VideoPlayer.ResourceError:
+                errorDialog.visible = true
+                break
+            }
+        }
     }
 
     MouseArea {

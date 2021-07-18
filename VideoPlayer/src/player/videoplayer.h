@@ -23,15 +23,22 @@ class VideoPlayer : public QQuickFramebufferObject
     Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
 
     // Read only property
-    Q_PROPERTY(int position READ position NOTIFY positionChanged)
-    Q_PROPERTY(int duration READ duration NOTIFY durationChanged)
-    Q_PROPERTY(bool hasVideo READ hasVideo NOTIFY hasVideoChanged)
-    Q_PROPERTY(bool hasAudio READ hasAudio NOTIFY hasAudioChanged)
+    Q_PROPERTY(int position READ position NOTIFY loaded)
+    Q_PROPERTY(int duration READ duration NOTIFY loaded)
+    Q_PROPERTY(bool hasVideo READ hasVideo NOTIFY loaded)
+    Q_PROPERTY(bool hasAudio READ hasAudio NOTIFY loaded)
 
-    Q_PROPERTY(int audioTrackCount READ audioTrackCount NOTIFY audioTrackCountChanged)
-    Q_PROPERTY(int subtitleTrackCount READ subtitleTrackCount NOTIFY subtitleTrackCountChanged)
+    Q_PROPERTY(int audioTrackCount READ audioTrackCount NOTIFY loaded)
+    Q_PROPERTY(int subtitleTrackCount READ subtitleTrackCount NOTIFY loaded)
 
 public:
+    enum Error
+    {
+        ResourceError
+    };
+
+    Q_ENUM(Error)
+
     VideoPlayer(QQuickItem *parent = nullptr);
     virtual ~VideoPlayer() Q_DECL_OVERRIDE;
 
@@ -72,16 +79,14 @@ public:
 signals:
     void sourceChanged(QUrl source);
 
-    void durationChanged(int duration);
-    void positionChanged(int position);
-    void hasVideoChanged(bool hasVideo);
-    void hasAudioChanged(bool hasAudio);
-    void audioTrackCountChanged(int count);
-    void subtitleTrackCountChanged(int count);
+    void loaded();
+
+    void error(const Error error);
 
     void playingChanged(bool playing);
     void pausedChanged(bool paused);
     void volumeChanged(qreal volume);
+    void positionChanged(int position);
 
 private:
     VideoPlayerPrivate * const d_ptr;

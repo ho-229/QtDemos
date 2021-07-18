@@ -81,15 +81,12 @@ void VideoPlayer::play(bool playing)
                 d->isVideoInfoChanged = true;
                 d->audioOutput->setAudioFormat(d->decoder->audioFormat());
 
-                emit durationChanged(this->duration());
-                emit hasVideoChanged(d->decoder->hasVideo());
-                emit hasAudioChanged(d->decoder->hasAudio());
-                emit audioTrackCountChanged(d->decoder->audioTrackCount());
-                emit subtitleTrackCountChanged(d->decoder->subtitleTrackCount());
+                emit loaded();
             }
             else
             {
                 qCritical() << __FUNCTION__ << ": Source load failed.";
+                emit error(ResourceError);
                 return;
             }
         }
@@ -200,6 +197,10 @@ void VideoPlayer::seek(int position)
 {
     Q_D(VideoPlayer);
     d->decoder->seek(position);
+
+    d->lastDiff = 0;
+    d->totalStep = 0;
+
     emit positionChanged(position);
 }
 
