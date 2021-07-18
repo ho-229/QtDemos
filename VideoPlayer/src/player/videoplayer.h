@@ -23,11 +23,11 @@ class VideoPlayer : public QQuickFramebufferObject
     Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
 
     // Read only property
-    Q_PROPERTY(int position READ position NOTIFY loaded)
+    Q_PROPERTY(int position READ position NOTIFY positionChanged)
+
     Q_PROPERTY(int duration READ duration NOTIFY loaded)
     Q_PROPERTY(bool hasVideo READ hasVideo NOTIFY loaded)
     Q_PROPERTY(bool hasAudio READ hasAudio NOTIFY loaded)
-
     Q_PROPERTY(int audioTrackCount READ audioTrackCount NOTIFY loaded)
     Q_PROPERTY(int subtitleTrackCount READ subtitleTrackCount NOTIFY loaded)
 

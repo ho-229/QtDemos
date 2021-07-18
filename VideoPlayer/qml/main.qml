@@ -45,8 +45,6 @@ Window {
 
         onSourceChanged: urlTitle.toast()
 
-        onPositionChanged: playSlider.value = position
-
         onError: {
             switch(error)
             {
@@ -234,7 +232,7 @@ Window {
             ToolTip {
                 parent: volumeSlider.handle
                 visible: volumeSlider.pressed
-                text: qsTr("Volume:") + parseInt(volumeSlider.value * 100)
+                text: qsTr("Volume: ") + parseInt(volumeSlider.value * 100)
             }
         }
 
@@ -304,7 +302,7 @@ Window {
         Text {
             id: progressText
 
-            text: toMMSS(videoPlayer.position) + " / " + toMMSS(videoPlayer.duration);
+            text: toMMSS(videoPlayer.position) + " / " + toMMSS(videoPlayer.duration)
 
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
@@ -342,7 +340,7 @@ Window {
             from: 0
             to: videoPlayer.duration
 
-            value: 0
+            value: videoPlayer.position
 
             enabled: videoPlayer.playing
 

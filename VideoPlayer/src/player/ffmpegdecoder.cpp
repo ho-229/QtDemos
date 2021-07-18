@@ -193,16 +193,14 @@ void FFmpegDecoder::trackSubtitle(int index)
     if(index < 0 || index > this->subtitleTrackCount())
         return;
 
-    QMutexLocker locker(&m_mutex);
+    m_mutex.lock();
+    this->clearCache();
+
     if(m_subtitleCodecContext)
     {
-        m_subtitleCache.clear();
-
         releaseContext(m_subtitleCodecContext);
         openCodecContext(m_formatContext, &m_subtitleStream, &m_subtitleCodecContext,
                          AVMEDIA_TYPE_SUBTITLE, index);
-
-        //emit callSeek();
     }
     else
     {
@@ -214,6 +212,10 @@ void FFmpegDecoder::trackSubtitle(int index)
 
         this->loadSubtitle(index);
     }
+
+    m_mutex.unlock();
+
+    emit callDecodec();
 }
 
 int FFmpegDecoder::subtitleTrackCount() const

@@ -22,9 +22,9 @@ extern "C"          // Import SDL 2
 #include <SDL.h>
 }
 
-#define VIDEO_CACHE_SIZE 256
-#define AUDIO_CACHE_SIZE 512
-#define SUBTITLE_CACHE_SIZE 256
+#define VIDEO_CACHE_SIZE 128
+#define AUDIO_CACHE_SIZE 256
+#define SUBTITLE_CACHE_SIZE 128
 
 #define FUNC_ERROR qCritical() << __FUNCTION__
 
