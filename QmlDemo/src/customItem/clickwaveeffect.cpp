@@ -20,10 +20,10 @@ ClickWaveEffect::ClickWaveEffect(QQuickItem *parent)
 
     m_alphaAnimation->setStartValue(255);
     m_alphaAnimation->setEndValue(0);
-    m_alphaAnimation->setDuration(300);
+    m_alphaAnimation->setDuration(250);
 
     m_radiusAnimation->setStartValue(0);
-    m_radiusAnimation->setDuration(400);
+    m_radiusAnimation->setDuration(300);
 
     m_animation->addAnimation(m_radiusAnimation);
     m_animation->addAnimation(m_alphaAnimation);
@@ -81,6 +81,12 @@ int ClickWaveEffect::waveDuration() const
     return m_radiusAnimation->duration();
 }
 
+void ClickWaveEffect::setMaxRadius(int radius)
+{
+    m_maxRadius = radius;
+    emit maxRadiusChanged(radius);
+}
+
 void ClickWaveEffect::paint(QPainter *painter)
 {
     painter->setPen(Qt::NoPen);
@@ -105,7 +111,9 @@ bool ClickWaveEffect::eventFilter(QObject *obj, QEvent *event)
             }
 
             m_currentColor = m_color;
-            m_radiusAnimation->setEndValue(maxRadius(m_pos, this->size().toSize()));
+
+            m_radiusAnimation->setEndValue(
+                        m_maxRadius < 0 ? maxRadius(m_pos, this->size().toSize()) : m_maxRadius);
 
             m_animation->start();
         }

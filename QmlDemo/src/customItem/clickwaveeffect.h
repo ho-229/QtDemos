@@ -19,6 +19,7 @@ class ClickWaveEffect : public QQuickPaintedItem
     Q_PROPERTY(QQuickItem* target READ target WRITE setTarget NOTIFY targetChanged)
     Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged)
     Q_PROPERTY(int waveDuration READ waveDuration WRITE setWaveDuration NOTIFY waveDurationChanged)
+    Q_PROPERTY(int maxRadius READ maxRadius WRITE setMaxRadius NOTIFY maxRadiusChanged)
 
 public:
     explicit ClickWaveEffect(QQuickItem *parent = nullptr);
@@ -33,9 +34,13 @@ public:
     void setWaveDuration(int duration);
     int waveDuration() const;
 
+    void setMaxRadius(int radius);
+    int maxRadius() const { return m_maxRadius; }
+
 signals:
     void waveDurationChanged(int duration);
     void targetChanged(QQuickItem *target);
+    void maxRadiusChanged(int radius);
     void colorChanged(QColor color);
     void finished();
 
@@ -48,6 +53,7 @@ private slots:
 
 private:
     int m_radius = 0;
+    int m_maxRadius = -1;
     bool m_isPressed = false;
 
     QQuickItem *m_target = nullptr;

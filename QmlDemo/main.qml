@@ -93,7 +93,7 @@ Window {
             }
         }
 
-        TextEdit {
+        TextField {
             id: textEdit
             text: qsTr("Hello World")
             Layout.fillWidth: true
@@ -107,6 +107,15 @@ Window {
 
             selectByMouse: true
             readOnly: true
+
+            background: ClickWaveEffect {
+                target: textEdit
+
+                maxRadius: 20
+                waveDuration: 100
+
+                anchors.fill: parent
+            }
         }
 
         RowLayout {

@@ -595,9 +595,12 @@ void FFmpegDecoder::decode()
                     mergeSubtitle(frame->data[0], frame->linesize[0],
                                   frame->width, frame->height, subtitle.rects[i]);
 
+                SubtitleFrame subtitleFrame;
+                subtitleFrame.image = loadFromAVFrame(frame);
+                subtitleFrame.pts = second(packet->pts, m_subtitleStream->time_base);
+
                 m_mutex.lock();
-                m_subtitleCache.append({loadFromAVFrame(frame),
-                                        second(packet->pts, m_subtitleStream->time_base)});
+                m_subtitleCache.append(subtitleFrame);
                 m_mutex.unlock();
 
                 avsubtitle_free(&subtitle);
