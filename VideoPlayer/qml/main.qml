@@ -122,7 +122,7 @@ Window {
 
             anchors.centerIn: parent
 
-            icon.source: videoPlayer.playing && !videoPlayer.paused ?
+            icon.source: videoPlayer.state == VideoPlayer.Playing ?
                              "qrc:/image/pause.png" : "qrc:/image/play.png"
             icon.color: "white"
             icon.width: 20
@@ -140,13 +140,10 @@ Window {
             }
 
             onClicked: {
-                if(!videoPlayer.playing)
-                {
-                    videoPlayer.playing = true;
-                    return;
-                }
-
-                videoPlayer.paused = !videoPlayer.paused
+                if(videoPlayer.state == VideoPlayer.Playing)
+                    videoPlayer.pause();
+                else
+                    videoPlayer.play();
             }
         }
 
@@ -177,7 +174,7 @@ Window {
             }
 
             onClicked: {
-                if(videoPlayer.playing)
+                if(videoPlayer.state == VideoPlayer.Playing)
                     videoPlayer.seek(videoPlayer.position + 10);
             }
         }
@@ -263,7 +260,7 @@ Window {
             }
 
             onClicked: {
-                if(videoPlayer.playing)
+                if(videoPlayer.state == VideoPlayer.Playing)
                     videoPlayer.seek(videoPlayer.position - 10);
             }
         }
@@ -274,7 +271,7 @@ Window {
             width: 29
             height: 29
 
-            enabled: videoPlayer.playing
+            enabled: videoPlayer.state == VideoPlayer.Playing
 
             anchors.verticalCenter: parent.verticalCenter
             anchors.right: backBtn.left
@@ -296,7 +293,7 @@ Window {
                 border.color: "white"
             }
 
-            onClicked: videoPlayer.playing = false
+            onClicked: videoPlayer.stop()
         }
 
         Text {
@@ -342,7 +339,7 @@ Window {
 
             value: videoPlayer.position
 
-            enabled: videoPlayer.playing
+            enabled: videoPlayer.state == VideoPlayer.Playing
 
             anchors.left: parent.left
             anchors.right: parent.right
@@ -458,7 +455,7 @@ Window {
 
         anchors.centerIn: parent
 
-        visible: !videoPlayer.playing
+        visible: videoPlayer.state == VideoPlayer.Stopped
 
         background: Rectangle {
             radius: 7
@@ -480,7 +477,7 @@ Window {
             onDropped: {
                 if(drop.hasUrls) {
                     videoPlayer.source = drop.urls[0];
-                    videoPlayer.playing = true;
+                    videoPlayer.play();
 
                     openBtn.text
                             = qsTr("<font color='white'>Open file<br>Or drop here</font>")
@@ -502,9 +499,9 @@ Window {
 
         onAccepted: {
             videoPlayer.source = fileUrl;
-            videoPlayer.playing = true;
+            videoPlayer.play();
         }
     }
 
-    onClosing: videoPlayer.playing = false;
+    onClosing: videoPlayer.stop();
 }

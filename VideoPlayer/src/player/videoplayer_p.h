@@ -25,8 +25,8 @@ public:
 
     SubtitleRenderer *subtitleRenderer = nullptr;
 
-    bool isPaused  = false;
-    bool isPlaying = false;
+    VideoPlayer::State state = VideoPlayer::Stopped;
+
     bool isUpdated = false;
     bool isVideoInfoChanged = false;
 

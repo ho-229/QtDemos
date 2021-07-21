@@ -34,8 +34,8 @@ VideoPlayer::~VideoPlayer()
 {
     Q_D(VideoPlayer);
 
-    if(d->isPlaying)
-        this->play(false);
+    if(d->state != Stopped)
+        this->stop();
 
     d->decoder->deleteLater();
 
@@ -65,14 +65,18 @@ QUrl VideoPlayer::source() const
     return d_ptr->decoder->url();
 }
 
-void VideoPlayer::play(bool playing)
+VideoPlayer::State VideoPlayer::state() const
+{
+    return d_ptr->state;
+}
+
+void VideoPlayer::play()
 {
     Q_D(VideoPlayer);
 
-    if(d->isPlaying == playing)
+    if(d->state == Playing)
         return;
-
-    if(playing)
+    else if(d->state == Stopped)
     {
         if(d->decoder->state() == FFmpegDecoder::Closed)
         {
@@ -100,55 +104,50 @@ void VideoPlayer::play(bool playing)
 
         d->audioOutput->play();
     }
-    else
-    {
-        if(!d->isPaused)
-            this->killTimer(d->timerId);
-
-        d->audioOutput->stop();
-        d->decoder->release();
-
-        d->position = 0;
-
-        emit positionChanged(d->position);
-
-        this->update();
-    }
-
-    d->isPlaying = playing;
-    emit playingChanged(playing);
-}
-
-bool VideoPlayer::isPlaying() const
-{
-    return d_ptr->isPlaying;
-}
-
-void VideoPlayer::pause(bool paused)
-{
-    Q_D(VideoPlayer);
-
-    if(d->isPaused == paused || !d->isPlaying)
-        return;
-
-    if(paused)
-    {
-        this->killTimer(d->timerId);
-        d->audioOutput->pause();
-    }
-    else
+    else if(d->state == Paused)
     {
         d->timerId = this->startTimer(d->interval);
         d->audioOutput->resume();
     }
 
-    d->isPaused = paused;
-    emit pausedChanged(paused);
+    d->state = Playing;
+    emit stateChanged(Playing);
 }
 
-bool VideoPlayer::isPaused() const
+void VideoPlayer::pause()
 {
-    return d_ptr->isPaused;
+    Q_D(VideoPlayer);
+
+    if(d->state != Playing)
+        return;
+
+    this->killTimer(d->timerId);
+    d->audioOutput->pause();
+
+    d->state = Paused;
+    emit stateChanged(Paused);
+}
+
+void VideoPlayer::stop()
+{
+    Q_D(VideoPlayer);
+
+    if(d->state == Stopped)
+        return;
+    else if(d->state == Playing)
+        this->killTimer(d->timerId);
+
+    d->audioOutput->stop();
+    d->decoder->release();
+
+    d->position = 0;
+
+    emit positionChanged(d->position);
+
+    this->update();
+
+    d->state = Stopped;
+    emit stateChanged(Stopped);
 }
 
 void VideoPlayer::setVolume(qreal volume)
@@ -234,7 +233,7 @@ void VideoPlayer::timerEvent(QTimerEvent *)
 
     if(!d->decoder->hasFrame() && d->decoder->isDecodeFinished())
     {
-        this->play(false);
+        this->stop();
         return;
     }
 

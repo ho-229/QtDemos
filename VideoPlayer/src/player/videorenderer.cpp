@@ -140,7 +140,7 @@ void VideoRenderer::paint()
     glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    if(!m_player_p->isPlaying || !m_textureAlloced)
+    if(m_player_p->state == VideoPlayer::Stopped || !m_textureAlloced)
         return;
 
     glViewport(m_viewRect.x(), m_viewRect.y(),

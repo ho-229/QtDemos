@@ -17,13 +17,15 @@ class VideoPlayer : public QQuickFramebufferObject
 {
     Q_OBJECT
 
+
+
     Q_PROPERTY(QUrl source READ source WRITE setSource NOTIFY sourceChanged)
-    Q_PROPERTY(bool playing READ isPlaying WRITE play NOTIFY playingChanged)
-    Q_PROPERTY(bool paused READ isPaused WRITE pause NOTIFY pausedChanged)
     Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
 
     // Read only property
     Q_PROPERTY(int position READ position NOTIFY positionChanged)
+
+    Q_PROPERTY(State state READ state NOTIFY stateChanged)
 
     Q_PROPERTY(int duration READ duration NOTIFY loaded)
     Q_PROPERTY(bool hasVideo READ hasVideo NOTIFY loaded)
@@ -39,6 +41,15 @@ public:
 
     Q_ENUM(Error)
 
+    enum State
+    {
+        Playing,
+        Paused,
+        Stopped
+    };
+
+    Q_ENUM(State)
+
     VideoPlayer(QQuickItem *parent = nullptr);
     virtual ~VideoPlayer() Q_DECL_OVERRIDE;
 
@@ -47,11 +58,7 @@ public:
     void setSource(const QUrl& source);
     QUrl source() const;
 
-    void play(bool playing = true);
-    bool isPlaying() const;
-
-    void pause(bool paused = true);
-    bool isPaused() const;
+    State state() const;
 
     void setVolume(qreal volume);
     qreal volume() const;
@@ -70,6 +77,12 @@ public:
 
     bool hasAudio() const;
 
+    Q_INVOKABLE void play();
+
+    Q_INVOKABLE void pause();
+
+    Q_INVOKABLE void stop();
+
     Q_INVOKABLE void seek(int position);
 
     Q_INVOKABLE void trackedAudio(int index);
@@ -83,10 +96,9 @@ signals:
 
     void error(const Error error);
 
-    void playingChanged(bool playing);
-    void pausedChanged(bool paused);
-    void volumeChanged(qreal volume);
-    void positionChanged(int position);
+    void stateChanged(const VideoPlayer::State state);
+    void volumeChanged(const qreal volume);
+    void positionChanged(const int position);
 
 private:
     VideoPlayerPrivate * const d_ptr;
@@ -96,7 +108,6 @@ private:
     void timerEvent(QTimerEvent *) Q_DECL_OVERRIDE;
 
     inline void updateTimer();
-
 };
 
 #endif // VIDEOPLAYER_H
