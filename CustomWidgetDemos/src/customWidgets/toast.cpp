@@ -24,7 +24,7 @@ Toast::Toast(QWidget *parent, int horizontalMargin, int verticalMargin,
 {
     this->setAttribute(Qt::WA_TransparentForMouseEvents);
     this->setAttribute(Qt::WA_TranslucentBackground);
-    this->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::CustomizeWindowHint);
+    this->setWindowFlags(Qt::FramelessWindowHint | Qt::ToolTip | Qt::CustomizeWindowHint);
 
     m_layout->addWidget(m_messageLabel);
     m_layout->setContentsMargins(0, 0, 0, 0);
