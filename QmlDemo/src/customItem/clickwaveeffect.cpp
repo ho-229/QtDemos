@@ -20,10 +20,10 @@ ClickWaveEffect::ClickWaveEffect(QQuickItem *parent)
 
     m_alphaAnimation->setStartValue(255);
     m_alphaAnimation->setEndValue(0);
-    m_alphaAnimation->setDuration(250);
+    m_alphaAnimation->setDuration(200);
 
     m_radiusAnimation->setStartValue(0);
-    m_radiusAnimation->setDuration(300);
+    m_radiusAnimation->setDuration(400);
 
     m_animation->addAnimation(m_radiusAnimation);
     m_animation->addAnimation(m_alphaAnimation);

@@ -47,5 +47,3 @@ unix {
     INCLUDEPATH += /usr/include/SDL2
     DEPENDPATH += /usr/include/SDL2
 }
-
-win32:
