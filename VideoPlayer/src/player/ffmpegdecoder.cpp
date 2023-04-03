@@ -81,15 +81,15 @@ bool FFmpegDecoder::load()
     {
         if(m_audioCodecContext->sample_fmt != AV_SAMPLE_FMT_S16)
         {
-            m_swrContext = swr_alloc_set_opts(m_swrContext,
-                                              av_get_default_channel_layout(2),
-                                              AV_SAMPLE_FMT_S16,
-                                              m_audioCodecContext->sample_rate,
-                                              av_get_default_channel_layout(
-                                                  m_audioCodecContext->channels),
-                                              m_audioCodecContext->sample_fmt,
-                                              m_audioCodecContext->sample_rate,
-                                              0, nullptr);
+            AVChannelLayout dest;
+            av_channel_layout_default(&dest, 2);
+            swr_alloc_set_opts2(&m_swrContext, &dest,
+                                AV_SAMPLE_FMT_S16,
+                                m_audioCodecContext->sample_rate,
+                                &m_audioCodecContext->ch_layout,
+                                m_audioCodecContext->sample_fmt,
+                                m_audioCodecContext->sample_rate,
+                                0, nullptr);
             swr_init(m_swrContext);
         }
     }
