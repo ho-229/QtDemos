@@ -6,7 +6,7 @@ HEADERS += \
    $$PWD/downloadmission.h \
    $$PWD/multithreadeddownloader.h \
    $$PWD/multithreadeddownloaderwriter.h \
-   $$PWD/until.h
+   $$PWD/util.h
 
 SOURCES += \
    $$PWD/downloadmission.cpp \
