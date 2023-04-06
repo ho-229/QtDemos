@@ -41,8 +41,8 @@ bool FFmpegDecoder::load()
     int ret = 0;
 
     // Open file
-    if((ret = avformat_open_input(
-             &m_formatContext, m_url.toLocalFile().toLocal8Bit().data(),
+    // Note that FFmpeg accepts filename encoded in UTF-8
+    if((ret = avformat_open_input(&m_formatContext, m_url.toLocalFile().toUtf8().data(),
              nullptr, nullptr)) < 0)
     {
         FFMPEG_ERROR(ret);
