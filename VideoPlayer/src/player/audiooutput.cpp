@@ -7,84 +7,96 @@
 #include "audiooutput.h"
 #include "ffmpegdecoder.h"
 
+#include <QIODevice>
+#include <QAudioOutput>
+#include <QAudioDeviceInfo>
+
+class AudioDevice final : public QIODevice
+{
+    FFmpegDecoder *m_decoder = nullptr;
+public:
+    AudioDevice(FFmpegDecoder *decoder, QObject *parent = nullptr)
+        : QIODevice(parent),
+          m_decoder(decoder)
+    { this->setOpenMode(QIODevice::ReadOnly); }
+
+    qint64 readData(char *data, qint64 maxlen) override
+    { return m_decoder->takeAudioData(data, maxlen); }
+
+    qint64 writeData(const char *, qint64) override { return 0; }
+};
+
 AudioOutput::AudioOutput(FFmpegDecoder *decoder, QObject *parent) :
     QObject(parent)
 {
-    if(SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
-        FUNC_ERROR << "Could not initialize SDL2 AUDIO:" << SDL_GetError();
-
     if(!decoder)
         FUNC_ERROR << ": Decoder is not valid";
 
-    m_userData.decoder = decoder;
+    m_audioDevice = new AudioDevice(decoder, this);
 }
 
 AudioOutput::~AudioOutput()
 {
-    SDL_QuitSubSystem(SDL_INIT_AUDIO);
+    this->stop();
 }
 
-void AudioOutput::setAudioFormat(const SDL_AudioSpec format)
+void AudioOutput::setAudioFormat(const QAudioFormat format)
 {
-    m_audioBuffer = format;
-
-    if(!m_audioBuffer.format)
-        FUNC_ERROR << ": This format is not support";
+    m_output = new QAudioOutput(format, this);
 }
 
 void AudioOutput::setVolume(qreal volume)
 {
-    m_userData.volume = int(volume * SDL_MIX_MAXVOLUME);
+    if (m_output)
+        m_output->setVolume(volume);
 }
 
 qreal AudioOutput::volume() const
 {
-    return m_userData.volume / SDL_MIX_MAXVOLUME;
+    return m_output ? m_output->volume() : 0.;
 }
 
 void AudioOutput::play()
 {
-    m_audioBuffer.userdata = &m_userData;
-    m_audioBuffer.callback = fillBuffer;
-
-    if(SDL_OpenAudio(&m_audioBuffer, nullptr) < 0)
-    {
-        FUNC_ERROR << ":Can not open audio";
+    if (!m_output)
         return;
-    }
 
-    SDL_PauseAudio(false);
+    m_output->start(m_audioDevice);
+
+    if (m_output->error() != QAudio::NoError)
+        FUNC_ERROR << ": " << m_output->error();
 }
 
 void AudioOutput::pause()
 {
-    SDL_PauseAudio(true);
+    if (m_output)
+        m_output->suspend();
 }
 
 void AudioOutput::resume()
 {
-    SDL_PauseAudio(false);
+    if (m_output)
+        m_output->resume();
 }
 
 void AudioOutput::stop()
 {
-    SDL_PauseAudio(true);
-    SDL_CloseAudio();
+    if (!m_output)
+        return;
+
+    m_output->stop();
+    m_output->deleteLater();
+    m_output = nullptr;
 }
 
-void AudioOutput::fillBuffer(void *userdata, Uint8 *stream, int len)
+void AudioOutput::reset()
 {
-    if(!len)
+    if (!m_output)
         return;
 
-    SDL_memset(stream, 0, size_t(len));
-    AudioUserData *user = reinterpret_cast<AudioUserData *>(userdata);
+    const auto previousState = m_output->state();
+    m_output->reset();
 
-    const QByteArray data(user->decoder->takeAudioData(len));
-
-    if(data.isEmpty())
-        return;
-
-    SDL_MixAudio(stream, reinterpret_cast<const uint8_t *>(data.data()),
-                 static_cast<Uint32>(data.size()), user->volume);
+    if (previousState == QAudio::ActiveState)
+        m_output->start(m_audioDevice);
 }

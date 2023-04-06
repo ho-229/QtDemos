@@ -13,18 +13,15 @@
 #include <QMutex>
 #include <QImage>
 #include <QObject>
+#include <QAudioFormat>
 #include <QContiguousCache>
 
 #include "ffmpeg.h"
 
-extern "C"          // Import SDL 2
-{
-#include <SDL.h>
-}
-
 #define VIDEO_CACHE_SIZE 128
 #define AUDIO_CACHE_SIZE 256
 #define SUBTITLE_CACHE_SIZE 128
+#define AUDIO_DELAY 0.3
 
 #define FUNC_ERROR qCritical() << __FUNCTION__
 
@@ -104,11 +101,11 @@ public:
 
     AVFrame* takeVideoFrame();
 
-    const QByteArray takeAudioData(int len);
+    qint64 takeAudioData(char *data, qint64 len);
 
     SubtitleFrame takeSubtitleFrame();
 
-    const SDL_AudioSpec audioFormat() const;
+    const QAudioFormat audioFormat() const;
 
     qreal fps() const;
 
