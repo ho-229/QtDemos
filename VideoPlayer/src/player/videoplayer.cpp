@@ -196,6 +196,7 @@ void VideoPlayer::seek(int position)
 {
     Q_D(VideoPlayer);
     d->decoder->seek(position);
+    d->audioOutput->reset();
 
     d->lastDiff = 0;
     d->totalStep = 0;

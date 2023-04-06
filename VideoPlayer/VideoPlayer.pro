@@ -1,4 +1,4 @@
-QT += quick
+QT += quick multimedia
 
 CONFIG += c++11
 
@@ -31,19 +31,11 @@ win32 {
     LIBS += -L$$(FFMPEG_PATH)/lib/ -lavutil -lavcodec -lavformat -lavfilter -lswresample -lswscale
     INCLUDEPATH += $$(FFMPEG_PATH)/include
     DEPENDPATH += $$(FFMPEG_PATH)/include
-
-    # SDL2
-    LIBS += -L$$(SDL_PATH)/lib/x64/ -lSDL2
-    INCLUDEPATH += $$(SDL_PATH)/include
-    DEPENDPATH += $$(SDL_PATH)/include
 }
 
 unix {
+    # FFmpeg
     LIBS += -L/usr/lib64/ -lavutil -lavcodec -lavformat -lavfilter -lswresample -lswscale
     INCLUDEPATH += /usr/include/ffmpeg
     DEPENDPATH += /usr/include/ffmpeg
-
-    LIBS += -L/usr/lib64/ -lSDL2
-    INCLUDEPATH += /usr/include/SDL2
-    DEPENDPATH += /usr/include/SDL2
 }

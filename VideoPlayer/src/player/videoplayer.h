@@ -17,8 +17,6 @@ class VideoPlayer : public QQuickFramebufferObject
 {
     Q_OBJECT
 
-
-
     Q_PROPERTY(QUrl source READ source WRITE setSource NOTIFY sourceChanged)
     Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
 

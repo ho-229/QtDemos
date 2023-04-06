@@ -5,6 +5,7 @@
  */
 
 #include "ffmpegdecoder.h"
+#include "qaudioformat.h"
 
 #include <QDir>
 #include <QThread>
@@ -377,7 +378,7 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
     m_videoTime = second(frame->pts, m_videoStream->time_base);
 
     if(m_isPtsUpdated)
-        m_diff = second(m_audioPts, m_audioStream->time_base) - m_videoTime;
+        m_diff = second(m_audioPts, m_audioStream->time_base) - m_videoTime - AUDIO_DELAY;
 
     m_position = static_cast<int>(m_videoTime);
 
@@ -389,7 +390,7 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
     return frame;
 }
 
-const QByteArray FFmpegDecoder::takeAudioData(int len)
+qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
 {
     m_mutex.lock();
     if(m_state == Closed || m_audioCache.isEmpty() || !len)
@@ -398,28 +399,28 @@ const QByteArray FFmpegDecoder::takeAudioData(int len)
         return {};
     }
 
-    int free = len;
-    QByteArray ret;
+    qint64 free = len;
+    char *dest = data;
 
-    do
+    while(!m_audioCache.isEmpty() && m_audioCache.first().second.size() <= free)
     {
-        const AudioFrame frame = m_audioCache.takeFirst();
+        const AudioFrame &&frame = m_audioCache.takeFirst();
+        const auto size = frame.second.size();
 
         m_audioPts = frame.first;
-        ret.append(frame.second);
+        memcpy(dest, frame.second.data(), size);
 
-        free -= frame.second.size();
+        free -= size;
+        dest += size;
     }
-    while(!m_audioCache.isEmpty() && m_audioCache.first().second.size() <= free);
 
     m_mutex.unlock();
-
     m_isPtsUpdated = true;
 
     if(m_audioCache.size() < AUDIO_CACHE_SIZE / 2 && !m_isDecodeFinished)
         emit callDecodec();
 
-    return ret;
+    return len - free;
 }
 
 SubtitleFrame FFmpegDecoder::takeSubtitleFrame()
@@ -437,18 +438,15 @@ SubtitleFrame FFmpegDecoder::takeSubtitleFrame()
     return m_subtitleCache.takeFirst();
 }
 
-const SDL_AudioSpec FFmpegDecoder::audioFormat() const
+const QAudioFormat FFmpegDecoder::audioFormat() const
 {
-    SDL_AudioSpec format;
+    QAudioFormat format;
 
-    if(m_state == Opened && m_hasAudio)
-    {
-        format.freq = m_audioCodecContext->sample_rate;
-        format.channels = 2;
-        format.silence = 0;
-        format.samples = static_cast<Uint16>(m_audioCodecContext->frame_size);
-        format.format = AUDIO_S16;
-    }
+    format.setCodec("audio/pcm");
+    format.setChannelCount(2);
+    format.setSampleType(QAudioFormat::SignedInt);
+    format.setSampleRate(m_audioCodecContext->sample_rate);
+    format.setSampleSize(16);
 
     return format;
 }
