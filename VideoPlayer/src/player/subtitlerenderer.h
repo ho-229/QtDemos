@@ -24,7 +24,6 @@ protected:
 
 private:
     SubtitleFrame m_subtitle;
-
 };
 
 #endif // SUBTITLERENDERER_H
