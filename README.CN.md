@@ -19,30 +19,26 @@
 
 ## 如何编译
 
-* 需要 `Qt5`，`FFmpeg` 和 `SDL2` 环境。
+* 需要 `Qt5` 和 `FFmpeg` 环境。
 
-  安装 Qt5。  
+  * 安装 Qt5。  
 
-  安装 FFmpeg 和 SDL2。
-  * Windows
+  * 安装 FFmpeg。
+    * Windows
 
-    下载 [FFmpeg](https://github.com/BtbN/FFmpeg-Builds/releases)，将库路径添加到系统环境变量 `FFMPEG_PATH`。
+      下载 [FFmpeg(shared libraries)](https://github.com/BtbN/FFmpeg-Builds/releases)，将库路径添加到系统环境变量 `FFMPEG_PATH`。
 
-    下载 [SDL2 devel](http://www.libsdl.org/download-2.0.php) ，将库路径添加到系统环境变量 `SDL_PATH`。
+    * Linux
 
-  * Linux
-
-    安装 `FFmpeg` and `SDL2`。 
-
-    ```shell
-    sudo pacman -S ffmpeg sdl2                            # Arch
-    sudo apt install ffmpeg libavfilter-dev libsdl2-dev   # Debian
-    ```
+      ```shell
+      sudo pacman -S ffmpeg                     # Arch
+      sudo apt install ffmpeg libavfilter-dev   # Debian
+      ```
 
 * 克隆仓库到本地并编译项目。
 
   ```shell
-  git clone https://github.com/ho229v3666/QtDemos.git
+  git clone https://github.com/ho-229/QtDemos.git
        # or https://gitee.com/ho229/QtDemos.git
   cd QtDemos
   mkdir build
@@ -50,8 +46,3 @@
   qmake ..
   make -j
   ```
-
-## 关于作者
-
-* QQ : 2189684957
-* E-mail : <ho229v3666@gmail.com>
