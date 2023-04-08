@@ -122,7 +122,7 @@ Window {
 
             anchors.centerIn: parent
 
-            icon.source: videoPlayer.state == VideoPlayer.Playing ?
+            icon.source: videoPlayer.playState == VideoPlayer.Playing ?
                              "qrc:/image/pause.png" : "qrc:/image/play.png"
             icon.color: "white"
             icon.width: 20
@@ -140,7 +140,7 @@ Window {
             }
 
             onClicked: {
-                if(videoPlayer.state == VideoPlayer.Playing)
+                if(videoPlayer.playState == VideoPlayer.Playing)
                     videoPlayer.pause();
                 else
                     videoPlayer.play();
@@ -174,7 +174,7 @@ Window {
             }
 
             onClicked: {
-                if(videoPlayer.state == VideoPlayer.Playing)
+                if(videoPlayer.playState == VideoPlayer.Playing)
                     videoPlayer.seek(videoPlayer.position + 10);
             }
         }
@@ -260,7 +260,7 @@ Window {
             }
 
             onClicked: {
-                if(videoPlayer.state == VideoPlayer.Playing)
+                if(videoPlayer.playState == VideoPlayer.Playing)
                     videoPlayer.seek(videoPlayer.position - 10);
             }
         }
@@ -271,7 +271,7 @@ Window {
             width: 29
             height: 29
 
-            enabled: videoPlayer.state == VideoPlayer.Playing
+            enabled: videoPlayer.playState != VideoPlayer.Stopped
 
             anchors.verticalCenter: parent.verticalCenter
             anchors.right: backBtn.left
@@ -339,7 +339,7 @@ Window {
 
             value: videoPlayer.position
 
-            enabled: videoPlayer.state == VideoPlayer.Playing
+            enabled: videoPlayer.playState == VideoPlayer.Playing
 
             anchors.left: parent.left
             anchors.right: parent.right
@@ -455,7 +455,7 @@ Window {
 
         anchors.centerIn: parent
 
-        visible: videoPlayer.state == VideoPlayer.Stopped
+        visible: videoPlayer.playState == VideoPlayer.Stopped
 
         background: Rectangle {
             radius: 7

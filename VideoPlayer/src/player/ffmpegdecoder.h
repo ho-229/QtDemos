@@ -32,10 +32,6 @@ typedef QPair<QSize,            // Size
               AVPixelFormat>    // Format
     VideoInfo;
 
-typedef QPair<qint64,           // PTS
-              QByteArray>       // PCM data
-    AudioFrame;
-
 struct SubtitleFrame
 {
     QImage image;
@@ -81,12 +77,10 @@ public:
                               m_formatContext->duration / AV_TIME_BASE) : 0; }
 
     void trackedAudio(int index);
-
     int audioTrackCount() const { return m_state == Opened ? streamCount(
             m_formatContext, AVMEDIA_TYPE_AUDIO) : 0; }
 
     void trackSubtitle(int index);
-
     int subtitleTrackCount() const;
 
     int position() const { return m_position; }
@@ -115,15 +109,15 @@ public:
     { return static_cast<qreal>(time) * av_q2d(timebase); }
 
 signals:
-    void callDecodec();         // Asynchronous call FFmpegDecoder::decode()
-    void callSeek();            // Asynchronous call FFmpegDecoder::seek()
-
     void decodeFinished();
     void subtitleChanged(SubtitleFrame);
 
+    void callDecodec();         // Asynchronous call FFmpegDecoder::decode()
+    void callSeek(int);         // Asynchronous call FFmpegDecoder::seek()
+
 private slots:
-    void decode();
-    void seek();
+    void onDecode();
+    void onSeek(int);
 
 protected:
     State m_state = Closed;
@@ -153,7 +147,7 @@ private:
     SwsContext *m_swsContext = nullptr;
 
     QContiguousCache<AVFrame *>     m_videoCache;
-    QContiguousCache<AudioFrame>    m_audioCache;
+    QContiguousCache<AVFrame *>     m_audioCache;
     QContiguousCache<SubtitleFrame> m_subtitleCache;
 
     SubtitleFrame m_currentSubtitle;
@@ -162,30 +156,26 @@ private:
     bool m_hasAudio = false;
     bool m_hasSubtitle = false;
 
-    bool m_isPtsUpdated = false;
+    volatile bool m_isPtsUpdated = false;
 
-    bool m_runnable = false;             // Is FFmpegDecoder::decode() could run
+    volatile bool m_runnable = false;             // Is FFmpegDecoder::decode() could run
 
     bool m_isDecodeFinished = false;
 
+    volatile qreal m_diff = 0.0;
+    volatile int m_position = 0;
     qreal m_videoTime = 0.0;
-    int m_position = 0;
-    int m_targetPosition = 0;
 
-    qint64 m_audioPts = 0;
-
-    qreal m_diff = 0.0;
+    volatile qint64 m_audioPts = 0;
 
     void loadSubtitle(int index = 1);
 
-    inline void clearCache();
+    void clearCache();
 
     static inline void releaseContext(AVCodecContext *&context)
     {
         avcodec_flush_buffers(context);
         avcodec_free_context(&context);
-
-        context = nullptr;
     }
 
     static inline void releaseFilter(AVFilterContext *&context)

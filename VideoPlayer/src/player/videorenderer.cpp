@@ -107,6 +107,7 @@ void VideoRenderer::updateTextureInfo()
 
         m_textureV->setSize(info.first.width(), info.first.height());
         m_textureV->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
+
         m_textureAlloced = true;
         break;
     default:
@@ -158,11 +159,11 @@ void VideoRenderer::paint()
     m_program.enableAttributeArray(m_verticesHandle);
     m_program.setAttributeArray(m_verticesHandle, m_vertices.constData());
 
-    // 纹理坐标
+    // fragment position
     m_program.enableAttributeArray(m_texCoordHandle);
     m_program.setAttributeArray(m_texCoordHandle, m_texcoords.constData());
 
-    // MVP矩阵
+    // MVP rectangle
     m_program.setUniformValue(m_modelMatHandle, m_modelMatrix);
     m_program.setUniformValue(m_viewMatHandle, m_viewMatrix);
     m_program.setUniformValue(m_projectMatHandle, m_projectionMatrix);

@@ -19,10 +19,8 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
 {
     Q_D(VideoPlayer);
 
-    d->decodeThread = new QThread(this);
-
     d->decoder = new FFmpegDecoder(nullptr);
-    d->decoder->moveToThread(d->decodeThread);
+    d->decoder->moveToThread(new QThread(this));
 
     d->audioOutput = new AudioOutput(d->decoder, this);
 
@@ -65,7 +63,7 @@ QUrl VideoPlayer::source() const
     return d_ptr->decoder->url();
 }
 
-VideoPlayer::State VideoPlayer::state() const
+VideoPlayer::State VideoPlayer::playState() const
 {
     return d_ptr->state;
 }
@@ -111,7 +109,7 @@ void VideoPlayer::play()
     }
 
     d->state = Playing;
-    emit stateChanged(Playing);
+    emit playStateChanged(Playing);
 }
 
 void VideoPlayer::pause()
@@ -125,7 +123,7 @@ void VideoPlayer::pause()
     d->audioOutput->pause();
 
     d->state = Paused;
-    emit stateChanged(Paused);
+    emit playStateChanged(Paused);
 }
 
 void VideoPlayer::stop()
@@ -147,7 +145,7 @@ void VideoPlayer::stop()
     this->update();
 
     d->state = Stopped;
-    emit stateChanged(Stopped);
+    emit playStateChanged(Stopped);
 }
 
 void VideoPlayer::setVolume(qreal volume)

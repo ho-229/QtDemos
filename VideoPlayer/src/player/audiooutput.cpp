@@ -84,7 +84,7 @@ void AudioOutput::stop()
     if (!m_output)
         return;
 
-    m_output->stop();
+    m_output->reset();
     m_output->deleteLater();
     m_output = nullptr;
 }

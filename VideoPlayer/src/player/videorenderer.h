@@ -61,14 +61,14 @@ private:
     void updateTextureInfo();
     void updateTextureData(AVFrame *frame);
 
-    inline void initShader();
-    inline void initTexture();
-    inline void initGeometry();
+    void initShader();
+    void initTexture();
+    void initGeometry();
 
-    inline void paint();
-    inline void resize();
+    void paint();
+    void resize();
 
-    static inline void destoryTexture(QOpenGLTexture *&texture);
+    static void destoryTexture(QOpenGLTexture *&texture);
 };
 
 #endif // VIDEORENDERER_H

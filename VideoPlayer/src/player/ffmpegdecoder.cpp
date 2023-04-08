@@ -23,9 +23,9 @@ FFmpegDecoder::FFmpegDecoder(QObject *parent) :
     m_subtitleCache.setCapacity(SUBTITLE_CACHE_SIZE);
 
     QObject::connect(this, &FFmpegDecoder::callDecodec, this,
-                     &FFmpegDecoder::decode);
+                     &FFmpegDecoder::onDecode);
     QObject::connect(this, &FFmpegDecoder::callSeek, this,
-                     QOverload<>::of(&FFmpegDecoder::seek));
+                     &FFmpegDecoder::onSeek);
 }
 
 FFmpegDecoder::~FFmpegDecoder()
@@ -40,9 +40,11 @@ bool FFmpegDecoder::load()
 
     int ret = 0;
 
+    const QString url = m_url.isLocalFile() ? m_url.toLocalFile() : m_url.toString();
+
     // Open file
     // Note that FFmpeg accepts filename encoded in UTF-8
-    if((ret = avformat_open_input(&m_formatContext, m_url.toLocalFile().toUtf8().data(),
+    if((ret = avformat_open_input(&m_formatContext, url.toUtf8().data(),
              nullptr, nullptr)) < 0)
     {
         FFMPEG_ERROR(ret);
@@ -87,7 +89,7 @@ bool FFmpegDecoder::load()
             swr_alloc_set_opts2(&m_swrContext, &dest,
                                 AV_SAMPLE_FMT_S16,
                                 m_audioCodecContext->sample_rate,
-                                &m_audioCodecContext->ch_layout,
+                                &dest,
                                 m_audioCodecContext->sample_fmt,
                                 m_audioCodecContext->sample_rate,
                                 0, nullptr);
@@ -145,10 +147,7 @@ void FFmpegDecoder::release()
         releaseFilter(m_buffersinkContext);
 
     if(m_swrContext)
-    {
-        swr_close(m_swrContext);
-        m_swrContext = nullptr;
-    }
+        swr_free(&m_swrContext);
 
     if(m_swsContext)
     {
@@ -159,7 +158,6 @@ void FFmpegDecoder::release()
     avformat_close_input(&m_formatContext);
 
     m_position = 0;
-    m_targetPosition = 0;
 
     m_isPtsUpdated = false;
 
@@ -245,10 +243,8 @@ void FFmpegDecoder::seek(int position)
     if(m_state == Closed || position == m_position)
         return;
 
-    m_targetPosition = position;
     m_runnable = false;
-
-    emit callSeek();
+    emit callSeek(position);
 }
 
 VideoInfo FFmpegDecoder::videoInfo() const
@@ -266,17 +262,17 @@ VideoInfo FFmpegDecoder::videoInfo() const
     return {{m_videoCodecContext->width, m_videoCodecContext->height}, format};
 }
 
-void FFmpegDecoder::seek()
+void FFmpegDecoder::onSeek(int target)
 {
-    if(m_state == Closed || m_position == m_targetPosition)
+    if(m_state == Closed || m_position == target)
         return;
 
     const AVStream *seekStream = m_hasVideo ? m_videoStream : m_audioStream;
     av_seek_frame(m_formatContext, seekStream->index, static_cast<qint64>
-                  (m_targetPosition / av_q2d(seekStream->time_base)),
+                  (target / av_q2d(seekStream->time_base)),
                   AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
 
-    m_position = m_targetPosition;
+    m_position = target;
 
     // Clear frame cache
     m_mutex.lock();
@@ -292,7 +288,8 @@ void FFmpegDecoder::seek()
     m_isPtsUpdated = false;
     m_runnable = true;
 
-    this->decode();
+    // runs on the same thread so doesn't need to be called by signal
+    this->onDecode();
 }
 
 void FFmpegDecoder::loadSubtitle(int index)
@@ -365,15 +362,13 @@ void FFmpegDecoder::loadSubtitle(int index)
 
 AVFrame *FFmpegDecoder::takeVideoFrame()
 {
-    m_mutex.lock();
+    QMutexLocker locker(&m_mutex);
 
     if(m_state == Closed || m_videoCache.isEmpty())
-    {
-        m_mutex.unlock();
         return nullptr;
-    }
 
     AVFrame *frame = m_videoCache.takeFirst();
+    locker.unlock();
 
     m_videoTime = second(frame->pts, m_videoStream->time_base);
 
@@ -381,8 +376,6 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
         m_diff = second(m_audioPts, m_audioStream->time_base) - m_videoTime - AUDIO_DELAY;
 
     m_position = static_cast<int>(m_videoTime);
-
-    m_mutex.unlock();
 
     if(m_videoCache.count() <= VIDEO_CACHE_SIZE / 2 && !m_isDecodeFinished)
         emit callDecodec();
@@ -392,29 +385,27 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
 
 qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
 {
-    m_mutex.lock();
+    QMutexLocker locker(&m_mutex);
     if(m_state == Closed || m_audioCache.isEmpty() || !len)
-    {
-        m_mutex.unlock();
         return {};
-    }
 
     qint64 free = len;
     char *dest = data;
 
-    while(!m_audioCache.isEmpty() && m_audioCache.first().second.size() <= free)
+    while(!m_audioCache.isEmpty() && m_audioCache.first()->linesize[0] <= free)
     {
-        const AudioFrame &&frame = m_audioCache.takeFirst();
-        const auto size = frame.second.size();
+        AVFrame *frame = m_audioCache.takeFirst();
+        const int size = frame->linesize[0];
 
-        m_audioPts = frame.first;
-        memcpy(dest, frame.second.data(), size);
+        m_audioPts = frame->pts;
+        memcpy(dest, frame->data[0], size);
+        av_frame_free(&frame);
 
         free -= size;
         dest += size;
     }
 
-    m_mutex.unlock();
+    locker.unlock();
     m_isPtsUpdated = true;
 
     if(m_audioCache.size() < AUDIO_CACHE_SIZE / 2 && !m_isDecodeFinished)
@@ -459,17 +450,14 @@ qreal FFmpegDecoder::fps() const
     return 0.0;
 }
 
-void FFmpegDecoder::decode()
+void FFmpegDecoder::onDecode()
 {
-    AVPacket* packet = nullptr;
+    AVPacket *packet = av_packet_alloc();
 
-    while(m_state == Opened && !this->isCacheFull() && m_runnable
-           && (packet = av_packet_alloc()))
+    while(m_state == Opened && !this->isCacheFull() && m_runnable)
     {
         if(av_read_frame(m_formatContext, packet))      // Read frame
         {
-            av_packet_free(&packet);
-
             m_isDecodeFinished = true;
             emit decodeFinished();
             break;
@@ -480,13 +468,11 @@ void FFmpegDecoder::decode()
             !avcodec_send_packet(m_videoCodecContext, packet))
         {
             AVFrame *frame = av_frame_alloc();
-            AVFrame *filterFrame = av_frame_alloc();
-
             if(frame && !avcodec_receive_frame(m_videoCodecContext, frame))
             {
-                m_mutex.lock();
                 if(m_buffersrcContext && m_buffersinkContext)
                 {
+                    AVFrame *filterFrame = av_frame_alloc();
                     if(av_buffersrc_add_frame_flags(
                             m_buffersrcContext, frame, AV_BUFFERSRC_FLAG_KEEP_REF) >= 0
                         && av_buffersink_get_frame(m_buffersinkContext, filterFrame) >= 0)
@@ -497,35 +483,23 @@ void FFmpegDecoder::decode()
                     else
                         av_frame_free(&filterFrame);
                 }
-                m_mutex.unlock();
 
                 if(m_swsContext)
                 {
                     AVFrame *swsFrame = av_frame_alloc();
-
                     swsFrame->pts = frame->pts;
-                    swsFrame->width = m_videoCodecContext->width;
-                    swsFrame->height = m_videoCodecContext->height;
+                    swsFrame->width = frame->width;
+                    swsFrame->height = frame->height;
                     swsFrame->format = AV_PIX_FMT_YUV420P;
 
-                    av_frame_get_buffer(swsFrame, 0);
-
-                    sws_scale(m_swsContext, frame->data, frame->linesize, 0,
-                              m_videoCodecContext->height, swsFrame->data,
-                              swsFrame->linesize);
-
+                    sws_scale_frame(m_swsContext, swsFrame, frame);
                     av_frame_free(&frame);
 
-                    m_mutex.lock();
-                    m_videoCache.append(swsFrame);
-                    m_mutex.unlock();
+                    frame = swsFrame;
                 }
-                else
-                {
-                    m_mutex.lock();
-                    m_videoCache.append(frame);
-                    m_mutex.unlock();
-                }
+
+                QMutexLocker locker(&m_mutex);
+                m_videoCache.append(frame);
             }
             else
                 av_frame_free(&frame);
@@ -538,38 +512,29 @@ void FFmpegDecoder::decode()
             AVFrame *frame = av_frame_alloc();
             if(!avcodec_receive_frame(m_audioCodecContext, frame))
             {
-                const int size =
-                    av_samples_get_buffer_size(nullptr,
-                                               2,
-                                               frame->nb_samples,
-                                               AV_SAMPLE_FMT_S16,
-                                               0);
-
                 if(m_swrContext)
                 {
-                    QByteArray pcm;
-                    pcm.resize(size);
-                    uint8_t *outData[2] = { nullptr };
-                    outData[0] = reinterpret_cast<uint8_t *>(pcm.data());
+                    AVFrame *swrFrame = av_frame_alloc();
+                    swrFrame->pts = frame->pts;
+                    swrFrame->nb_samples = frame->nb_samples;
+                    swrFrame->format = AV_SAMPLE_FMT_S16;
+                    av_channel_layout_default(&swrFrame->ch_layout, 2);
 
-                    swr_convert(m_swrContext, outData, frame->nb_samples,
-                                reinterpret_cast<const uint8_t **>(frame),
+                    av_frame_get_buffer(swrFrame, 0);
+
+                    swr_convert(m_swrContext, swrFrame->data, frame->nb_samples,
+                                const_cast<const uint8_t **>(frame->data),
                                 frame->nb_samples);
 
-                    m_mutex.lock();
-                    m_audioCache.append({frame->pts, pcm});
-                    m_mutex.unlock();
+                    av_frame_free(&frame);
+                    frame = swrFrame;
                 }
-                else
-                {
-                    m_mutex.lock();
-                    m_audioCache.append({frame->pts, {reinterpret_cast<const char *>
-                                                      (frame->data[0]), size}});
-                    m_mutex.unlock();
-                }
-            }
 
-            av_frame_free(&frame);
+                QMutexLocker locker(&m_mutex);
+                m_audioCache.append(frame);
+            }
+            else
+                av_frame_free(&frame);
         }
 
         // Subtitle frame decode
@@ -597,17 +562,18 @@ void FFmpegDecoder::decode()
                 subtitleFrame.image = loadFromAVFrame(frame);
                 subtitleFrame.pts = second(packet->pts, m_subtitleStream->time_base);
 
-                m_mutex.lock();
-                m_subtitleCache.append(subtitleFrame);
-                m_mutex.unlock();
-
                 avsubtitle_free(&subtitle);
                 av_frame_free(&frame);
+
+                QMutexLocker locker(&m_mutex);
+                m_subtitleCache.append(std::move(subtitleFrame));
             }
         }
 
-        av_packet_free(&packet);
+        av_packet_unref(packet);
     }
+
+    av_packet_free(&packet);
 }
 
 void FFmpegDecoder::clearCache()
@@ -702,7 +668,7 @@ bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
 
     // Create in filter using "arg"
     if (avfilter_graph_create_filter(&buffersrcContext, buffersrc, "in",
-                                     args.toLocal8Bit().data(), nullptr, filterGraph) < 0)
+                                     args.toUtf8().data(), nullptr, filterGraph) < 0)
     {
         FUNC_ERROR << "Has Error: line =" << __LINE__;
         release();
@@ -736,7 +702,7 @@ bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
     input->pad_idx = 0;
     input->filter_ctx = buffersinkContext;
 
-    if(avfilter_graph_parse_ptr(filterGraph, filterDesc.toLocal8Bit().data(),
+    if(avfilter_graph_parse_ptr(filterGraph, filterDesc.toUtf8().data(),
                                  &input, &output, nullptr) < 0)
     {
         FUNC_ERROR << "Has Error: line =" << __LINE__;
@@ -828,9 +794,8 @@ int FFmpegDecoder::findRelativeStream(const AVFormatContext *format,
 
     if(relativeIndex >= 1)
         for(size_t i = 0; i < format->nb_streams; ++i)
-            if(format->streams[i]->codecpar->codec_type == type)
-                if(relativeIndex == ++count)
-                    return int(i);
+            if(format->streams[i]->codecpar->codec_type == type && relativeIndex == ++count)
+                return int(i);
 
     return -1;
 }

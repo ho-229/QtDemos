@@ -18,7 +18,6 @@ class VideoPlayerPrivate
 public:
     VideoPlayerPrivate(VideoPlayer *parent) : q_ptr(parent) {}
 
-    QThread *decodeThread  = nullptr;
     FFmpegDecoder *decoder = nullptr;
 
     AudioOutput *audioOutput = nullptr;
@@ -37,10 +36,10 @@ public:
 
     qreal lastDiff = 0, totalStep = 0;
 
-    QQuickWindow* window() const { return q_ptr->window(); }
+    QQuickWindow *window() const { return q_ptr->window(); }
 
 private:
-    VideoPlayer * const q_ptr;
+    VideoPlayer *const q_ptr;
     Q_DECLARE_PUBLIC(VideoPlayer)
 };
 

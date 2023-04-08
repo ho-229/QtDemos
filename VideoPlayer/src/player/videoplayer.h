@@ -23,7 +23,7 @@ class VideoPlayer : public QQuickFramebufferObject
     // Read only property
     Q_PROPERTY(int position READ position NOTIFY positionChanged)
 
-    Q_PROPERTY(State state READ state NOTIFY stateChanged)
+    Q_PROPERTY(State playState READ playState NOTIFY playStateChanged)
 
     Q_PROPERTY(int duration READ duration NOTIFY loaded)
     Q_PROPERTY(bool hasVideo READ hasVideo NOTIFY loaded)
@@ -56,7 +56,7 @@ public:
     void setSource(const QUrl& source);
     QUrl source() const;
 
-    State state() const;
+    State playState() const;
 
     void setVolume(qreal volume);
     qreal volume() const;
@@ -92,14 +92,14 @@ signals:
 
     void loaded();
 
-    void error(const Error error);
+    void error(const VideoPlayer::Error error);
 
-    void stateChanged(const VideoPlayer::State state);
+    void playStateChanged(const VideoPlayer::State state);
     void volumeChanged(const qreal volume);
     void positionChanged(const int position);
 
 private:
-    VideoPlayerPrivate * const d_ptr;
+    VideoPlayerPrivate *const d_ptr;
 
     Q_DECLARE_PRIVATE(VideoPlayer)
 
