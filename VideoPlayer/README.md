@@ -1,5 +1,5 @@
 # Video Player
-* A video player based on `Qt`, using `FFmpeg` for decoding, `SDL2` for playing audio and `OpenGL` for rendering.
+* A video player based on `Qt`, using `FFmpeg` for decoding and `OpenGL` for rendering.
 
 * Screenshot
 ![image](./screenshot/run.png)
@@ -8,8 +8,9 @@
 - [x] Play audio and video.
 - [x] Play progress control.
 - [x] Play volume control.
-- [x] Audio track select.
 - [x] Subtitle support.
   - [x] `.ass` subtitle support.
   - [x] `Bitmap` subtitle support.
 - [x] Subtitle track select.
+- [x] Audio track select.
+- [x] Play internet stream
