@@ -38,45 +38,59 @@ struct SubtitleFrame
     qreal pts = -1;      // In second
 };
 
+Q_DECLARE_METATYPE(SubtitleFrame)
+
 class FFmpegDecoder : public QObject
 {
     Q_OBJECT
 public:
     enum State
     {
+        Error,      // only used by stateChanged signal
         Opened,
         Closed
     };
+    Q_ENUM(State)
+
+    enum SubtitleType
+    {
+        None,
+        TextBased,
+        Bitmap
+    };
+    Q_ENUM(SubtitleType)
 
     explicit FFmpegDecoder(QObject *parent = nullptr);
     ~FFmpegDecoder() Q_DECL_OVERRIDE;
 
-    bool load();
-    void release();
+    void requestInterrupt() { m_runnable = false; }
 
-    void setUrl(const QUrl& url){ m_url = url; }
+    void setUrl(const QUrl& url) { m_url = url; }
     QUrl url() const { return m_url; }
 
     State state() const { return m_state; }
 
+    QString errorString() const { return m_errorBuf; }
+
     bool hasVideo() const { return m_hasVideo; }
     bool hasAudio() const { return m_hasAudio; }
-    bool hasSubtitle() const { return m_hasSubtitle; }
+
+    SubtitleType subtitleType() const { return m_subtitleType; }
 
     bool hasFrame() const { return m_videoCache.count() || m_audioCache.count(); }
 
-    bool isDecodeFinished() const { return m_isDecodeFinished; }
+    bool seekable() const;
+
+    bool isEnd() const { return m_isEnd; }
 
     bool isCacheFull() const { return m_videoCache.isFull() || m_audioCache.isFull(); }
 
     /**
      * @return duration of the media in seconds.
      */
-    int duration() const { return m_formatContext ?
-                          static_cast<int>(
-                              m_formatContext->duration / AV_TIME_BASE) : 0; }
+    int duration() const;
 
-    void trackedAudio(int index);
+    void trackAudio(int index);
     int audioTrackCount() const { return m_state == Opened ? streamCount(
             m_formatContext, AVMEDIA_TYPE_AUDIO) : 0; }
 
@@ -84,8 +98,6 @@ public:
     int subtitleTrackCount() const;
 
     int position() const { return m_position; }
-
-    void seek(int position);
 
     VideoInfo videoInfo() const;
 
@@ -109,15 +121,17 @@ public:
     { return static_cast<qreal>(time) * av_q2d(timebase); }
 
 signals:
-    void decodeFinished();
-    void subtitleChanged(SubtitleFrame);
+    void seeked();
+    void stateChanged(FFmpegDecoder::State);
 
-    void callDecodec();         // Asynchronous call FFmpegDecoder::decode()
-    void callSeek(int);         // Asynchronous call FFmpegDecoder::seek()
+public slots:
+    void load();
+    void release();
+
+    void seek(int position);
 
 private slots:
     void onDecode();
-    void onSeek(int);
 
 protected:
     State m_state = Closed;
@@ -150,17 +164,14 @@ private:
     QContiguousCache<AVFrame *>     m_audioCache;
     QContiguousCache<SubtitleFrame> m_subtitleCache;
 
-    SubtitleFrame m_currentSubtitle;
+    SubtitleType m_subtitleType;
 
     bool m_hasVideo = false;
     bool m_hasAudio = false;
-    bool m_hasSubtitle = false;
 
     volatile bool m_isPtsUpdated = false;
-
     volatile bool m_runnable = false;             // Is FFmpegDecoder::decode() could run
-
-    bool m_isDecodeFinished = false;
+    volatile bool m_isEnd = false;
 
     volatile qreal m_diff = 0.0;
     volatile int m_position = 0;
@@ -206,7 +217,5 @@ private:
     static int findRelativeStream(const AVFormatContext *format, int relativeIndex,
                                   AVMediaType type);
 };
-
-Q_DECLARE_METATYPE(SubtitleFrame)
 
 #endif // FFMPEGDECODER_H

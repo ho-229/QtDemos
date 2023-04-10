@@ -5,36 +5,45 @@
  */
 
 #include "ffmpegdecoder.h"
-#include "qaudioformat.h"
 
 #include <QDir>
 #include <QThread>
 #include <QFileInfo>
+#include <QMetaObject>
 #include <QMutexLocker>
 
 FFmpegDecoder::FFmpegDecoder(QObject *parent) :
     QObject(parent)
 {
-    //avformat_network_init();
+    qRegisterMetaType<State>();
+
     av_log_set_level(AV_LOG_INFO);
 
     m_videoCache.setCapacity(VIDEO_CACHE_SIZE);
     m_audioCache.setCapacity(AUDIO_CACHE_SIZE);
     m_subtitleCache.setCapacity(SUBTITLE_CACHE_SIZE);
-
-    QObject::connect(this, &FFmpegDecoder::callDecodec, this,
-                     &FFmpegDecoder::onDecode);
-    QObject::connect(this, &FFmpegDecoder::callSeek, this,
-                     &FFmpegDecoder::onSeek);
 }
 
 FFmpegDecoder::~FFmpegDecoder()
 {
     this->release();
-    //avformat_network_deinit();
 }
 
-bool FFmpegDecoder::load()
+bool FFmpegDecoder::seekable() const
+{
+    // return m_formatContext ? m_formatContext->pb->seekable : false;
+    return m_url.isLocalFile();
+}
+
+int FFmpegDecoder::duration() const
+{
+    if(!m_formatContext || !this->seekable())
+        return 0;
+
+    return static_cast<int>(m_formatContext->duration / AV_TIME_BASE);
+}
+
+void FFmpegDecoder::load()
 {
     this->release();        // Reset
 
@@ -48,14 +57,16 @@ bool FFmpegDecoder::load()
              nullptr, nullptr)) < 0)
     {
         FFMPEG_ERROR(ret);
-        return false;
+        emit stateChanged(Error);
+        return;
     }
 
     // Find stream info
     if((ret = avformat_find_stream_info(m_formatContext, nullptr)) < 0)
     {
         FFMPEG_ERROR(ret);
-        return false;
+        emit stateChanged(Error);
+        return;
     }
 
     // Print file infomation
@@ -98,19 +109,19 @@ bool FFmpegDecoder::load()
     }
 
     if(!(m_hasVideo || m_hasAudio))     // If there is no video and audio
-        return false;
+        emit stateChanged(Error);
 
     this->loadSubtitle();
 
     this->thread()->start();            // Start the decode thread
 
-    m_isDecodeFinished = false;
-    m_state = Opened;
+    m_isEnd = false;
     m_runnable = true;
 
-    emit callDecodec();                 // Asynchronous call FFmpegDecoder::decode()
+    m_state = Opened;
+    emit stateChanged(m_state);
 
-    return true;
+    this->onDecode();
 }
 
 void FFmpegDecoder::release()
@@ -118,18 +129,11 @@ void FFmpegDecoder::release()
     if(m_state == Closed)
         return;
 
-    m_state = Closed;
     m_runnable = false;
-
-    this->thread()->quit();             // Tell the decode thread exit
 
     m_mutex.lock();
     this->clearCache();
     m_mutex.unlock();
-
-    // Wait for finished
-    if(!this->thread()->wait())
-        FUNC_ERROR << ": Decode thread exit failed";
 
     if(m_hasVideo)
         releaseContext(m_videoCodecContext);
@@ -167,10 +171,14 @@ void FFmpegDecoder::release()
 
     m_hasAudio = false;
     m_hasVideo = false;
-    m_hasSubtitle = false;
+
+    m_subtitleType = None;
+
+    m_state = Closed;
+    emit stateChanged(m_state);
 }
 
-void FFmpegDecoder::trackedAudio(int index)
+void FFmpegDecoder::trackAudio(int index)
 {
     if(index < 0 || index > this->audioTrackCount() || index == m_audioStream->index)
         return;
@@ -184,7 +192,7 @@ void FFmpegDecoder::trackedAudio(int index)
 
     m_mutex.unlock();
 
-    emit callDecodec();
+    QMetaObject::invokeMethod(this, &FFmpegDecoder::onDecode);  // Asynchronous call FFmpegDecoder::decode()
 }
 
 void FFmpegDecoder::trackSubtitle(int index)
@@ -214,7 +222,7 @@ void FFmpegDecoder::trackSubtitle(int index)
 
     m_mutex.unlock();
 
-    emit callDecodec();
+    QMetaObject::invokeMethod(this, &FFmpegDecoder::onDecode);  // Asynchronous call FFmpegDecoder::decode()
 }
 
 int FFmpegDecoder::subtitleTrackCount() const
@@ -238,15 +246,6 @@ int FFmpegDecoder::subtitleTrackCount() const
     return subtitleList.size();
 }
 
-void FFmpegDecoder::seek(int position)
-{
-    if(m_state == Closed || position == m_position)
-        return;
-
-    m_runnable = false;
-    emit callSeek(position);
-}
-
 VideoInfo FFmpegDecoder::videoInfo() const
 {
     if(!m_hasVideo && !m_videoCodecContext)
@@ -262,22 +261,22 @@ VideoInfo FFmpegDecoder::videoInfo() const
     return {{m_videoCodecContext->width, m_videoCodecContext->height}, format};
 }
 
-void FFmpegDecoder::onSeek(int target)
+void FFmpegDecoder::seek(int position)
 {
-    if(m_state == Closed || m_position == target)
+    if(m_state == Closed || m_position == position)
         return;
-
-    const AVStream *seekStream = m_hasVideo ? m_videoStream : m_audioStream;
-    av_seek_frame(m_formatContext, seekStream->index, static_cast<qint64>
-                  (target / av_q2d(seekStream->time_base)),
-                  AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
-
-    m_position = target;
 
     // Clear frame cache
     m_mutex.lock();
     this->clearCache();
     m_mutex.unlock();
+
+    const AVStream *seekStream = m_hasVideo ? m_videoStream : m_audioStream;
+    av_seek_frame(m_formatContext, seekStream->index, static_cast<qint64>
+                  (position / av_q2d(seekStream->time_base)),
+                  AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
+
+    m_position = position;
 
     // Flush the codec buffers
     if(m_videoCodecContext)
@@ -287,6 +286,8 @@ void FFmpegDecoder::onSeek(int target)
 
     m_isPtsUpdated = false;
     m_runnable = true;
+
+    emit seeked();
 
     // runs on the same thread so doesn't need to be called by signal
     this->onDecode();
@@ -318,20 +319,18 @@ void FFmpegDecoder::loadSubtitle(int index)
 
     if(av_find_best_stream(m_formatContext, AVMEDIA_TYPE_SUBTITLE,
                             findRelativeStream(m_formatContext, index,
-                              AVMEDIA_TYPE_SUBTITLE), -1, nullptr, 0) > 0)
+                                               AVMEDIA_TYPE_SUBTITLE), -1, nullptr, 0) > 0)
     {
         QString subtitleFileName = m_url.toLocalFile();
 
-        if((m_hasSubtitle = initSubtitleFilter(m_buffersrcContext,
-                                                m_buffersinkContext, args,
-                                                makeFilterDesc(toFFmpegFormat(
-                                                    subtitleFileName), index))))
-            return;
-
+        if(initSubtitleFilter(m_buffersrcContext, m_buffersinkContext, args,
+                               makeFilterDesc(toFFmpegFormat(subtitleFileName), index)))
+            m_subtitleType = TextBased;
         // If is not text based subtitles
-        m_hasSubtitle = openCodecContext(m_formatContext, &m_subtitleStream,
-                                         &m_subtitleCodecContext,
-                                         AVMEDIA_TYPE_SUBTITLE, index);
+        else if(openCodecContext(m_formatContext, &m_subtitleStream,
+                                  &m_subtitleCodecContext,
+                                  AVMEDIA_TYPE_SUBTITLE, index))
+            m_subtitleType = Bitmap;
     }
 
     // If no found subtitle stream in video file
@@ -353,9 +352,10 @@ void FFmpegDecoder::loadSubtitle(int index)
 
         if(QFileInfo::exists(subtitleFileName))
         {
-            m_hasSubtitle = initSubtitleFilter(
+            if(initSubtitleFilter(
                 m_buffersrcContext, m_buffersinkContext, args,
-                makeFilterDesc(toFFmpegFormat(subtitleFileName), 0));
+                    makeFilterDesc(toFFmpegFormat(subtitleFileName), 0)))
+                m_subtitleType = TextBased;
         }
     }
 }
@@ -377,8 +377,8 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
 
     m_position = static_cast<int>(m_videoTime);
 
-    if(m_videoCache.count() <= VIDEO_CACHE_SIZE / 2 && !m_isDecodeFinished)
-        emit callDecodec();
+    if(m_videoCache.count() <= VIDEO_CACHE_SIZE / 2 && !m_isEnd)
+        QMetaObject::invokeMethod(this, &FFmpegDecoder::onDecode);  // Asynchronous call FFmpegDecoder::decode()
 
     return frame;
 }
@@ -408,8 +408,8 @@ qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
     locker.unlock();
     m_isPtsUpdated = true;
 
-    if(m_audioCache.size() < AUDIO_CACHE_SIZE / 2 && !m_isDecodeFinished)
-        emit callDecodec();
+    if(m_audioCache.size() < AUDIO_CACHE_SIZE / 2 && !m_isEnd)
+        QMetaObject::invokeMethod(this, &FFmpegDecoder::onDecode);  // Asynchronous call FFmpegDecoder::decode()
 
     return len - free;
 }
@@ -456,12 +456,9 @@ void FFmpegDecoder::onDecode()
 
     while(m_state == Opened && !this->isCacheFull() && m_runnable)
     {
-        if(av_read_frame(m_formatContext, packet))      // Read frame
-        {
-            m_isDecodeFinished = true;
-            emit decodeFinished();
+        m_isEnd = av_read_frame(m_formatContext, packet);
+        if(m_isEnd)
             break;
-        }
 
         // Video frame decode
         if(m_hasVideo && packet->stream_index == m_videoStream->index &&

@@ -19,7 +19,7 @@ Window {
 
     function onPlay() { playBtn.clicked() }
     function onBack() { backBtn.clicked() }
-    function onGoahead() { goaheadBtn.clicked() }
+    function onGoahead() { goAheadBtn.clicked() }
     function onEscape() { fullScreen = false; }
 
     function prefixZero(num, n) {
@@ -148,7 +148,7 @@ Window {
         }
 
         Button {
-            id: goaheadBtn
+            id: goAheadBtn
 
             width: 37
             height: 37
@@ -164,6 +164,8 @@ Window {
 
             focusPolicy: Qt.NoFocus
 
+            enabled: videoPlayer.playState == VideoPlayer.Playing && videoPlayer.seekable
+
             background: Rectangle {
                 color: "transparent"
 
@@ -173,10 +175,7 @@ Window {
                 border.color: "white"
             }
 
-            onClicked: {
-                if(videoPlayer.playState == VideoPlayer.Playing)
-                    videoPlayer.seek(videoPlayer.position + 10);
-            }
+            onClicked: videoPlayer.seek(videoPlayer.position + 10);
         }
 
         Button {
@@ -188,7 +187,7 @@ Window {
             width: 37
             height: 37
 
-            anchors.left: goaheadBtn.right
+            anchors.left: goAheadBtn.right
             anchors.verticalCenter: parent.verticalCenter
             anchors.leftMargin: 18
 
@@ -250,6 +249,8 @@ Window {
 
             focusPolicy: Qt.NoFocus
 
+            enabled: videoPlayer.playState == VideoPlayer.Playing && videoPlayer.seekable
+
             background: Rectangle {
                 color: "transparent"
 
@@ -259,10 +260,7 @@ Window {
                 border.color: "white"
             }
 
-            onClicked: {
-                if(videoPlayer.playState == VideoPlayer.Playing)
-                    videoPlayer.seek(videoPlayer.position - 10);
-            }
+            onClicked: videoPlayer.seek(videoPlayer.position - 10);
         }
 
         Button {
@@ -339,7 +337,7 @@ Window {
 
             value: videoPlayer.position
 
-            enabled: videoPlayer.playState == VideoPlayer.Playing
+            enabled: videoPlayer.playState == VideoPlayer.Playing && videoPlayer.seekable
 
             anchors.left: parent.left
             anchors.right: parent.right
@@ -448,7 +446,7 @@ Window {
     Button {
         id: openBtn
 
-        text: qsTr("<font color='white'>Open file<br>or drop here</font>")
+        text: qsTr("<font color='white'>Open file<br>or drop the link here</font>")
         font.pointSize: 14
 
         focusPolicy: Qt.NoFocus
@@ -475,8 +473,10 @@ Window {
             anchors.fill: parent
 
             onDropped: {
-                if(drop.hasUrls) {
-                    videoPlayer.source = drop.urls[0];
+                if(drop.hasUrls || drop.hasText) {
+                    openBtn.text = qsTr("<font color='white'>Loading...</font>")
+
+                    videoPlayer.source = drop.hasUrls ? drop.urls[0] : drop.text;
                     videoPlayer.play();
 
                     openBtn.text
@@ -487,8 +487,8 @@ Window {
             onEntered: openBtn.text
                        = qsTr("<font color='white'>Release to open file</font>");
             onExited: openBtn.text
-                      = qsTr("<font color='white'>Open file<br>Or drop here</font>")
-        }        
+                      = qsTr("<font color='white'>Open file<br>Or drop the link here</font>")
+        }
     }
 
     FileDialog {

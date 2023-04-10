@@ -11,6 +11,8 @@
 #include "subtitlerenderer.h"
 
 #include <QThread>
+#include <QEventLoop>
+#include <QMetaObject>
 #include <QTimerEvent>
 
 VideoPlayer::VideoPlayer(QQuickItem *parent) :
@@ -21,6 +23,7 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
 
     d->decoder = new FFmpegDecoder(nullptr);
     d->decoder->moveToThread(new QThread(this));
+    d->decoder->thread()->start();
 
     d->audioOutput = new AudioOutput(d->decoder, this);
 
@@ -35,7 +38,12 @@ VideoPlayer::~VideoPlayer()
     if(d->state != Stopped)
         this->stop();
 
-    d->decoder->deleteLater();
+    // Tell the decode thread exit
+    d->decoder->thread()->quit();
+
+    // Wait for finished
+    if(!d->decoder->thread()->wait())
+        FUNC_ERROR << ": Decode thread exit failed";
 
     // Delete the VideoPlayerPrivate
     delete d;
@@ -78,7 +86,14 @@ void VideoPlayer::play()
     {
         if(d->decoder->state() == FFmpegDecoder::Closed)
         {
-            if(d->decoder->load())
+            QEventLoop loop;
+            QObject::connect(d->decoder, &FFmpegDecoder::stateChanged, &loop,
+                             [&](FFmpegDecoder::State state) {
+                                 loop.exit(state != FFmpegDecoder::State::Opened);
+                             });
+            QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::load, Qt::QueuedConnection);
+
+            if(!loop.exec())
             {
                 d->isVideoInfoChanged = true;
                 d->audioOutput->setAudioFormat(d->decoder->audioFormat());
@@ -92,8 +107,6 @@ void VideoPlayer::play()
                 return;
             }
         }
-
-        qDebug() << "fps:" << d->decoder->fps();
 
         d->interval = static_cast<int>(1000 / d->decoder->fps());
         d->timerId = this->startTimer(d->interval);
@@ -136,11 +149,14 @@ void VideoPlayer::stop()
         this->killTimer(d->timerId);
 
     d->audioOutput->stop();
-    d->decoder->release();
 
-    d->position = 0;
+    d->decoder->requestInterrupt();
+    QEventLoop loop;
+    QObject::connect(d->decoder, &FFmpegDecoder::stateChanged, &loop, &QEventLoop::quit);
+    QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::release, Qt::QueuedConnection);
+    loop.exec();
 
-    emit positionChanged(d->position);
+    emit positionChanged(0);
 
     this->update();
 
@@ -177,7 +193,7 @@ int VideoPlayer::duration() const
 
 int VideoPlayer::position() const
 {
-    return d_ptr->position;
+    return d_ptr->decoder->position();
 }
 
 bool VideoPlayer::hasVideo() const
@@ -190,22 +206,34 @@ bool VideoPlayer::hasAudio() const
     return d_ptr->decoder->hasAudio();
 }
 
+bool VideoPlayer::seekable() const
+{
+    return d_ptr->decoder->seekable();
+}
+
 void VideoPlayer::seek(int position)
 {
     Q_D(VideoPlayer);
-    d->decoder->seek(position);
+
+    if(d->state == State::Stopped || !this->seekable())
+        return;
+
+    d->decoder->requestInterrupt();
+    QEventLoop loop;
+    QObject::connect(d->decoder, &FFmpegDecoder::seeked, &loop, &QEventLoop::quit);
+    QMetaObject::invokeMethod(d->decoder, "seek", Qt::QueuedConnection, Q_ARG(int, position));
+    loop.exec();
+
     d->audioOutput->reset();
 
     d->lastDiff = 0;
     d->totalStep = 0;
-
-    emit positionChanged(position);
 }
 
 void VideoPlayer::trackedAudio(int index)
 {
     Q_D(VideoPlayer);
-    d->decoder->trackedAudio(index);
+    d->decoder->trackAudio(index);
 }
 
 void VideoPlayer::trackSubtitle(int index)
@@ -221,16 +249,21 @@ void VideoPlayer::timerEvent(QTimerEvent *)
     d->isUpdated = true;
     this->update();
 
-    d->subtitleRenderer->setSize(this->size());
-    d->subtitleRenderer->render(d->decoder->takeSubtitleFrame());
-
-    if(d->decoder->position() != d->position)
+    if(d->decoder->subtitleType() == FFmpegDecoder::Bitmap)
     {
-        d->position = d->decoder->position();
-        emit positionChanged(d->position);
+        d->subtitleRenderer->setSize(this->size());
+        d->subtitleRenderer->render(d->decoder->takeSubtitleFrame());
     }
 
-    if(!d->decoder->hasFrame() && d->decoder->isDecodeFinished())
+    const int newPos = d->decoder->position();
+    static int oldPos = 0;
+    if(newPos != oldPos)
+    {
+        oldPos = newPos;
+        emit positionChanged(newPos);
+    }
+
+    if(!d->decoder->hasFrame() && d->decoder->isEnd())
     {
         this->stop();
         return;

@@ -29,8 +29,6 @@ public:
     bool isUpdated = false;
     bool isVideoInfoChanged = false;
 
-    int position = 0;
-
     int interval = 0;
     int timerId = -1;
 

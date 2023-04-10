@@ -28,6 +28,7 @@ class VideoPlayer : public QQuickFramebufferObject
     Q_PROPERTY(int duration READ duration NOTIFY loaded)
     Q_PROPERTY(bool hasVideo READ hasVideo NOTIFY loaded)
     Q_PROPERTY(bool hasAudio READ hasAudio NOTIFY loaded)
+    Q_PROPERTY(bool seekable READ seekable NOTIFY loaded)
     Q_PROPERTY(int audioTrackCount READ audioTrackCount NOTIFY loaded)
     Q_PROPERTY(int subtitleTrackCount READ subtitleTrackCount NOTIFY loaded)
 
@@ -75,6 +76,8 @@ public:
 
     bool hasAudio() const;
 
+    bool seekable() const;
+
     Q_INVOKABLE void play();
 
     Q_INVOKABLE void pause();
@@ -88,15 +91,13 @@ public:
     Q_INVOKABLE void trackSubtitle(int index);
 
 signals:
-    void sourceChanged(QUrl source);
+    void error(VideoPlayer::Error error);
 
     void loaded();
-
-    void error(const VideoPlayer::Error error);
-
-    void playStateChanged(const VideoPlayer::State state);
-    void volumeChanged(const qreal volume);
-    void positionChanged(const int position);
+    void sourceChanged(QUrl source);
+    void playStateChanged(VideoPlayer::State state);
+    void volumeChanged(qreal volume);
+    void positionChanged(int position);
 
 private:
     VideoPlayerPrivate *const d_ptr;
