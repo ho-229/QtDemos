@@ -180,7 +180,7 @@ void FFmpegDecoder::release()
 
 void FFmpegDecoder::trackAudio(int index)
 {
-    if(index < 0 || index > this->audioTrackCount() || index == m_audioStream->index)
+    if(index < 0 || index > this->audioTrackCount())
         return;
 
     m_mutex.lock();
@@ -227,8 +227,8 @@ void FFmpegDecoder::trackSubtitle(int index)
 
 int FFmpegDecoder::subtitleTrackCount() const
 {
-    if(m_state == Closed)
-        return 0;
+    if(!m_formatContext || m_subtitleType == None)
+        return -1;
 
     int ret = 0;
 
@@ -243,7 +243,7 @@ int FFmpegDecoder::subtitleTrackCount() const
         subtitleDir.entryList({{"*.ass"}, {"*.srt"}, {"*.lrc"}},
                               QDir::Files).filter(fileInfo.baseName());
 
-    return subtitleList.size();
+    return subtitleList.isEmpty() ? -1 : subtitleList.size();
 }
 
 VideoInfo FFmpegDecoder::videoInfo() const
@@ -334,7 +334,7 @@ void FFmpegDecoder::loadSubtitle(int index)
     }
 
     // If no found subtitle stream in video file
-    else
+    else if(m_url.isLocalFile())
     {
         const QFileInfo fileInfo(m_url.toLocalFile());
 
@@ -344,11 +344,11 @@ void FFmpegDecoder::loadSubtitle(int index)
             subtitleDir.entryList({{"*.ass"}, {"*.srt"}, {"*.lrc"}},
                                   QDir::Files).filter(fileInfo.baseName());
 
-        if(subtitleList.size() <= index - 1)    // Out of range
+        if(index < 0 || subtitleList.size() <= index)    // Out of range
             return;
 
         QString subtitleFileName = subtitleDir.absolutePath()
-                                   + '/' + subtitleList.at(index - 1);
+                                   + '/' + subtitleList.at(index);
 
         if(QFileInfo::exists(subtitleFileName))
         {
@@ -598,7 +598,7 @@ bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **
                                    type, findRelativeStream(
                                        formatContext, index, type), -1, nullptr, 0)) < 0)
     {
-        FUNC_ERROR << "Could not find stream" << av_get_media_type_string(type);
+        FUNC_ERROR << "Could not find stream " << av_get_media_type_string(type);
         return false;
     }
 
@@ -789,10 +789,16 @@ int FFmpegDecoder::findRelativeStream(const AVFormatContext *format,
 {
     int count = 0;
 
-    if(relativeIndex >= 1)
-        for(size_t i = 0; i < format->nb_streams; ++i)
-            if(format->streams[i]->codecpar->codec_type == type && relativeIndex == ++count)
+    for(size_t i = 0; i < format->nb_streams; ++i)
+    {
+        if(format->streams[i]->codecpar->codec_type == type)
+        {
+            if(relativeIndex == count)
                 return int(i);
+
+            ++count;
+        }
+    }
 
     return -1;
 }

@@ -159,6 +159,7 @@ void VideoPlayer::stop()
     emit positionChanged(0);
 
     this->update();
+    d->subtitleRenderer->render({});
 
     d->state = Stopped;
     emit playStateChanged(Stopped);
@@ -206,6 +207,11 @@ bool VideoPlayer::hasAudio() const
     return d_ptr->decoder->hasAudio();
 }
 
+bool VideoPlayer::hasSubtitle() const
+{
+    return d_ptr->decoder->subtitleType() != FFmpegDecoder::None;
+}
+
 bool VideoPlayer::seekable() const
 {
     return d_ptr->decoder->seekable();
@@ -230,7 +236,7 @@ void VideoPlayer::seek(int position)
     d->totalStep = 0;
 }
 
-void VideoPlayer::trackedAudio(int index)
+void VideoPlayer::trackAudio(int index)
 {
     Q_D(VideoPlayer);
     d->decoder->trackAudio(index);
@@ -242,6 +248,14 @@ void VideoPlayer::trackSubtitle(int index)
     d->decoder->trackSubtitle(index);
 }
 
+void VideoPlayer::geometryChanged(const QRectF &newGeometry, const QRectF &oldGeometry)
+{
+    Q_D(VideoPlayer);
+    d->subtitleRenderer->setPosition(newGeometry.topLeft());
+    d->subtitleRenderer->setSize(newGeometry.size());
+    QQuickFramebufferObject::geometryChanged(newGeometry, oldGeometry);
+}
+
 void VideoPlayer::timerEvent(QTimerEvent *)
 {
     Q_D(VideoPlayer);
@@ -250,10 +264,7 @@ void VideoPlayer::timerEvent(QTimerEvent *)
     this->update();
 
     if(d->decoder->subtitleType() == FFmpegDecoder::Bitmap)
-    {
-        d->subtitleRenderer->setSize(this->size());
         d->subtitleRenderer->render(d->decoder->takeSubtitleFrame());
-    }
 
     const int newPos = d->decoder->position();
     static int oldPos = 0;

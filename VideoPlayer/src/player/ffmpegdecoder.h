@@ -91,8 +91,8 @@ public:
     int duration() const;
 
     void trackAudio(int index);
-    int audioTrackCount() const { return m_state == Opened ? streamCount(
-            m_formatContext, AVMEDIA_TYPE_AUDIO) : 0; }
+    int audioTrackCount() const { return m_formatContext ? streamCount(
+            m_formatContext, AVMEDIA_TYPE_AUDIO) : -1; }
 
     void trackSubtitle(int index);
     int subtitleTrackCount() const;
@@ -164,7 +164,7 @@ private:
     QContiguousCache<AVFrame *>     m_audioCache;
     QContiguousCache<SubtitleFrame> m_subtitleCache;
 
-    SubtitleType m_subtitleType;
+    SubtitleType m_subtitleType = None;
 
     bool m_hasVideo = false;
     bool m_hasAudio = false;
@@ -198,7 +198,7 @@ private:
     static bool openCodecContext(AVFormatContext *formatContext,
                                  AVStream **stream,
                                  AVCodecContext **codecContext,
-                                 AVMediaType type, int index = 1);
+                                 AVMediaType type, int index = 0);
 
     static bool initSubtitleFilter(AVFilterContext * &buffersrcContext,
                                    AVFilterContext * &buffersinkContext,

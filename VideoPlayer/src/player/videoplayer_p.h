@@ -26,8 +26,8 @@ public:
 
     VideoPlayer::State state = VideoPlayer::Stopped;
 
-    bool isUpdated = false;
-    bool isVideoInfoChanged = false;
+    volatile bool isUpdated = false;
+    volatile bool isVideoInfoChanged = false;
 
     int interval = 0;
     int timerId = -1;

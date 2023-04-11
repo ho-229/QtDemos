@@ -22,13 +22,16 @@ class VideoPlayer : public QQuickFramebufferObject
 
     // Read only property
     Q_PROPERTY(int position READ position NOTIFY positionChanged)
+    Q_PROPERTY(int duration READ duration NOTIFY loaded)
 
     Q_PROPERTY(State playState READ playState NOTIFY playStateChanged)
 
-    Q_PROPERTY(int duration READ duration NOTIFY loaded)
     Q_PROPERTY(bool hasVideo READ hasVideo NOTIFY loaded)
     Q_PROPERTY(bool hasAudio READ hasAudio NOTIFY loaded)
+    Q_PROPERTY(bool hasSubtitle READ hasSubtitle NOTIFY loaded)
+
     Q_PROPERTY(bool seekable READ seekable NOTIFY loaded)
+
     Q_PROPERTY(int audioTrackCount READ audioTrackCount NOTIFY loaded)
     Q_PROPERTY(int subtitleTrackCount READ subtitleTrackCount NOTIFY loaded)
 
@@ -69,25 +72,21 @@ public:
      * @return duration of the media in seconds.
      */
     int duration() const;
-
     int position() const;
 
     bool hasVideo() const;
-
     bool hasAudio() const;
+    bool hasSubtitle() const;
 
     bool seekable() const;
 
     Q_INVOKABLE void play();
-
     Q_INVOKABLE void pause();
-
     Q_INVOKABLE void stop();
 
     Q_INVOKABLE void seek(int position);
 
-    Q_INVOKABLE void trackedAudio(int index);
-
+    Q_INVOKABLE void trackAudio(int index);
     Q_INVOKABLE void trackSubtitle(int index);
 
 signals:
@@ -98,6 +97,10 @@ signals:
     void playStateChanged(VideoPlayer::State state);
     void volumeChanged(qreal volume);
     void positionChanged(int position);
+
+protected:
+    void geometryChanged(const QRectF &newGeometry,
+                         const QRectF &oldGeometry) override;
 
 private:
     VideoPlayerPrivate *const d_ptr;

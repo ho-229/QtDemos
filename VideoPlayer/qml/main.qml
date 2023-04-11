@@ -297,7 +297,9 @@ Window {
         Text {
             id: progressText
 
-            text: toMMSS(videoPlayer.position) + " / " + toMMSS(videoPlayer.duration)
+            property string durationString: toMMSS(videoPlayer.duration)
+
+            text: toMMSS(videoPlayer.position) + " / " + durationString
 
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
@@ -390,7 +392,7 @@ Window {
             width: 150
 
             color: "black"
-            radius: 11
+            radius: 5
 
             Column {
                 anchors.fill: parent
@@ -412,11 +414,14 @@ Window {
                 }
 
                 SpinBox {
-                    from: videoPlayer.hasAudio ? 1 : 0
-                    value: videoPlayer.hasAudio ? 1 : 0
-                    to: videoPlayer.audioTrackCount
+                    from: videoPlayer.hasAudio ? 0 : -1
+                    value: videoPlayer.hasAudio ? 0 : -1
+                    to: videoPlayer.hasAudio ? videoPlayer.audioTrackCount - 1 : -1
 
-                    onValueChanged: videoPlayer.trackedAudio(value)
+                    onValueChanged: {
+                        if (videoPlayer.hasAudio)
+                            videoPlayer.trackAudio(value)
+                    }
                 }
 
                 Text {
@@ -427,11 +432,14 @@ Window {
                 }
 
                 SpinBox {
-                    from: videoPlayer.subtitleTrackCount ? 1 : 0
-                    value: videoPlayer.subtitleTrackCount ? 1 : 0
-                    to: videoPlayer.subtitleTrackCount
+                    from: videoPlayer.hasSubtitle ? 0 : -1
+                    value: videoPlayer.hasSubtitle ? 0 : -1
+                    to: videoPlayer.hasSubtitle ? videoPlayer.subtitleTrackCount - 1 : -1
 
-                    onValueChanged: videoPlayer.trackSubtitle(value)
+                    onValueChanged: {
+                        if (videoPlayer.hasSubtitle)
+                            videoPlayer.trackSubtitle(value)
+                    }
                 }
             }
 
