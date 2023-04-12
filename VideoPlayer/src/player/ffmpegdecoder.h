@@ -25,7 +25,7 @@
 
 #define FUNC_ERROR qCritical() << __FUNCTION__
 
-#define FFMPEG_ERROR(x) FUNC_ERROR << ": line" << __LINE__ \
+#define FFMPEG_ERROR(x) FUNC_ERROR << ":" << __LINE__ \
                     << ":" << av_make_error_string(m_errorBuf, sizeof (m_errorBuf), x)
 
 typedef QPair<QSize,            // Size
@@ -90,20 +90,13 @@ public:
      */
     int duration() const;
 
-    void trackAudio(int index);
-    int audioTrackCount() const { return m_formatContext ? streamCount(
-            m_formatContext, AVMEDIA_TYPE_AUDIO) : -1; }
+    int audioTrackCount() const;
 
-    void trackSubtitle(int index);
     int subtitleTrackCount() const;
 
     int position() const { return m_position; }
 
     VideoInfo videoInfo() const;
-
-    QSize subtitleSize() const { return m_subtitleCodecContext ?
-                                      QSize(m_subtitleCodecContext->width,
-                                            m_subtitleCodecContext->height) : QSize(); }
 
     AVFrame* takeVideoFrame();
 
@@ -130,6 +123,9 @@ public slots:
 
     void seek(int position);
 
+    void trackAudio(int index);
+    void trackSubtitle(int index);
+
 private slots:
     void onDecode();
 
@@ -137,7 +133,7 @@ protected:
     State m_state = Closed;
 
 private:
-    char m_errorBuf[512];
+    char m_errorBuf[AV_ERROR_MAX_STRING_SIZE];
 
     mutable QMutex m_mutex;
 
@@ -183,39 +179,12 @@ private:
 
     void clearCache();
 
-    static inline void releaseContext(AVCodecContext *&context)
-    {
-        avcodec_flush_buffers(context);
-        avcodec_free_context(&context);
-    }
+    bool openCodecContext(AVStream *&stream, AVCodecContext *&codecContext,
+                          AVMediaType type, int index = 0);
+    void closeCodecContext(AVStream *&stream, AVCodecContext *&codecContext);
 
-    static inline void releaseFilter(AVFilterContext *&context)
-    {
-        avfilter_free(context);
-        context = nullptr;
-    }
-
-    static bool openCodecContext(AVFormatContext *formatContext,
-                                 AVStream **stream,
-                                 AVCodecContext **codecContext,
-                                 AVMediaType type, int index = 0);
-
-    static bool initSubtitleFilter(AVFilterContext * &buffersrcContext,
-                                   AVFilterContext * &buffersinkContext,
-                                   const QString &args, const QString &filterDesc);
-
-    /**
-     * @ref ffmpeg.c line:181 : static void sub2video_copy_rect()
-     */
-    static void mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
-                              AVSubtitleRect *r);
-
-    static QImage loadFromAVFrame(const AVFrame *frame);
-
-    static int streamCount(const AVFormatContext *format, AVMediaType type);
-
-    static int findRelativeStream(const AVFormatContext *format, int relativeIndex,
-                                  AVMediaType type);
+    bool openSubtitleFilter(const QString &args, const QString &filterDesc);
+    void closeSubtitleFilter();
 };
 
 #endif // FFMPEGDECODER_H

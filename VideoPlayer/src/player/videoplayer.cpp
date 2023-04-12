@@ -225,12 +225,7 @@ void VideoPlayer::seek(int position)
         return;
 
     d->decoder->requestInterrupt();
-    QEventLoop loop;
-    QObject::connect(d->decoder, &FFmpegDecoder::seeked, &loop, &QEventLoop::quit);
     QMetaObject::invokeMethod(d->decoder, "seek", Qt::QueuedConnection, Q_ARG(int, position));
-    loop.exec();
-
-    d->audioOutput->reset();
 
     d->lastDiff = 0;
     d->totalStep = 0;
@@ -239,20 +234,32 @@ void VideoPlayer::seek(int position)
 void VideoPlayer::trackAudio(int index)
 {
     Q_D(VideoPlayer);
-    d->decoder->trackAudio(index);
+
+    if(!this->hasAudio())
+        return;
+
+    d->decoder->requestInterrupt();
+    QMetaObject::invokeMethod(d->decoder, "trackAudio", Qt::QueuedConnection, Q_ARG(int, index));
 }
 
 void VideoPlayer::trackSubtitle(int index)
 {
     Q_D(VideoPlayer);
-    d->decoder->trackSubtitle(index);
+
+    if(!this->hasSubtitle())
+        return;
+
+    d->decoder->requestInterrupt();
+    QMetaObject::invokeMethod(d->decoder, "trackSubtitle", Qt::QueuedConnection, Q_ARG(int, index));
 }
 
 void VideoPlayer::geometryChanged(const QRectF &newGeometry, const QRectF &oldGeometry)
 {
     Q_D(VideoPlayer);
+
     d->subtitleRenderer->setPosition(newGeometry.topLeft());
     d->subtitleRenderer->setSize(newGeometry.size());
+
     QQuickFramebufferObject::geometryChanged(newGeometry, oldGeometry);
 }
 

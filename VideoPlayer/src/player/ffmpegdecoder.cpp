@@ -10,7 +10,15 @@
 #include <QThread>
 #include <QFileInfo>
 #include <QMetaObject>
+#include <QScopeGuard>
 #include <QMutexLocker>
+
+static void mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
+                          AVSubtitleRect *r);
+static QImage loadFromAVFrame(const AVFrame *frame);
+static int streamCount(const AVFormatContext *format, AVMediaType type);
+static int findRelativeStream(const AVFormatContext *format,
+                              int relativeIndex, AVMediaType type);
 
 FFmpegDecoder::FFmpegDecoder(QObject *parent) :
     QObject(parent)
@@ -43,6 +51,12 @@ int FFmpegDecoder::duration() const
     return static_cast<int>(m_formatContext->duration / AV_TIME_BASE);
 }
 
+int FFmpegDecoder::audioTrackCount() const
+{
+    return m_formatContext ? streamCount(
+               m_formatContext, AVMEDIA_TYPE_AUDIO) : -1;
+}
+
 void FFmpegDecoder::load()
 {
     this->release();        // Reset
@@ -73,8 +87,8 @@ void FFmpegDecoder::load()
     av_dump_format(m_formatContext, 0, m_formatContext->url, 0);
 
     // Initialize video codec context
-    if((m_hasVideo = openCodecContext(m_formatContext, &m_videoStream,
-                                       &m_videoCodecContext, AVMEDIA_TYPE_VIDEO)))
+    if((m_hasVideo = this->openCodecContext(m_videoStream, m_videoCodecContext,
+                                             AVMEDIA_TYPE_VIDEO)))
     {
         if(m_videoCodecContext->pix_fmt != AV_PIX_FMT_YUV420P &&
             m_videoCodecContext->pix_fmt != AV_PIX_FMT_YUV444P)
@@ -90,8 +104,8 @@ void FFmpegDecoder::load()
     }
 
     // Initialize audio codec context
-    if((m_hasAudio = openCodecContext(m_formatContext, &m_audioStream,
-                                       &m_audioCodecContext, AVMEDIA_TYPE_AUDIO)))
+    if((m_hasAudio = this->openCodecContext(m_audioStream, m_audioCodecContext,
+                                             AVMEDIA_TYPE_AUDIO)))
     {
         if(m_audioCodecContext->sample_fmt != AV_SAMPLE_FMT_S16)
         {
@@ -108,8 +122,13 @@ void FFmpegDecoder::load()
         }
     }
 
-    if(!(m_hasVideo || m_hasAudio))     // If there is no video and audio
+    // If there is no video and audio
+    if(!(m_hasVideo || m_hasAudio))
+    {
+        avformat_close_input(&m_formatContext);
         emit stateChanged(Error);
+        return;
+    }
 
     this->loadSubtitle();
 
@@ -136,19 +155,16 @@ void FFmpegDecoder::release()
     m_mutex.unlock();
 
     if(m_hasVideo)
-        releaseContext(m_videoCodecContext);
+        this->closeCodecContext(m_videoStream, m_videoCodecContext);
 
     if(m_hasAudio)
-        releaseContext(m_audioCodecContext);
+        this->closeCodecContext(m_audioStream, m_audioCodecContext);
 
     if(m_subtitleCodecContext)
-        releaseContext(m_subtitleCodecContext);
+        this->closeCodecContext(m_subtitleStream, m_subtitleCodecContext);
 
-    if(m_buffersrcContext)
-        releaseFilter(m_buffersrcContext);
-
-    if(m_buffersinkContext)
-        releaseFilter(m_buffersinkContext);
+    if(m_buffersrcContext && m_buffersinkContext)
+        this->closeSubtitleFilter();
 
     if(m_swrContext)
         swr_free(&m_swrContext);
@@ -165,10 +181,6 @@ void FFmpegDecoder::release()
 
     m_isPtsUpdated = false;
 
-    m_videoStream = nullptr;
-    m_audioStream = nullptr;
-    m_subtitleStream = nullptr;
-
     m_hasAudio = false;
     m_hasVideo = false;
 
@@ -180,49 +192,48 @@ void FFmpegDecoder::release()
 
 void FFmpegDecoder::trackAudio(int index)
 {
+    m_runnable = true;
+
     if(index < 0 || index > this->audioTrackCount())
         return;
 
     m_mutex.lock();
-
     this->clearCache();
-    releaseContext(m_audioCodecContext);
-    openCodecContext(m_formatContext, &m_audioStream, &m_audioCodecContext,
-                     AVMEDIA_TYPE_AUDIO, index);
-
     m_mutex.unlock();
 
-    QMetaObject::invokeMethod(this, &FFmpegDecoder::onDecode);  // Asynchronous call FFmpegDecoder::decode()
+    this->closeCodecContext(m_audioStream, m_audioCodecContext);
+    this->openCodecContext(m_audioStream, m_audioCodecContext,
+                           AVMEDIA_TYPE_AUDIO, index);
+
+    this->onDecode();
 }
 
 void FFmpegDecoder::trackSubtitle(int index)
 {
+    m_runnable = true;
+
     if(index < 0 || index > this->subtitleTrackCount())
         return;
 
     m_mutex.lock();
     this->clearCache();
+    m_mutex.unlock();
 
     if(m_subtitleCodecContext)
     {
-        releaseContext(m_subtitleCodecContext);
-        openCodecContext(m_formatContext, &m_subtitleStream, &m_subtitleCodecContext,
-                         AVMEDIA_TYPE_SUBTITLE, index);
+        this->closeCodecContext(m_subtitleStream, m_subtitleCodecContext);
+        this->openCodecContext(m_subtitleStream, m_subtitleCodecContext,
+                               AVMEDIA_TYPE_SUBTITLE, index);
     }
     else
     {
         if(m_buffersrcContext && m_buffersinkContext)
-        {
-            releaseFilter(m_buffersrcContext);
-            releaseFilter(m_buffersinkContext);
-        }
+            this->closeSubtitleFilter();
 
         this->loadSubtitle(index);
     }
 
-    m_mutex.unlock();
-
-    QMetaObject::invokeMethod(this, &FFmpegDecoder::onDecode);  // Asynchronous call FFmpegDecoder::decode()
+    this->onDecode();
 }
 
 int FFmpegDecoder::subtitleTrackCount() const
@@ -312,8 +323,10 @@ void FFmpegDecoder::loadSubtitle(int index)
             .arg(index);
     };
 
-    auto toFFmpegFormat = [](QString &fileName) -> QString& {
+    auto convertPath = [](QString &fileName) -> QString& {
+#ifdef Q_OS_WIN
         fileName.replace('/', "\\\\");
+#endif
         return fileName.insert(fileName.indexOf(":\\"), char('\\'));
     };
 
@@ -323,13 +336,11 @@ void FFmpegDecoder::loadSubtitle(int index)
     {
         QString subtitleFileName = m_url.toLocalFile();
 
-        if(initSubtitleFilter(m_buffersrcContext, m_buffersinkContext, args,
-                               makeFilterDesc(toFFmpegFormat(subtitleFileName), index)))
+        if(this->openSubtitleFilter(args, makeFilterDesc(convertPath(subtitleFileName), index)))
             m_subtitleType = TextBased;
         // If is not text based subtitles
-        else if(openCodecContext(m_formatContext, &m_subtitleStream,
-                                  &m_subtitleCodecContext,
-                                  AVMEDIA_TYPE_SUBTITLE, index))
+        else if(this->openCodecContext(m_subtitleStream, m_subtitleCodecContext,
+                                        AVMEDIA_TYPE_SUBTITLE, index))
             m_subtitleType = Bitmap;
     }
 
@@ -340,9 +351,9 @@ void FFmpegDecoder::loadSubtitle(int index)
 
         const QDir subtitleDir(fileInfo.absoluteDir());
 
-        const QStringList subtitleList =
-            subtitleDir.entryList({{"*.ass"}, {"*.srt"}, {"*.lrc"}},
-                                  QDir::Files).filter(fileInfo.baseName());
+        const QStringList subtitleList = subtitleDir
+                .entryList({{"*.ass"}, {"*.srt"}, {"*.lrc"}}, QDir::Files)
+                .filter(fileInfo.baseName());
 
         if(index < 0 || subtitleList.size() <= index)    // Out of range
             return;
@@ -352,9 +363,7 @@ void FFmpegDecoder::loadSubtitle(int index)
 
         if(QFileInfo::exists(subtitleFileName))
         {
-            if(initSubtitleFilter(
-                m_buffersrcContext, m_buffersinkContext, args,
-                    makeFilterDesc(toFFmpegFormat(subtitleFileName), 0)))
+            if(this->openSubtitleFilter(args, makeFilterDesc(convertPath(subtitleFileName), 0)))
                 m_subtitleType = TextBased;
         }
     }
@@ -588,24 +597,23 @@ void FFmpegDecoder::clearCache()
     m_subtitleCache.clear();
 }
 
-bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **stream,
-                                     AVCodecContext **codecContext, AVMediaType type,
-                                     int index)
+bool FFmpegDecoder::openCodecContext(AVStream *&stream, AVCodecContext *&codecContext,
+                                     AVMediaType type, int index)
 {
     // Find stream
     int ret = 0;
-    if ((ret = av_find_best_stream(formatContext,
+    if ((ret = av_find_best_stream(m_formatContext,
                                    type, findRelativeStream(
-                                       formatContext, index, type), -1, nullptr, 0)) < 0)
+                                       m_formatContext, index, type), -1, nullptr, 0)) < 0)
     {
         FUNC_ERROR << "Could not find stream " << av_get_media_type_string(type);
         return false;
     }
 
-    *stream = formatContext->streams[ret];
+    stream = m_formatContext->streams[ret];
 
     // Find codec
-    const AVCodec *codec = avcodec_find_decoder((*stream)->codecpar->codec_id);
+    const AVCodec *codec = avcodec_find_decoder(stream->codecpar->codec_id);
     if (!codec)
     {
         FUNC_ERROR << "Cound not find codec " << av_get_media_type_string(type);
@@ -613,16 +621,16 @@ bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **
     }
 
     // Allocate codec context
-    if(!(*codecContext = avcodec_alloc_context3(codec)))
+    if(!(codecContext = avcodec_alloc_context3(codec)))
     {
         FUNC_ERROR << "Failed to allocate codec context";
         return false;
     }
 
-    (*codecContext)->thread_count = 1;
+    codecContext->thread_count = 1;
 
     AVDictionary *opts = nullptr;
-    ret = avcodec_parameters_to_context(*codecContext, (*stream)->codecpar);
+    ret = avcodec_parameters_to_context(codecContext, stream->codecpar);
     if (ret < 0)
     {
         FUNC_ERROR << "Failed to copy codec parameters to decoder context"
@@ -632,7 +640,7 @@ bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **
     av_dict_set(&opts, "refcounted_frames", "0", 0);
 
     // Open codec and get the context
-    if (avcodec_open2(*codecContext, codec, &opts) < 0)
+    if (avcodec_open2(codecContext, codec, &opts) < 0)
     {
         FUNC_ERROR << "Failed to open codec " << av_get_media_type_string(type);
         return false;
@@ -641,9 +649,15 @@ bool FFmpegDecoder::openCodecContext(AVFormatContext *formatContext, AVStream **
     return true;
 }
 
-bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
-                                       AVFilterContext *&buffersinkContext,
-                                       const QString& args, const QString& filterDesc)
+void FFmpegDecoder::closeCodecContext(AVStream *&stream, AVCodecContext *&codecContext)
+{
+    avcodec_flush_buffers(codecContext);
+    avcodec_free_context(&codecContext);
+
+    stream = nullptr;
+}
+
+bool FFmpegDecoder::openSubtitleFilter(const QString& args, const QString& filterDesc)
 {
     const AVFilter *buffersrc = avfilter_get_by_name("buffer");
     const AVFilter *buffersink = avfilter_get_by_name("buffersink");
@@ -652,81 +666,77 @@ bool FFmpegDecoder::initSubtitleFilter(AVFilterContext *&buffersrcContext,
     AVFilterInOut *input = avfilter_inout_alloc();
     AVFilterGraph *filterGraph = avfilter_graph_alloc();
 
-    auto release = [&output, &input] {
+    auto cleanup = qScopeGuard([&output, &input] {
         avfilter_inout_free(&output);
         avfilter_inout_free(&input);
+    });
+
+    auto resetContext = [this] {
+        m_buffersrcContext = nullptr;
+        m_buffersinkContext = nullptr;
     };
 
-    if (!output || !input || !filterGraph)
-    {
-        release();
+    if(!output || !input || !filterGraph)
         return false;
-    }
 
+    int ret = 0;
     // Create in filter using "arg"
-    if (avfilter_graph_create_filter(&buffersrcContext, buffersrc, "in",
-                                     args.toUtf8().data(), nullptr, filterGraph) < 0)
+    if((ret = avfilter_graph_create_filter(&m_buffersrcContext, buffersrc, "in",
+                                            args.toUtf8().data(), nullptr, filterGraph)) < 0)
     {
-        FUNC_ERROR << "Has Error: line =" << __LINE__;
-        release();
-
-        buffersrcContext = nullptr;
-        buffersinkContext = nullptr;
-
+        FFMPEG_ERROR(ret);
         return false;
     }
 
     // Create out filter
-    if (avfilter_graph_create_filter(&buffersinkContext, buffersink, "out",
-                                     nullptr, nullptr, filterGraph) < 0)
+    if((ret = avfilter_graph_create_filter(&m_buffersinkContext, buffersink, "out",
+                                            nullptr, nullptr, filterGraph)) < 0)
     {
-        FUNC_ERROR << "Has Error: line =" << __LINE__;
-        release();
-
-        buffersrcContext = nullptr;
-        buffersinkContext = nullptr;
-
+        FFMPEG_ERROR(ret);
         return false;
     }
 
     output->name = av_strdup("in");
     output->next = nullptr;
     output->pad_idx = 0;
-    output->filter_ctx = buffersrcContext;
+    output->filter_ctx = m_buffersrcContext;
 
     input->name = av_strdup("out");
     input->next = nullptr;
     input->pad_idx = 0;
-    input->filter_ctx = buffersinkContext;
+    input->filter_ctx = m_buffersinkContext;
 
-    if(avfilter_graph_parse_ptr(filterGraph, filterDesc.toUtf8().data(),
-                                 &input, &output, nullptr) < 0)
+    if((ret = avfilter_graph_parse_ptr(filterGraph, filterDesc.toUtf8().data(),
+                                 &input, &output, nullptr)) < 0)
     {
-        FUNC_ERROR << "Has Error: line =" << __LINE__;
-        release();
-
-        buffersrcContext = nullptr;
-        buffersinkContext = nullptr;
-
+        FFMPEG_ERROR(ret);
+        resetContext();
         return false;
     }
 
-    if(avfilter_graph_config(filterGraph, nullptr) < 0)
+    if((ret = avfilter_graph_config(filterGraph, nullptr)) < 0)
     {
-        FUNC_ERROR << "Has Error: line =" << __LINE__;
-        release();
-
-        buffersrcContext = nullptr;
-        buffersinkContext = nullptr;
-
+        FFMPEG_ERROR(ret);
+        resetContext();
         return false;
     }
 
-    release();
     return true;
 }
 
-void FFmpegDecoder::mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
+void FFmpegDecoder::closeSubtitleFilter()
+{
+    avfilter_free(m_buffersrcContext);
+    avfilter_free(m_buffersinkContext);
+
+    m_buffersrcContext = nullptr;
+    m_buffersinkContext = nullptr;
+}
+
+/**
+ * @ref ffmpeg.c line:181 : static void sub2video_copy_rect()
+ */
+static void mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
                                   AVSubtitleRect *r)
 {
     uint32_t *pal, *dst2;
@@ -761,7 +771,7 @@ void FFmpegDecoder::mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
     }
 }
 
-QImage FFmpegDecoder::loadFromAVFrame(const AVFrame *frame)
+static QImage loadFromAVFrame(const AVFrame *frame)
 {
     QImage image(frame->width, frame->height, QImage::Format_ARGB32);
     image.fill(Qt::transparent);
@@ -773,7 +783,7 @@ QImage FFmpegDecoder::loadFromAVFrame(const AVFrame *frame)
     return image;
 }
 
-int FFmpegDecoder::streamCount(const AVFormatContext *format, AVMediaType type)
+static int streamCount(const AVFormatContext *format, AVMediaType type)
 {
     int count = 0;
 
@@ -784,8 +794,8 @@ int FFmpegDecoder::streamCount(const AVFormatContext *format, AVMediaType type)
     return count;
 }
 
-int FFmpegDecoder::findRelativeStream(const AVFormatContext *format,
-                                      int relativeIndex, AVMediaType type)
+static int findRelativeStream(const AVFormatContext *format,
+                              int relativeIndex, AVMediaType type)
 {
     int count = 0;
 
