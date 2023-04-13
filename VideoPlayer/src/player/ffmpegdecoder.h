@@ -14,6 +14,7 @@
 #include <QImage>
 #include <QObject>
 #include <QAudioFormat>
+#include <QSharedPointer>
 #include <QContiguousCache>
 
 #include "ffmpeg.h"
@@ -21,7 +22,9 @@
 #define VIDEO_CACHE_SIZE 128
 #define AUDIO_CACHE_SIZE 256
 #define SUBTITLE_CACHE_SIZE 128
+
 #define AUDIO_DELAY 0.3
+#define SUBTITLE_DEFAULT_DURATION 2
 
 #define FUNC_ERROR qCritical() << __FUNCTION__
 
@@ -34,11 +37,14 @@ typedef QPair<QSize,            // Size
 
 struct SubtitleFrame
 {
-    QImage image;
-    qreal pts = -1;      // In second
-};
+    SubtitleFrame(int width, int height) :
+        image(width, height, QImage::Format_ARGB32)
+    { image.fill(Qt::transparent); }
 
-Q_DECLARE_METATYPE(SubtitleFrame)
+    QImage image;
+    qreal start = 0;
+    qreal end = 0;
+};
 
 class FFmpegDecoder : public QObject
 {
@@ -102,7 +108,7 @@ public:
 
     qint64 takeAudioData(char *data, qint64 len);
 
-    SubtitleFrame takeSubtitleFrame();
+    QSharedPointer<SubtitleFrame> takeSubtitleFrame();
 
     const QAudioFormat audioFormat() const;
 
@@ -156,9 +162,9 @@ private:
     SwrContext *m_swrContext = nullptr;
     SwsContext *m_swsContext = nullptr;
 
-    QContiguousCache<AVFrame *>     m_videoCache;
-    QContiguousCache<AVFrame *>     m_audioCache;
-    QContiguousCache<SubtitleFrame> m_subtitleCache;
+    QContiguousCache<AVFrame *> m_videoCache;
+    QContiguousCache<AVFrame *> m_audioCache;
+    QContiguousCache<QSharedPointer<SubtitleFrame>> m_subtitleCache;
 
     SubtitleType m_subtitleType = None;
 

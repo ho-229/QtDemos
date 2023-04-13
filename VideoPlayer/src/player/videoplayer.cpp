@@ -28,7 +28,6 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
     d->audioOutput = new AudioOutput(d->decoder, this);
 
     d->subtitleRenderer = new SubtitleRenderer(this);
-    d->subtitleRenderer->setRenderTarget(QQuickPaintedItem::FramebufferObject);
 }
 
 VideoPlayer::~VideoPlayer()

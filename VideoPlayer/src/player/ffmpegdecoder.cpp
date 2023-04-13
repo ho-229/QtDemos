@@ -15,7 +15,6 @@
 
 static void mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
                           AVSubtitleRect *r);
-static QImage loadFromAVFrame(const AVFrame *frame);
 static int streamCount(const AVFormatContext *format, AVMediaType type);
 static int findRelativeStream(const AVFormatContext *format,
                               int relativeIndex, AVMediaType type);
@@ -107,14 +106,16 @@ void FFmpegDecoder::load()
     if((m_hasAudio = this->openCodecContext(m_audioStream, m_audioCodecContext,
                                              AVMEDIA_TYPE_AUDIO)))
     {
-        if(m_audioCodecContext->sample_fmt != AV_SAMPLE_FMT_S16)
+        if(m_audioCodecContext->sample_fmt != AV_SAMPLE_FMT_S16 ||
+            m_audioCodecContext->ch_layout.nb_channels != 2)
         {
             AVChannelLayout dest;
             av_channel_layout_default(&dest, 2);
-            swr_alloc_set_opts2(&m_swrContext, &dest,
+            swr_alloc_set_opts2(&m_swrContext,
+                                &dest,
                                 AV_SAMPLE_FMT_S16,
                                 m_audioCodecContext->sample_rate,
-                                &dest,
+                                &m_audioCodecContext->ch_layout,
                                 m_audioCodecContext->sample_fmt,
                                 m_audioCodecContext->sample_rate,
                                 0, nullptr);
@@ -423,19 +424,17 @@ qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
     return len - free;
 }
 
-SubtitleFrame FFmpegDecoder::takeSubtitleFrame()
+QSharedPointer<SubtitleFrame> FFmpegDecoder::takeSubtitleFrame()
 {
     QMutexLocker locker(&m_mutex);
 
-    if(!m_subtitleCache.isEmpty() && m_subtitleCache.first().pts < m_videoTime)
+    while(!m_subtitleCache.isEmpty() && m_subtitleCache.first()->end < m_videoTime)
         m_subtitleCache.removeFirst();
 
-    if(m_subtitleCache.isEmpty() ||
-        m_subtitleCache.first().pts < m_videoTime ||
-        m_subtitleCache.first().pts - m_videoTime > 0.04)
+    if(m_subtitleCache.isEmpty() || m_subtitleCache.first()->start > m_videoTime)
         return {};
 
-    return m_subtitleCache.takeFirst();
+    return m_subtitleCache.first();
 }
 
 const QAudioFormat FFmpegDecoder::audioFormat() const
@@ -479,6 +478,7 @@ void FFmpegDecoder::onDecode()
                 if(m_buffersrcContext && m_buffersinkContext)
                 {
                     AVFrame *filterFrame = av_frame_alloc();
+                    // FIXME: memory leak here
                     if(av_buffersrc_add_frame_flags(
                             m_buffersrcContext, frame, AV_BUFFERSRC_FLAG_KEEP_REF) >= 0
                         && av_buffersink_get_frame(m_buffersinkContext, filterFrame) >= 0)
@@ -552,26 +552,28 @@ void FFmpegDecoder::onDecode()
             if(avcodec_decode_subtitle2(m_subtitleCodecContext,
                                          &subtitle, &isGet, packet) > 0 && isGet)
             {
-                AVFrame *frame = av_frame_alloc();
-
-                frame->width = m_subtitleCodecContext->width;
-                frame->height = m_subtitleCodecContext->height;
-                frame->format = AV_PIX_FMT_RGB32;
-
-                av_frame_get_buffer(frame, 0);
+                auto subtitleFrame = QSharedPointer<SubtitleFrame>(
+                    new SubtitleFrame(m_subtitleCodecContext->width, m_subtitleCodecContext->height));
 
                 for(uint i = 0; i < subtitle.num_rects; ++i)
-                    mergeSubtitle(frame->data[0], frame->linesize[0],
-                                  frame->width, frame->height, subtitle.rects[i]);
-
-                SubtitleFrame subtitleFrame;
-                subtitleFrame.image = loadFromAVFrame(frame);
-                subtitleFrame.pts = second(packet->pts, m_subtitleStream->time_base);
+                    mergeSubtitle(subtitleFrame->image.bits(), subtitleFrame->image.bytesPerLine(),
+                                  subtitleFrame->image.width(), subtitleFrame->image.height(),
+                                  subtitle.rects[i]);
 
                 avsubtitle_free(&subtitle);
-                av_frame_free(&frame);
+
+                const auto duration =
+                    packet->duration > 0 ? second(packet->duration, m_subtitleStream->time_base) :
+                        SUBTITLE_DEFAULT_DURATION;
+
+                subtitleFrame->start = second(packet->pts, m_subtitleStream->time_base);
+                subtitleFrame->end = subtitleFrame->start + duration;
 
                 QMutexLocker locker(&m_mutex);
+
+                if(!m_subtitleCache.isEmpty() && m_subtitleCache.last()->end > subtitleFrame->start)
+                    m_subtitleCache.last()->end = subtitleFrame->start;
+
                 m_subtitleCache.append(std::move(subtitleFrame));
             }
         }
@@ -769,18 +771,6 @@ static void mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
         dst += dst_linesize;
         src += r->linesize[0];
     }
-}
-
-static QImage loadFromAVFrame(const AVFrame *frame)
-{
-    QImage image(frame->width, frame->height, QImage::Format_ARGB32);
-    image.fill(Qt::transparent);
-
-    for(int y = 0; y < frame->height; ++y)
-        memcpy(image.scanLine(y), frame->data[0] + y * frame->linesize[0],
-               size_t(frame->width * 3));
-
-    return image;
 }
 
 static int streamCount(const AVFormatContext *format, AVMediaType type)

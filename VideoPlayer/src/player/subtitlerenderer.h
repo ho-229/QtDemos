@@ -9,6 +9,7 @@
 
 #include "ffmpegdecoder.h"
 
+#include <QSharedPointer>
 #include <QQuickPaintedItem>
 
 class SubtitleRenderer : public QQuickPaintedItem
@@ -17,13 +18,16 @@ public:
     explicit SubtitleRenderer(QQuickItem *parent = nullptr);
     ~SubtitleRenderer() Q_DECL_OVERRIDE;
 
-    void render(const SubtitleFrame &frame);
+    void render(QSharedPointer<SubtitleFrame> &&frame);
+
+    void updateViewRect(const QRect &rect) { m_viewRect = rect; }
 
 protected:
     void paint(QPainter *painter) Q_DECL_OVERRIDE;
 
 private:
-    SubtitleFrame m_subtitle;
+    QRect m_viewRect;
+    QSharedPointer<SubtitleFrame> m_subtitle;
 };
 
 #endif // SUBTITLERENDERER_H

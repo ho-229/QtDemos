@@ -11,7 +11,8 @@
 SubtitleRenderer::SubtitleRenderer(QQuickItem *parent)
     : QQuickPaintedItem(parent)
 {
-
+    this->setRenderTarget(QQuickPaintedItem::FramebufferObject);
+    this->setMipmap(true);
 }
 
 SubtitleRenderer::~SubtitleRenderer()
@@ -19,17 +20,17 @@ SubtitleRenderer::~SubtitleRenderer()
 
 }
 
-void SubtitleRenderer::render(const SubtitleFrame &frame)
+void SubtitleRenderer::render(QSharedPointer<SubtitleFrame> &&frame)
 {
-    m_subtitle = frame;
+    if(frame == m_subtitle)
+        return;
 
-    if(m_subtitle.pts > 0)
-        this->update();
+    m_subtitle = frame;
+    this->update();
 }
 void SubtitleRenderer::paint(QPainter *painter)
 {
-    if(m_subtitle.pts > 0)
-        painter->drawImage(QRectF(this->x(), this->y(), this->width(), this->height()),
-                           m_subtitle.image);
+    if(m_subtitle)
+        painter->drawImage(m_viewRect, m_subtitle->image);
 }
 
