@@ -20,11 +20,16 @@ class VideoPlayer : public QQuickFramebufferObject
     Q_PROPERTY(QUrl source READ source WRITE setSource NOTIFY sourceChanged)
     Q_PROPERTY(qreal volume READ volume WRITE setVolume NOTIFY volumeChanged)
 
+    Q_PROPERTY(int activeVideoTrack READ activeVideoTrack WRITE setActiveVideoTrack NOTIFY activeVideoTrackChanged)
+    Q_PROPERTY(int activeAudioTrack READ activeAudioTrack WRITE setActiveAudioTrack NOTIFY activeAudioTrackChanged)
+    Q_PROPERTY(int activeSubtitleTrack READ activeSubtitleTrack WRITE setActiveSubtitleTrack NOTIFY activeSubtitleTrackChanged)
+
     // Read only property
     Q_PROPERTY(int position READ position NOTIFY positionChanged)
-    Q_PROPERTY(int duration READ duration NOTIFY loaded)
 
     Q_PROPERTY(State playState READ playState NOTIFY playStateChanged)
+
+    Q_PROPERTY(int duration READ duration NOTIFY loaded)
 
     Q_PROPERTY(bool hasVideo READ hasVideo NOTIFY loaded)
     Q_PROPERTY(bool hasAudio READ hasAudio NOTIFY loaded)
@@ -32,6 +37,7 @@ class VideoPlayer : public QQuickFramebufferObject
 
     Q_PROPERTY(bool seekable READ seekable NOTIFY loaded)
 
+    Q_PROPERTY(int videoTrackCount READ videoTrackCount NOTIFY loaded)
     Q_PROPERTY(int audioTrackCount READ audioTrackCount NOTIFY loaded)
     Q_PROPERTY(int subtitleTrackCount READ subtitleTrackCount NOTIFY loaded)
 
@@ -65,6 +71,16 @@ public:
     void setVolume(qreal volume);
     qreal volume() const;
 
+    void setActiveVideoTrack(int index);
+    int activeVideoTrack() const;
+
+    void setActiveAudioTrack(int index);
+    int activeAudioTrack() const;
+
+    void setActiveSubtitleTrack(int index);
+    int activeSubtitleTrack() const;
+
+    int videoTrackCount() const;
     int audioTrackCount() const;
     int subtitleTrackCount() const;
 
@@ -86,17 +102,18 @@ public:
 
     Q_INVOKABLE void seek(int position);
 
-    Q_INVOKABLE void trackAudio(int index);
-    Q_INVOKABLE void trackSubtitle(int index);
-
 signals:
     void error(VideoPlayer::Error error);
 
     void loaded();
-    void sourceChanged(QUrl source);
-    void playStateChanged(VideoPlayer::State state);
-    void volumeChanged(qreal volume);
-    void positionChanged(int position);
+    void sourceChanged(QUrl);
+    void playStateChanged(VideoPlayer::State);
+    void volumeChanged(qreal);
+    void positionChanged(int);
+
+    void activeVideoTrackChanged(int);
+    void activeAudioTrackChanged(int);
+    void activeSubtitleTrackChanged(int);
 
 protected:
     void geometryChanged(const QRectF &newGeometry,

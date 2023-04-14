@@ -28,6 +28,13 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
     d->audioOutput = new AudioOutput(d->decoder, this);
 
     d->subtitleRenderer = new SubtitleRenderer(this);
+
+    QObject::connect(d->decoder, &FFmpegDecoder::activeVideoTrackChanged,
+                     this, &VideoPlayer::activeVideoTrackChanged);
+    QObject::connect(d->decoder, &FFmpegDecoder::activeAudioTrackChanged,
+                     this, &VideoPlayer::activeAudioTrackChanged);
+    QObject::connect(d->decoder, &FFmpegDecoder::activeSubtitleTrackChanged,
+                     this, &VideoPlayer::activeSubtitleTrackChanged);
 }
 
 VideoPlayer::~VideoPlayer()
@@ -176,6 +183,68 @@ qreal VideoPlayer::volume() const
     return d_ptr->audioOutput->volume();
 }
 
+void VideoPlayer::setActiveVideoTrack(int index)
+{
+    Q_D(VideoPlayer);
+
+    if(!this->hasVideo() || d->decoder->activeVideoTrack() == index)
+        return;
+
+    d->decoder->requestInterrupt();
+    QMetaObject::invokeMethod(d->decoder, "setActiveVideoTrack",
+                              Qt::QueuedConnection, Q_ARG(int, index));
+    QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
+                              Qt::QueuedConnection);
+}
+
+int VideoPlayer::activeVideoTrack() const
+{
+    return d_ptr->decoder->activeVideoTrack();
+}
+
+void VideoPlayer::setActiveAudioTrack(int index)
+{
+    Q_D(VideoPlayer);
+
+    if(!this->hasAudio() || d->decoder->activeAudioTrack() == index)
+        return;
+
+    d->decoder->requestInterrupt();
+    QMetaObject::invokeMethod(d->decoder, "setActiveAudioTrack",
+                              Qt::QueuedConnection, Q_ARG(int, index));
+    QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
+                              Qt::QueuedConnection);
+}
+
+int VideoPlayer::activeAudioTrack() const
+{
+    return d_ptr->decoder->activeAudioTrack();
+}
+
+void VideoPlayer::setActiveSubtitleTrack(int index)
+{
+    Q_D(VideoPlayer);
+
+    if(!this->hasSubtitle() || d->decoder->activeSubtitleTrack() == index)
+        return;
+
+    d->decoder->requestInterrupt();
+    QMetaObject::invokeMethod(d->decoder, "setActiveSubtitleTrack",
+                              Qt::QueuedConnection, Q_ARG(int, index));
+    QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
+                              Qt::QueuedConnection);
+}
+
+int VideoPlayer::activeSubtitleTrack() const
+{
+    return d_ptr->decoder->activeSubtitleTrack();
+}
+
+int VideoPlayer::videoTrackCount() const
+{
+    return d_ptr->decoder->videoTrackCount();
+}
+
 int VideoPlayer::audioTrackCount() const
 {
     return d_ptr->decoder->audioTrackCount();
@@ -198,17 +267,17 @@ int VideoPlayer::position() const
 
 bool VideoPlayer::hasVideo() const
 {
-    return d_ptr->decoder->hasVideo();
+    return d_ptr->decoder->videoTrackCount();
 }
 
 bool VideoPlayer::hasAudio() const
 {
-    return d_ptr->decoder->hasAudio();
+    return d_ptr->decoder->audioTrackCount();
 }
 
 bool VideoPlayer::hasSubtitle() const
 {
-    return d_ptr->decoder->subtitleType() != FFmpegDecoder::None;
+    return d_ptr->decoder->subtitleTrackCount();
 }
 
 bool VideoPlayer::seekable() const
@@ -228,28 +297,6 @@ void VideoPlayer::seek(int position)
 
     d->lastDiff = 0;
     d->totalStep = 0;
-}
-
-void VideoPlayer::trackAudio(int index)
-{
-    Q_D(VideoPlayer);
-
-    if(!this->hasAudio())
-        return;
-
-    d->decoder->requestInterrupt();
-    QMetaObject::invokeMethod(d->decoder, "trackAudio", Qt::QueuedConnection, Q_ARG(int, index));
-}
-
-void VideoPlayer::trackSubtitle(int index)
-{
-    Q_D(VideoPlayer);
-
-    if(!this->hasSubtitle())
-        return;
-
-    d->decoder->requestInterrupt();
-    QMetaObject::invokeMethod(d->decoder, "trackSubtitle", Qt::QueuedConnection, Q_ARG(int, index));
 }
 
 void VideoPlayer::geometryChanged(const QRectF &newGeometry, const QRectF &oldGeometry)

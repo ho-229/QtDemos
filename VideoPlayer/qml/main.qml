@@ -415,12 +415,12 @@ Window {
 
                 SpinBox {
                     from: videoPlayer.hasAudio ? 0 : -1
-                    value: videoPlayer.hasAudio ? 0 : -1
-                    to: videoPlayer.hasAudio ? videoPlayer.audioTrackCount - 1 : -1
+                    value: videoPlayer.activeAudioTrack
+                    to: videoPlayer.audioTrackCount - 1
 
                     onValueChanged: {
                         if (videoPlayer.hasAudio)
-                            videoPlayer.trackAudio(value)
+                            videoPlayer.activeAudioTrack = value
                     }
                 }
 
@@ -433,12 +433,12 @@ Window {
 
                 SpinBox {
                     from: videoPlayer.hasSubtitle ? 0 : -1
-                    value: videoPlayer.hasSubtitle ? 0 : -1
-                    to: videoPlayer.hasSubtitle ? videoPlayer.subtitleTrackCount - 1 : -1
+                    value: videoPlayer.activeSubtitleTrack
+                    to: videoPlayer.subtitleTrackCount - 1
 
                     onValueChanged: {
                         if (videoPlayer.hasSubtitle)
-                            videoPlayer.trackSubtitle(value)
+                            videoPlayer.activeSubtitleTrack = value
                     }
                 }
             }

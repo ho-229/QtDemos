@@ -13,6 +13,7 @@
 #include <QMutex>
 #include <QImage>
 #include <QObject>
+#include <QVariant>
 #include <QAudioFormat>
 #include <QSharedPointer>
 #include <QContiguousCache>
@@ -46,7 +47,7 @@ struct SubtitleFrame
     qreal end = 0;
 };
 
-class FFmpegDecoder : public QObject
+class FFmpegDecoder final : public QObject
 {
     Q_OBJECT
 public:
@@ -78,8 +79,13 @@ public:
 
     QString errorString() const { return m_errorBuf; }
 
-    bool hasVideo() const { return m_hasVideo; }
-    bool hasAudio() const { return m_hasAudio; }
+    int activeVideoTrack() const;
+    int activeAudioTrack() const;
+    int activeSubtitleTrack() const;
+
+    int videoTrackCount() const;
+    int audioTrackCount() const;
+    int subtitleTrackCount() const;
 
     SubtitleType subtitleType() const { return m_subtitleType; }
 
@@ -95,11 +101,6 @@ public:
      * @return duration of the media in seconds.
      */
     int duration() const;
-
-    int audioTrackCount() const;
-
-    int subtitleTrackCount() const;
-
     int position() const { return m_position; }
 
     VideoInfo videoInfo() const;
@@ -120,8 +121,11 @@ public:
     { return static_cast<qreal>(time) * av_q2d(timebase); }
 
 signals:
-    void seeked();
     void stateChanged(FFmpegDecoder::State);
+
+    void activeVideoTrackChanged(int);
+    void activeAudioTrackChanged(int);
+    void activeSubtitleTrackChanged(int);
 
 public slots:
     void load();
@@ -129,16 +133,25 @@ public slots:
 
     void seek(int position);
 
-    void trackAudio(int index);
-    void trackSubtitle(int index);
+    void setActiveVideoTrack(int index);
+    void setActiveAudioTrack(int index);
+    void setActiveSubtitleTrack(int index);
 
-private slots:
-    void onDecode();
-
-protected:
-    State m_state = Closed;
+    void decode();
 
 private:
+    void clearCache();
+
+    bool openCodecContext(AVStream *&stream, AVCodecContext *&codecContext,
+                          AVMediaType type, int index = 0);
+    void closeCodecContext(AVStream *&stream, AVCodecContext *&codecContext);
+
+    bool openSubtitleFilter(const QString &args, const QString &filterDesc);
+    void closeSubtitleFilter();
+
+private:
+    State m_state = Closed;
+
     char m_errorBuf[AV_ERROR_MAX_STRING_SIZE];
 
     mutable QMutex m_mutex;
@@ -168,9 +181,6 @@ private:
 
     SubtitleType m_subtitleType = None;
 
-    bool m_hasVideo = false;
-    bool m_hasAudio = false;
-
     volatile bool m_isPtsUpdated = false;
     volatile bool m_runnable = false;             // Is FFmpegDecoder::decode() could run
     volatile bool m_isEnd = false;
@@ -181,16 +191,10 @@ private:
 
     volatile qint64 m_audioPts = 0;
 
-    void loadSubtitle(int index = 1);
-
-    void clearCache();
-
-    bool openCodecContext(AVStream *&stream, AVCodecContext *&codecContext,
-                          AVMediaType type, int index = 0);
-    void closeCodecContext(AVStream *&stream, AVCodecContext *&codecContext);
-
-    bool openSubtitleFilter(const QString &args, const QString &filterDesc);
-    void closeSubtitleFilter();
+    QList<int> m_videoIndexes;
+    QList<int> m_audioIndexes;
+    QList<QVariant> m_subtitleIndexes;
+    int m_subtitleIndex = -1;
 };
 
 #endif // FFMPEGDECODER_H

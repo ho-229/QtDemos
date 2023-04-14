@@ -42,7 +42,8 @@ AudioOutput::~AudioOutput()
 
 void AudioOutput::setAudioFormat(const QAudioFormat format)
 {
-    m_output = new QAudioOutput(format, this);
+    if(format.isValid())
+        m_output = new QAudioOutput(format, this);
 }
 
 void AudioOutput::setVolume(qreal volume)
