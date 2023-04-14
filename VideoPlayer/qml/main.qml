@@ -34,7 +34,7 @@ Window {
         id: errorDialog
 
         title: qsTr("Error")
-        text: qsTr("Resource load failed")
+        text: videoPlayer.errorString
     }
 
     VideoPlayer {
@@ -45,14 +45,7 @@ Window {
 
         onSourceChanged: urlTitle.toast()
 
-        onError: {
-            switch(error)
-            {
-            case VideoPlayer.ResourceError:
-                errorDialog.visible = true
-                break
-            }
-        }
+        onErrorOccurred: errorDialog.visible = true
     }
 
     MouseArea {

@@ -27,6 +27,7 @@ class VideoPlayer : public QQuickFramebufferObject
     // Read only property
     Q_PROPERTY(int position READ position NOTIFY positionChanged)
 
+    Q_PROPERTY(QString errorString READ errorString NOTIFY errorOccurred)
     Q_PROPERTY(State playState READ playState NOTIFY playStateChanged)
 
     Q_PROPERTY(int duration READ duration NOTIFY loaded)
@@ -42,20 +43,12 @@ class VideoPlayer : public QQuickFramebufferObject
     Q_PROPERTY(int subtitleTrackCount READ subtitleTrackCount NOTIFY loaded)
 
 public:
-    enum Error
-    {
-        ResourceError
-    };
-
-    Q_ENUM(Error)
-
     enum State
     {
         Playing,
         Paused,
         Stopped
     };
-
     Q_ENUM(State)
 
     VideoPlayer(QQuickItem *parent = nullptr);
@@ -96,6 +89,8 @@ public:
 
     bool seekable() const;
 
+    QString errorString() const;
+
     Q_INVOKABLE void play();
     Q_INVOKABLE void pause();
     Q_INVOKABLE void stop();
@@ -103,7 +98,7 @@ public:
     Q_INVOKABLE void seek(int position);
 
 signals:
-    void error(VideoPlayer::Error error);
+    void errorOccurred(QString);
 
     void loaded();
     void sourceChanged(QUrl);

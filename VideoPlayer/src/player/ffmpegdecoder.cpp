@@ -12,6 +12,9 @@
 #include <QScopeGuard>
 #include <QMutexLocker>
 
+#define FFMPEG_ERROR(x) FUNC_ERROR << ":" << __LINE__ \
+                        << ":" << av_make_error_string(m_errorBuf, sizeof (m_errorBuf), x)
+
 /**
  * @ref ffmpeg.c line:181 : static void sub2video_copy_rect()
  */
@@ -194,23 +197,16 @@ void FFmpegDecoder::setActiveSubtitleTrack(int index)
             QString subtitleFileName = m_url.toLocalFile();
 
             m_subtitleIndex = index;
-            if(this->openSubtitleFilter(args, makeFilterDesc(convertPath(subtitleFileName), absoluteIndex)))
-                m_subtitleType = TextBased;
-            // If is not text based subtitles
-            else if(this->openCodecContext(m_subtitleStream, m_subtitleCodecContext,
-                                            AVMEDIA_TYPE_SUBTITLE, absoluteIndex))
-                m_subtitleType = Bitmap;
-            else
-                m_subtitleIndex = -1;
+            if(this->openSubtitleFilter(args, makeFilterDesc(convertPath(subtitleFileName), absoluteIndex)) ||
+                this->openCodecContext(m_subtitleStream, m_subtitleCodecContext,
+                                       AVMEDIA_TYPE_SUBTITLE, absoluteIndex))
+                m_subtitleIndex = index;
         }
     }
     else if(m_subtitleIndexes[index].type() == QVariant::String)
     {
         if(this->openSubtitleFilter(args, makeFilterDesc(convertPath(m_subtitleIndexes[index].toString()), 0)))
-        {
             m_subtitleIndex = index;
-            m_subtitleType = TextBased;
-        }
     }
 
     if(m_subtitleIndex == index)
@@ -246,6 +242,11 @@ int FFmpegDecoder::subtitleTrackCount() const
     return m_subtitleIndexes.size();
 }
 
+bool FFmpegDecoder::isBitmapSubtitleActived() const
+{
+    return m_subtitleCodecContext && m_subtitleCodecContext->pix_fmt == AV_PIX_FMT_PAL8;
+}
+
 void FFmpegDecoder::load()
 {
     this->release();        // Reset
@@ -260,7 +261,7 @@ void FFmpegDecoder::load()
              nullptr, nullptr)) < 0)
     {
         FFMPEG_ERROR(ret);
-        emit stateChanged(Error);
+        emit stateChanged(Closed);
         return;
     }
 
@@ -268,7 +269,7 @@ void FFmpegDecoder::load()
     if((ret = avformat_find_stream_info(m_formatContext, nullptr)) < 0)
     {
         FFMPEG_ERROR(ret);
-        emit stateChanged(Error);
+        this->release();
         return;
     }
 
@@ -301,8 +302,8 @@ void FFmpegDecoder::load()
     // If there is no video and audio or fps is invalid
     if(!(m_videoStream || m_audioStream) || qFuzzyIsNull(this->fps()))
     {
+        qstrcpy(m_errorBuf, "There is no video and audio or fps is invalid");
         this->release();
-        emit stateChanged(Error);
         return;
     }
 
@@ -332,8 +333,6 @@ void FFmpegDecoder::release()
     m_videoIndexes.clear();
     m_audioIndexes.clear();
     m_subtitleIndexes.clear();
-
-    m_subtitleType = None;
 
     m_state = Closed;
     emit stateChanged(m_state);
@@ -632,7 +631,8 @@ bool FFmpegDecoder::openCodecContext(AVStream *&stream, AVCodecContext *&codecCo
     int ret = 0;
     if ((ret = av_find_best_stream(m_formatContext, type, index, -1, nullptr, 0)) < 0)
     {
-        FUNC_ERROR << "Could not find stream " << av_get_media_type_string(type);
+        FUNC_ERROR << "Could not find stream" << av_get_media_type_string(type);
+        FFMPEG_ERROR(ret);
         return false;
     }
 
@@ -642,7 +642,7 @@ bool FFmpegDecoder::openCodecContext(AVStream *&stream, AVCodecContext *&codecCo
     const AVCodec *codec = avcodec_find_decoder(stream->codecpar->codec_id);
     if (!codec)
     {
-        FUNC_ERROR << "Cound not find codec " << av_get_media_type_string(type);
+        FUNC_ERROR << "Cound not find codec" << av_get_media_type_string(type);
         return false;
     }
 
@@ -656,19 +656,20 @@ bool FFmpegDecoder::openCodecContext(AVStream *&stream, AVCodecContext *&codecCo
     codecContext->thread_count = 1;
 
     AVDictionary *opts = nullptr;
-    ret = avcodec_parameters_to_context(codecContext, stream->codecpar);
-    if (ret < 0)
+    if ((ret = avcodec_parameters_to_context(codecContext, stream->codecpar)) < 0)
     {
         FUNC_ERROR << "Failed to copy codec parameters to decoder context"
                    << av_get_media_type_string(type);
-        return ret;
+        FFMPEG_ERROR(ret);
+        return false;
     }
     av_dict_set(&opts, "refcounted_frames", "0", 0);
 
     // Open codec and get the context
-    if (avcodec_open2(codecContext, codec, &opts) < 0)
+    if ((ret = avcodec_open2(codecContext, codec, &opts)) < 0)
     {
-        FUNC_ERROR << "Failed to open codec " << av_get_media_type_string(type);
+        FUNC_ERROR << "Failed to open codec" << av_get_media_type_string(type);
+        FFMPEG_ERROR(ret);
         return false;
     }
 

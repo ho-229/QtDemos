@@ -29,9 +29,6 @@
 
 #define FUNC_ERROR qCritical() << __FUNCTION__
 
-#define FFMPEG_ERROR(x) FUNC_ERROR << ":" << __LINE__ \
-                    << ":" << av_make_error_string(m_errorBuf, sizeof (m_errorBuf), x)
-
 typedef QPair<QSize,            // Size
               AVPixelFormat>    // Format
     VideoInfo;
@@ -53,19 +50,10 @@ class FFmpegDecoder final : public QObject
 public:
     enum State
     {
-        Error,      // only used by stateChanged signal
         Opened,
         Closed
     };
     Q_ENUM(State)
-
-    enum SubtitleType
-    {
-        None,
-        TextBased,
-        Bitmap
-    };
-    Q_ENUM(SubtitleType)
 
     explicit FFmpegDecoder(QObject *parent = nullptr);
     ~FFmpegDecoder() Q_DECL_OVERRIDE;
@@ -87,15 +75,13 @@ public:
     int audioTrackCount() const;
     int subtitleTrackCount() const;
 
-    SubtitleType subtitleType() const { return m_subtitleType; }
-
     bool hasFrame() const { return m_videoCache.count() || m_audioCache.count(); }
 
     bool seekable() const;
 
     bool isEnd() const { return m_isEnd; }
-
     bool isCacheFull() const { return m_videoCache.isFull() || m_audioCache.isFull(); }
+    bool isBitmapSubtitleActived() const;
 
     /**
      * @return duration of the media in seconds.
@@ -178,8 +164,6 @@ private:
     QContiguousCache<AVFrame *> m_videoCache;
     QContiguousCache<AVFrame *> m_audioCache;
     QContiguousCache<QSharedPointer<SubtitleFrame>> m_subtitleCache;
-
-    SubtitleType m_subtitleType = None;
 
     volatile bool m_isPtsUpdated = false;
     volatile bool m_runnable = false;             // Is FFmpegDecoder::decode() could run

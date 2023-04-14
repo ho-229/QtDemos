@@ -14,7 +14,7 @@ extern "C"
 #  ifdef _STDINT_H
 #   undef _STDINT_H
 #  endif
-# include "stdint.h"
+# include <stdint.h>
 #endif
 
 #ifndef INT64_C

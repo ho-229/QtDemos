@@ -108,8 +108,7 @@ void VideoPlayer::play()
             }
             else
             {
-                qCritical() << __FUNCTION__ << ": Source load failed.";
-                emit error(ResourceError);
+                emit errorOccurred(this->errorString());
                 return;
             }
         }
@@ -233,6 +232,8 @@ void VideoPlayer::setActiveSubtitleTrack(int index)
                               Qt::QueuedConnection, Q_ARG(int, index));
     QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
                               Qt::QueuedConnection);
+
+    d->subtitleRenderer->render({});
 }
 
 int VideoPlayer::activeSubtitleTrack() const
@@ -285,6 +286,11 @@ bool VideoPlayer::seekable() const
     return d_ptr->decoder->seekable();
 }
 
+QString VideoPlayer::errorString() const
+{
+    return d_ptr->decoder->errorString();
+}
+
 void VideoPlayer::seek(int position)
 {
     Q_D(VideoPlayer);
@@ -316,7 +322,7 @@ void VideoPlayer::timerEvent(QTimerEvent *)
     d->isUpdated = true;
     this->update();
 
-    if(d->decoder->subtitleType() == FFmpegDecoder::Bitmap)
+    if(d->decoder->isBitmapSubtitleActived())
         d->subtitleRenderer->render(d->decoder->takeSubtitleFrame());
 
     const int newPos = d->decoder->position();
