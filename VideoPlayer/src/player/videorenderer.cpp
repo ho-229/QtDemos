@@ -23,8 +23,8 @@ VideoRenderer::VideoRenderer(VideoPlayerPrivate * const player_p)
 
     m_decoder = m_player_p->decoder;
 
-    glDepthMask(GL_TRUE);
-    glEnable(GL_TEXTURE_2D);
+    this->glDepthMask(GL_TRUE);
+    this->glEnable(GL_TEXTURE_2D);
 
     this->initShader();
     this->initGeometry();
@@ -32,9 +32,9 @@ VideoRenderer::VideoRenderer(VideoPlayerPrivate * const player_p)
 
 VideoRenderer::~VideoRenderer()
 {
-    destoryTexture(m_textureY);
-    destoryTexture(m_textureU);
-    destoryTexture(m_textureV);
+    this->destoryTexture(m_textureY);
+    this->destoryTexture(m_textureU);
+    this->destoryTexture(m_textureV);
 }
 
 void VideoRenderer::render()
@@ -75,7 +75,8 @@ void VideoRenderer::synchronize(QQuickFramebufferObject *)
 
 void VideoRenderer::updateTextureInfo()
 {
-    const VideoInfo info(m_decoder->videoInfo());
+    const auto videoFormat = m_decoder->videoPixelFormat();
+    const auto videoSize = m_decoder->videoSize();
 
     destoryTexture(m_textureY);
     destoryTexture(m_textureU);
@@ -84,34 +85,34 @@ void VideoRenderer::updateTextureInfo()
 
     this->initTexture();
 
-    switch(info.second)
+    switch(videoFormat)
     {
     case AV_PIX_FMT_YUV420P:        // YUV 420p 12bpp
-        m_textureY->setSize(info.first.width(), info.first.height());
+        m_textureY->setSize(videoSize.width(), videoSize.height());
         m_textureY->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
 
-        m_textureU->setSize(info.first.width() / 2, info.first.height() / 2);
+        m_textureU->setSize(videoSize.width() / 2, videoSize.height() / 2);
         m_textureU->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
 
-        m_textureV->setSize(info.first.width() / 2, info.first.height() / 2);
+        m_textureV->setSize(videoSize.width() / 2, videoSize.height() / 2);
         m_textureV->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
 
         m_textureAlloced = true;
         break;
     case AV_PIX_FMT_YUV444P:        // YUV 444P 24bpp
-        m_textureY->setSize(info.first.width(), info.first.height());
+        m_textureY->setSize(videoSize.width(), videoSize.height());
         m_textureY->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
 
-        m_textureU->setSize(info.first.width(), info.first.height());
+        m_textureU->setSize(videoSize.width(), videoSize.height());
         m_textureU->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
 
-        m_textureV->setSize(info.first.width(), info.first.height());
+        m_textureV->setSize(videoSize.width(), videoSize.height());
         m_textureV->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
 
         m_textureAlloced = true;
         break;
     default:
-        FUNC_ERROR << ": Unknow pixel format" << info.second;
+        FUNC_ERROR << ": Unknow pixel format" << videoFormat;
     }
 }
 
@@ -263,7 +264,7 @@ void VideoRenderer::initGeometry()
 void VideoRenderer::resize()
 {
     const QRect screenRect(QPoint(0, 0), m_size);
-    const QSize videoSize(m_decoder->videoInfo().first);
+    const QSize videoSize(m_decoder->videoSize());
 
     if(!videoSize.isValid())
         return;

@@ -29,10 +29,6 @@
 
 #define FUNC_ERROR qCritical() << __FUNCTION__
 
-typedef QPair<QSize,            // Size
-              AVPixelFormat>    // Format
-    VideoInfo;
-
 struct SubtitleFrame
 {
     SubtitleFrame(int width, int height) :
@@ -89,15 +85,14 @@ public:
     int duration() const;
     int position() const { return m_position; }
 
-    VideoInfo videoInfo() const;
-
-    AVFrame* takeVideoFrame();
-
-    qint64 takeAudioData(char *data, qint64 len);
-
-    QSharedPointer<SubtitleFrame> takeSubtitleFrame();
+    QSize videoSize() const;
+    AVPixelFormat videoPixelFormat() const;
 
     const QAudioFormat audioFormat() const;
+
+    AVFrame* takeVideoFrame();
+    qint64 takeAudioData(char *data, qint64 len);
+    QSharedPointer<SubtitleFrame> takeSubtitleFrame();
 
     qreal fps() const;
 
@@ -126,6 +121,10 @@ public slots:
     void decode();
 
 private:
+    void decodeVideo();
+    void decodeAudio();
+    void decodeSubtitle(AVPacket *packet);
+
     void clearCache();
 
     bool openCodecContext(AVStream *&stream, AVCodecContext *&codecContext,

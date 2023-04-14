@@ -93,13 +93,10 @@ void VideoPlayer::play()
         if(d->decoder->state() == FFmpegDecoder::Closed)
         {
             QEventLoop loop;
-            QObject::connect(d->decoder, &FFmpegDecoder::stateChanged, &loop,
-                             [&](FFmpegDecoder::State state) {
-                                 loop.exit(state != FFmpegDecoder::State::Opened);
-                             });
+            QObject::connect(d->decoder, &FFmpegDecoder::stateChanged, &loop, &QEventLoop::exit);
             QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::load, Qt::QueuedConnection);
 
-            if(!loop.exec())
+            if(loop.exec() == FFmpegDecoder::State::Opened)
             {
                 d->isVideoInfoChanged = true;
                 d->audioOutput->setAudioFormat(d->decoder->audioFormat());
@@ -339,23 +336,22 @@ void VideoPlayer::timerEvent(QTimerEvent *)
         return;
     }
 
-    const qreal diff = d->decoder->diff();
+    qreal diff = d->decoder->diff();
 
-    if(diff >= ALLOW_DIFF)          // Too slow
+    if(diff > ALLOW_DIFF)          // Too slow
     {
-        if(d->interval <= 10 || diff > ALLOW_DIFF * 2)
+        while(d->interval <= 10 || diff > ALLOW_DIFF * 4)
         {
             AVFrame *frame = d->decoder->takeVideoFrame();
             av_frame_free(&frame);
+            diff = d->decoder->diff();
         }
-        else
+
+        if(diff - d->lastDiff > ALLOW_DIFF / 2 && d->totalStep < 9)
         {
-            if(diff - d->lastDiff > ALLOW_DIFF / 2 && d->totalStep < 9)
-            {
-                ++d->totalStep;
-                --d->interval;
-                this->updateTimer();
-            }
+            ++d->totalStep;
+            --d->interval;
+            this->updateTimer();
         }
     }
     else if(diff <= -ALLOW_DIFF)    // Too quick
