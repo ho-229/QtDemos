@@ -18,20 +18,23 @@ bool KeyboardControllor::eventFilter(QObject *obj, QEvent *event)
     {
         QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
 
-        switch(keyEvent->key())
+        if(!keyEvent->isAutoRepeat())
         {
-        case Qt::Key_Space:
-            emit play();
-            break;
-        case Qt::Key_Left:
-            emit back();
-            break;
-        case Qt::Key_Right:
-            emit goahead();
-            break;
-        case Qt::Key_Escape:
-            emit escape();
-            break;
+            switch(keyEvent->key())
+            {
+            case Qt::Key_Space:
+                emit play();
+                break;
+            case Qt::Key_Left:
+                emit back();
+                break;
+            case Qt::Key_Right:
+                emit goahead();
+                break;
+            case Qt::Key_Escape:
+                emit escape();
+                break;
+            }
         }
     }
 

@@ -42,6 +42,9 @@ AudioOutput::~AudioOutput()
 
 void AudioOutput::setAudioFormat(const QAudioFormat format)
 {
+    if(m_output)
+        this->stop();
+
     if(format.isValid())
         m_output = new QAudioOutput(format, this);
 }

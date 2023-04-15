@@ -353,19 +353,16 @@ void FFmpegDecoder::seek(int position)
 {
     m_runnable = true;
 
-    if(m_state == Closed || m_position == position)
-        return;
-
-    const AVStream *seekStream = m_videoStream ? m_videoStream : m_audioStream;
-    if(!seekStream)
+    if(m_state == Closed || (!m_videoStream && !m_audioStream))
         return;
 
     // Clear frame cache
     this->clearCache();
 
+    const AVStream *seekStream = m_videoStream ? m_videoStream : m_audioStream;
+    const int flags = (position < m_position ? AVSEEK_FLAG_BACKWARD : 0) | AVSEEK_FLAG_FRAME;
     av_seek_frame(m_formatContext, seekStream->index, static_cast<qint64>
-                  (position / av_q2d(seekStream->time_base)),
-                  AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_FRAME);
+                  (position / av_q2d(seekStream->time_base)), flags);
 
     m_position = position;
 
@@ -383,22 +380,25 @@ void FFmpegDecoder::seek(int position)
 
 AVFrame *FFmpegDecoder::takeVideoFrame()
 {
-    QMutexLocker locker(&m_mutex);
-
-    if(m_state == Closed || m_videoCache.isEmpty())
+    if(m_state == Closed)
         return nullptr;
 
-    AVFrame *frame = m_videoCache.takeFirst();
-    locker.unlock();
+    AVFrame *frame = nullptr;
+    m_mutex.lock();
+    if(!m_videoCache.isEmpty())
+    {
+        frame = m_videoCache.takeFirst();
 
-    m_videoTime = second(frame->pts, m_videoStream->time_base);
+        m_videoTime = second(frame->pts, m_videoStream->time_base);
 
-    if(m_isPtsUpdated)
-        m_diff = second(m_audioPts, m_audioStream->time_base) - m_videoTime - AUDIO_DELAY;
+        if(m_isPtsUpdated)
+            m_diff = second(m_audioPts, m_audioStream->time_base) - m_videoTime - AUDIO_DELAY;
 
-    m_position = static_cast<int>(m_videoTime);
+        m_position = static_cast<int>(m_videoTime);
+    }
+    m_mutex.unlock();
 
-    if(m_videoCache.count() <= VIDEO_CACHE_SIZE / 2 && !m_isEnd)
+    if(m_videoCache.count() <= VIDEO_CACHE_SIZE / 2 && !m_isEnd && !m_isDecoding)
         QMetaObject::invokeMethod(this, &FFmpegDecoder::decode);  // Asynchronous call FFmpegDecoder::decode()
 
     return frame;
@@ -406,13 +406,13 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
 
 qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
 {
-    QMutexLocker locker(&m_mutex);
-    if(m_state == Closed || m_audioCache.isEmpty() || !len)
+    if(m_state == Closed || !len)
         return {};
 
     qint64 free = len;
     char *dest = data;
 
+    m_mutex.lock();
     while(!m_audioCache.isEmpty() && m_audioCache.first()->linesize[0] <= free)
     {
         AVFrame *frame = m_audioCache.takeFirst();
@@ -424,12 +424,12 @@ qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
 
         free -= size;
         dest += size;
+
+        m_isPtsUpdated = true;
     }
+    m_mutex.unlock();
 
-    locker.unlock();
-    m_isPtsUpdated = true;
-
-    if(m_audioCache.size() < AUDIO_CACHE_SIZE / 2 && !m_isEnd)
+    if(m_audioCache.size() < AUDIO_CACHE_SIZE / 2 && !m_isEnd && !m_isDecoding)
         QMetaObject::invokeMethod(this, &FFmpegDecoder::decode);  // Asynchronous call FFmpegDecoder::decode()
 
     return len - free;
@@ -476,6 +476,7 @@ void FFmpegDecoder::decode()
 {
     AVPacket *packet = av_packet_alloc();
 
+    m_isDecoding = true;
     while(m_state == Opened && !this->isCacheFull() && m_runnable)
     {
         m_isEnd = av_read_frame(m_formatContext, packet);
@@ -499,6 +500,7 @@ void FFmpegDecoder::decode()
         av_packet_unref(packet);
     }
 
+    m_isDecoding = false;
     av_packet_free(&packet);
 }
 

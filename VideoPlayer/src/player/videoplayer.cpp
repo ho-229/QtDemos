@@ -35,6 +35,18 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
                      this, &VideoPlayer::activeAudioTrackChanged);
     QObject::connect(d->decoder, &FFmpegDecoder::activeSubtitleTrackChanged,
                      this, &VideoPlayer::activeSubtitleTrackChanged);
+
+    QObject::connect(d->decoder, &FFmpegDecoder::activeAudioTrackChanged,
+                     this, [this] {
+        d_ptr->audioOutput->setAudioFormat(d_ptr->decoder->audioFormat());
+
+        if(d_ptr->state != Stopped)
+        {
+            d_ptr->audioOutput->play();
+            if(d_ptr->state == Paused)
+                d_ptr->audioOutput->pause();
+        }
+    });
 }
 
 VideoPlayer::~VideoPlayer()
@@ -64,11 +76,7 @@ void VideoPlayer::setSource(const QUrl& source)
 {
     Q_D(VideoPlayer);
 
-    if(!source.isValid())
-        return;
-
     d->decoder->setUrl(source);
-
     emit sourceChanged(source);
 }
 
@@ -99,8 +107,6 @@ void VideoPlayer::play()
             if(loop.exec() == FFmpegDecoder::State::Opened)
             {
                 d->isVideoInfoChanged = true;
-                d->audioOutput->setAudioFormat(d->decoder->audioFormat());
-
                 emit loaded();
             }
             else
@@ -112,8 +118,6 @@ void VideoPlayer::play()
 
         d->interval = static_cast<int>(1000 / d->decoder->fps());
         d->timerId = this->startTimer(d->interval);
-        d->lastDiff = 0;
-        d->totalStep = 0;
 
         d->audioOutput->play();
     }
@@ -165,6 +169,9 @@ void VideoPlayer::stop()
 
     d->state = Stopped;
     emit playStateChanged(Stopped);
+
+    d->lastDiff = 0;
+    d->totalStep = 0;
 }
 
 void VideoPlayer::setVolume(qreal volume)
@@ -292,13 +299,14 @@ void VideoPlayer::seek(int position)
 {
     Q_D(VideoPlayer);
 
-    if(d->state == State::Stopped || !this->seekable())
+    if(d->state == State::Stopped || !this->seekable() || d->decoder->position() == position)
         return;
 
     d->decoder->requestInterrupt();
     QMetaObject::invokeMethod(d->decoder, "seek", Qt::QueuedConnection, Q_ARG(int, position));
 
     d->lastDiff = 0;
+    d->interval += d->totalStep;
     d->totalStep = 0;
 }
 
@@ -340,11 +348,14 @@ void VideoPlayer::timerEvent(QTimerEvent *)
 
     if(diff > ALLOW_DIFF)          // Too slow
     {
-        while(d->interval <= 10 || diff > ALLOW_DIFF * 4)
+        while(diff > ALLOW_DIFF * 4)
         {
             AVFrame *frame = d->decoder->takeVideoFrame();
             av_frame_free(&frame);
             diff = d->decoder->diff();
+
+            d->interval += d->totalStep;
+            d->totalStep = 0;
         }
 
         if(diff - d->lastDiff > ALLOW_DIFF / 2 && d->totalStep < 9)

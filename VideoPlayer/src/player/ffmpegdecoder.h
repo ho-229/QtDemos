@@ -164,6 +164,7 @@ private:
     QContiguousCache<AVFrame *> m_audioCache;
     QContiguousCache<QSharedPointer<SubtitleFrame>> m_subtitleCache;
 
+    volatile bool m_isDecoding = false;
     volatile bool m_isPtsUpdated = false;
     volatile bool m_runnable = false;             // Is FFmpegDecoder::decode() could run
     volatile bool m_isEnd = false;
