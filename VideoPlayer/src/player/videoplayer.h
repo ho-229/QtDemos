@@ -9,7 +9,7 @@
 
 #include <QQuickFramebufferObject>
 
-#define ALLOW_DIFF 0.04         // 40ms
+#define ALLOW_DIFF 0.03         // 40ms
 
 class VideoPlayerPrivate;
 

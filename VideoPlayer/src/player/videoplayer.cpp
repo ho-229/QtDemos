@@ -15,6 +15,8 @@
 #include <QMetaObject>
 #include <QTimerEvent>
 
+static inline int sigmoid(qreal value);
+
 VideoPlayer::VideoPlayer(QQuickItem *parent) :
     QQuickFramebufferObject(parent),
     d_ptr(new VideoPlayerPrivate(this))
@@ -304,10 +306,9 @@ void VideoPlayer::seek(int position)
 
     d->decoder->requestInterrupt();
     QMetaObject::invokeMethod(d->decoder, "seek", Qt::QueuedConnection, Q_ARG(int, position));
+    d->audioOutput->reset();
 
     d->lastDiff = 0;
-    d->interval += d->totalStep;
-    d->totalStep = 0;
 }
 
 void VideoPlayer::geometryChanged(const QRectF &newGeometry, const QRectF &oldGeometry)
@@ -345,32 +346,20 @@ void VideoPlayer::timerEvent(QTimerEvent *)
     }
 
     qreal diff = d->decoder->diff();
-
-    if(diff > ALLOW_DIFF)          // Too slow
+    while(diff > ALLOW_DIFF * 4)
     {
-        while(diff > ALLOW_DIFF * 4)
-        {
-            AVFrame *frame = d->decoder->takeVideoFrame();
-            av_frame_free(&frame);
-            diff = d->decoder->diff();
-
-            d->interval += d->totalStep;
-            d->totalStep = 0;
-        }
-
-        if(diff - d->lastDiff > ALLOW_DIFF / 2 && d->totalStep < 9)
-        {
-            ++d->totalStep;
-            --d->interval;
-            this->updateTimer();
-        }
+        AVFrame *frame = d->decoder->takeVideoFrame();
+        av_frame_free(&frame);
+        diff = d->decoder->diff();
     }
-    else if(diff <= -ALLOW_DIFF)    // Too quick
+
+    const qreal absDiff = qAbs(diff);
+    if(absDiff > ALLOW_DIFF && absDiff > qAbs(d->lastDiff))
     {
-        if(diff - d->lastDiff > -ALLOW_DIFF / 2)
+        const int delta = sigmoid(diff);
+        if(delta && d->interval - delta > 0)
         {
-            --d->totalStep;
-            ++d->interval;
+            d->interval -= delta;
             this->updateTimer();
         }
     }
@@ -384,4 +373,9 @@ void VideoPlayer::updateTimer()
 
     this->killTimer(d->timerId);
     d->timerId = this->startTimer(d->interval);
+}
+
+static inline int sigmoid(qreal value)
+{
+    return value * 100 / (5 + qAbs(value));
 }
