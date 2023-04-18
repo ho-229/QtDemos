@@ -22,6 +22,8 @@ static void mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
                           AVSubtitleRect *r);
 template <typename T>
 static void findStreams(const AVFormatContext *format, AVMediaType type, QList<T> &list);
+inline static bool shouldDecode(const QContiguousCache<AVFrame *> &cache,
+                                AVRational timebase, qreal current);
 
 FFmpegDecoder::FFmpegDecoder(QObject *parent) :
     QObject(parent)
@@ -396,10 +398,16 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
 
         m_position = static_cast<int>(m_videoTime);
     }
-    m_mutex.unlock();
 
-    if(m_videoCache.count() <= VIDEO_CACHE_SIZE / 2 && !m_isEnd && !m_isDecoding)
-        QMetaObject::invokeMethod(this, &FFmpegDecoder::decode);  // Asynchronous call FFmpegDecoder::decode()
+    if(shouldDecode(m_videoCache, m_videoStream->time_base, m_videoTime) &&
+        !m_isEnd && !m_isDecoding)
+    {
+        m_isDecoding = true;
+        // Asynchronous call FFmpegDecoder::decode()
+        QMetaObject::invokeMethod(this, &FFmpegDecoder::decode);
+    }
+
+    m_mutex.unlock();
 
     return frame;
 }
@@ -427,10 +435,16 @@ qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
 
         m_isPtsUpdated = true;
     }
-    m_mutex.unlock();
 
-    if(m_audioCache.size() < AUDIO_CACHE_SIZE / 2 && !m_isEnd && !m_isDecoding)
-        QMetaObject::invokeMethod(this, &FFmpegDecoder::decode);  // Asynchronous call FFmpegDecoder::decode()
+    if(shouldDecode(m_audioCache, m_audioStream->time_base, m_videoTime) &&
+        !m_isEnd && !m_isDecoding)
+    {
+        m_isDecoding = true;
+        // Asynchronous call FFmpegDecoder::decode()
+        QMetaObject::invokeMethod(this, &FFmpegDecoder::decode);
+    }
+
+    m_mutex.unlock();
 
     return len - free;
 }
@@ -583,8 +597,9 @@ void FFmpegDecoder::decodeSubtitle(AVPacket *packet)
     AVSubtitle subtitle;
     auto cleanup = qScopeGuard([&] { avsubtitle_free(&subtitle); });
 
-    if(avcodec_decode_subtitle2(m_subtitleCodecContext,
-                                 &subtitle, &isGot, packet) < 0 || !isGot)
+    if(avcodec_decode_subtitle2(m_subtitleCodecContext,&subtitle, &isGot, packet) < 0 ||
+        !isGot ||
+        subtitle.format != 0)   // why the fucking ffmpeg doesn't do the job
         return;
 
     auto subtitleFrame = QSharedPointer<SubtitleFrame>(
@@ -809,4 +824,13 @@ static void findStreams(const AVFormatContext *format, AVMediaType type, QList<T
     for(int i = 0; i < int(format->nb_streams); ++i)
         if(format->streams[i]->codecpar->codec_type == type)
             list.append(i);
+}
+
+inline static bool shouldDecode(const QContiguousCache<AVFrame *> &cache,
+                                AVRational timebase, qreal current)
+{
+    if(cache.isEmpty())
+        return true;
+
+    return FFmpegDecoder::second(cache.last()->pts, timebase) - current < MIN_DECODED_DURATION;
 }

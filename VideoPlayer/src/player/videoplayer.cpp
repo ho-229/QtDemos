@@ -173,7 +173,6 @@ void VideoPlayer::stop()
     emit playStateChanged(Stopped);
 
     d->lastDiff = 0;
-    d->totalStep = 0;
 }
 
 void VideoPlayer::setVolume(qreal volume)
@@ -357,9 +356,9 @@ void VideoPlayer::timerEvent(QTimerEvent *)
     if(absDiff > ALLOW_DIFF && absDiff > qAbs(d->lastDiff))
     {
         const int delta = sigmoid(diff);
-        if(delta && d->interval - delta > 0)
+        if(delta)
         {
-            d->interval -= delta;
+            d->interval = qMax(d->interval - delta, 1);
             this->updateTimer();
         }
     }
@@ -377,5 +376,5 @@ void VideoPlayer::updateTimer()
 
 static inline int sigmoid(qreal value)
 {
-    return value * 100 / (5 + qAbs(value));
+    return value * 100 / (5.5 + qAbs(value));
 }

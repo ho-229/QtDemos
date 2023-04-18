@@ -21,10 +21,11 @@
 #include "ffmpeg.h"
 
 #define VIDEO_CACHE_SIZE 128
-#define AUDIO_CACHE_SIZE 256
+#define AUDIO_CACHE_SIZE 128
 #define SUBTITLE_CACHE_SIZE 128
 
 #define AUDIO_DELAY 0.3
+#define MIN_DECODED_DURATION 1.2
 #define SUBTITLE_DEFAULT_DURATION 2
 
 #define FUNC_ERROR qCritical() << __FUNCTION__
