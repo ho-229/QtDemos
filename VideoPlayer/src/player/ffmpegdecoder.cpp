@@ -84,6 +84,7 @@ void FFmpegDecoder::setActiveVideoTrack(int index)
     }
 
     this->clearCache();
+    m_isPtsUpdated = false;
 
     // Initialize video codec context
     if(index < 0 || !this->openCodecContext(m_videoStream, m_videoCodecContext,
@@ -123,6 +124,7 @@ void FFmpegDecoder::setActiveAudioTrack(int index)
     }
 
     this->clearCache();
+    m_isPtsUpdated = false;
 
     // Initialize audio codec context
     if(index < 0 || !this->openCodecContext(m_audioStream, m_audioCodecContext,
@@ -161,7 +163,9 @@ void FFmpegDecoder::setActiveSubtitleTrack(int index)
         this->closeSubtitleFilter();
 
     m_subtitleIndex = -1;
+
     this->clearCache();
+    m_isPtsUpdated = false;
 
     if(index < 0 || !m_url.isLocalFile() || !m_videoStream)
         return;
@@ -190,6 +194,7 @@ void FFmpegDecoder::setActiveSubtitleTrack(int index)
 #endif
     };
 
+    m_subtitleIndex = index;
     if(m_subtitleIndexes[index].type() == QVariant::Int)
     {
         const int absoluteIndex = m_subtitleIndexes[index].toInt();
@@ -198,21 +203,15 @@ void FFmpegDecoder::setActiveSubtitleTrack(int index)
         {
             QString subtitleFileName = m_url.toLocalFile();
 
-            m_subtitleIndex = index;
-            if(this->openSubtitleFilter(args, makeFilterDesc(convertPath(subtitleFileName), absoluteIndex)) ||
+            if(!this->openSubtitleFilter(args, makeFilterDesc(convertPath(subtitleFileName), absoluteIndex)))
                 this->openCodecContext(m_subtitleStream, m_subtitleCodecContext,
-                                       AVMEDIA_TYPE_SUBTITLE, absoluteIndex))
-                m_subtitleIndex = index;
+                                       AVMEDIA_TYPE_SUBTITLE, absoluteIndex);
         }
     }
     else if(m_subtitleIndexes[index].type() == QVariant::String)
-    {
-        if(this->openSubtitleFilter(args, makeFilterDesc(convertPath(m_subtitleIndexes[index].toString()), 0)))
-            m_subtitleIndex = index;
-    }
+        this->openSubtitleFilter(args, makeFilterDesc(convertPath(m_subtitleIndexes[index].toString()), 0));
 
-    if(m_subtitleIndex == index)
-        emit activeSubtitleTrackChanged(index);
+    emit activeSubtitleTrackChanged(index);
 }
 
 bool FFmpegDecoder::seekable() const
@@ -360,6 +359,7 @@ void FFmpegDecoder::seek(int position)
 
     // Clear frame cache
     this->clearCache();
+    m_isPtsUpdated = false;
 
     const AVStream *seekStream = m_videoStream ? m_videoStream : m_audioStream;
     const int flags = (position < m_position ? AVSEEK_FLAG_BACKWARD : 0) | AVSEEK_FLAG_FRAME;
@@ -373,8 +373,6 @@ void FFmpegDecoder::seek(int position)
         avcodec_flush_buffers(m_videoCodecContext);
     if(m_audioCodecContext)
         avcodec_flush_buffers(m_audioCodecContext);
-
-    m_isPtsUpdated = false;
 
     // runs on the same thread so doesn't need to be called by signal
     this->decode();
@@ -392,11 +390,8 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
         frame = m_videoCache.takeFirst();
 
         m_videoTime = second(frame->pts, m_videoStream->time_base);
-
-        if(m_isPtsUpdated)
-            m_diff = second(m_audioPts, m_audioStream->time_base) - m_videoTime - AUDIO_DELAY;
-
         m_position = static_cast<int>(m_videoTime);
+        m_diff = second(m_audioPts, m_audioStream->time_base) - m_videoTime - AUDIO_DELAY;
     }
 
     if(shouldDecode(m_videoCache, m_videoStream->time_base, m_videoTime) &&
@@ -602,27 +597,27 @@ void FFmpegDecoder::decodeSubtitle(AVPacket *packet)
         subtitle.format != 0)   // why the fucking ffmpeg doesn't do the job
         return;
 
-    auto subtitleFrame = QSharedPointer<SubtitleFrame>(
+    auto frame = QSharedPointer<SubtitleFrame>(
         new SubtitleFrame(m_subtitleCodecContext->width, m_subtitleCodecContext->height));
 
     for(uint i = 0; i < subtitle.num_rects; ++i)
-        mergeSubtitle(subtitleFrame->image.bits(), subtitleFrame->image.bytesPerLine(),
-                      subtitleFrame->image.width(), subtitleFrame->image.height(),
+        mergeSubtitle(frame->image.bits(), frame->image.bytesPerLine(),
+                      frame->image.width(), frame->image.height(),
                       subtitle.rects[i]);
 
     const auto duration =
         packet->duration > 0 ? second(packet->duration, m_subtitleStream->time_base) :
             SUBTITLE_DEFAULT_DURATION;
 
-    subtitleFrame->start = second(packet->pts, m_subtitleStream->time_base);
-    subtitleFrame->end = subtitleFrame->start + duration;
+    frame->start = second(packet->pts, m_subtitleStream->time_base);
+    frame->end = frame->start + duration;
 
     QMutexLocker locker(&m_mutex);
 
-    if(!m_subtitleCache.isEmpty() && m_subtitleCache.last()->end > subtitleFrame->start)
-        m_subtitleCache.last()->end = subtitleFrame->start;
+    if(!m_subtitleCache.isEmpty() && m_subtitleCache.last()->end > frame->start)
+        m_subtitleCache.last()->end = frame->start;
 
-    m_subtitleCache.append(std::move(subtitleFrame));
+    m_subtitleCache.append(std::move(frame));
 }
 
 void FFmpegDecoder::clearCache()
