@@ -118,7 +118,8 @@ void VideoPlayer::play()
             }
         }
 
-        d->interval = static_cast<int>(1000 / d->decoder->fps());
+        d->originalInterval = static_cast<int>(1000 / d->decoder->fps());
+        d->interval = d->originalInterval;
         d->timerId = this->startTimer(d->interval);
 
         d->audioOutput->play();
@@ -199,6 +200,12 @@ void VideoPlayer::setActiveVideoTrack(int index)
                               Qt::QueuedConnection, Q_ARG(int, index));
     QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
                               Qt::QueuedConnection);
+
+    if(d->state != Stopped)
+    {
+        d->interval = d->originalInterval;
+        this->updateTimer();
+    }
 }
 
 int VideoPlayer::activeVideoTrack() const
@@ -218,6 +225,9 @@ void VideoPlayer::setActiveAudioTrack(int index)
                               Qt::QueuedConnection, Q_ARG(int, index));
     QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
                               Qt::QueuedConnection);
+
+    d->interval = d->originalInterval;
+    this->updateTimer();
 }
 
 int VideoPlayer::activeAudioTrack() const
@@ -239,6 +249,9 @@ void VideoPlayer::setActiveSubtitleTrack(int index)
                               Qt::QueuedConnection);
 
     d->subtitleRenderer->render({});
+
+    d->interval = d->originalInterval;
+    this->updateTimer();
 }
 
 int VideoPlayer::activeSubtitleTrack() const
@@ -307,6 +320,9 @@ void VideoPlayer::seek(int position)
     QMetaObject::invokeMethod(d->decoder, "seek", Qt::QueuedConnection, Q_ARG(int, position));
     d->audioOutput->reset();
 
+    d->interval = d->originalInterval;
+    this->updateTimer();
+
     d->lastDiff = 0;
 }
 
@@ -362,6 +378,11 @@ void VideoPlayer::timerEvent(QTimerEvent *)
             this->updateTimer();
         }
     }
+    else if(d->interval != d->originalInterval)
+    {
+        d->interval = d->originalInterval;
+        this->updateTimer();
+    }
 
     d->lastDiff = diff;
 }
@@ -369,6 +390,9 @@ void VideoPlayer::timerEvent(QTimerEvent *)
 void VideoPlayer::updateTimer()
 {
     Q_D(VideoPlayer);
+
+    if(d->state != Playing)
+        return;
 
     this->killTimer(d->timerId);
     d->timerId = this->startTimer(d->interval);

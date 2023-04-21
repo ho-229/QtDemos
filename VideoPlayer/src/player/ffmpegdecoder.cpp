@@ -14,6 +14,8 @@
 
 #define FFMPEG_ERROR(x) FUNC_ERROR << ":" << __LINE__ \
                         << ":" << av_make_error_string(m_errorBuf, sizeof (m_errorBuf), x)
+#define SET_AVTIME(x) m_videoTime = x; \
+                      m_audioTime = x;
 
 /**
  * @ref ffmpeg.c line:181 : static void sub2video_copy_rect()
@@ -84,7 +86,8 @@ void FFmpegDecoder::setActiveVideoTrack(int index)
     }
 
     this->clearCache();
-    m_isPtsUpdated = false;
+    SET_AVTIME(-1);
+//    m_isPtsUpdated = false;
 
     // Initialize video codec context
     if(index < 0 || !this->openCodecContext(m_videoStream, m_videoCodecContext,
@@ -124,7 +127,7 @@ void FFmpegDecoder::setActiveAudioTrack(int index)
     }
 
     this->clearCache();
-    m_isPtsUpdated = false;
+    SET_AVTIME(-1);
 
     // Initialize audio codec context
     if(index < 0 || !this->openCodecContext(m_audioStream, m_audioCodecContext,
@@ -165,7 +168,7 @@ void FFmpegDecoder::setActiveSubtitleTrack(int index)
     m_subtitleIndex = -1;
 
     this->clearCache();
-    m_isPtsUpdated = false;
+    SET_AVTIME(-1);
 
     if(index < 0 || !m_url.isLocalFile() || !m_videoStream)
         return;
@@ -226,6 +229,16 @@ int FFmpegDecoder::duration() const
         return 0;
 
     return static_cast<int>(m_formatContext->duration / AV_TIME_BASE);
+}
+
+int FFmpegDecoder::position() const
+{
+    if(m_videoTime >= 0)
+        m_position = static_cast<int>(m_videoTime);
+    else if(m_audioTime >= 0)
+        m_position = static_cast<int>(m_audioTime);
+
+    return m_state == Closed ? 0 : m_position;
 }
 
 QSize FFmpegDecoder::videoSize() const
@@ -339,8 +352,7 @@ void FFmpegDecoder::release()
     avformat_close_input(&m_formatContext);
 
     m_position = 0;
-
-    m_isPtsUpdated = false;
+    SET_AVTIME(-1);
 
     m_videoIndexes.clear();
     m_audioIndexes.clear();
@@ -359,7 +371,7 @@ void FFmpegDecoder::seek(int position)
 
     // Clear frame cache
     this->clearCache();
-    m_isPtsUpdated = false;
+    SET_AVTIME(-1);
 
     const AVStream *seekStream = m_videoStream ? m_videoStream : m_audioStream;
     const int flags = (position < m_position ? AVSEEK_FLAG_BACKWARD : 0) | AVSEEK_FLAG_FRAME;
@@ -385,13 +397,11 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
 
     AVFrame *frame = nullptr;
     m_mutex.lock();
+
     if(!m_videoCache.isEmpty())
     {
         frame = m_videoCache.takeFirst();
-
         m_videoTime = second(frame->pts, m_videoStream->time_base);
-        m_position = static_cast<int>(m_videoTime);
-        m_diff = second(m_audioPts, m_audioStream->time_base) - m_videoTime - AUDIO_DELAY;
     }
 
     if(shouldDecode(m_videoCache, m_videoStream->time_base, m_videoTime) &&
@@ -421,14 +431,13 @@ qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
         AVFrame *frame = m_audioCache.takeFirst();
         const int size = frame->linesize[0];
 
-        m_audioPts = frame->pts;
+        m_audioTime = second(frame->pts, m_audioStream->time_base);
+
         memcpy(dest, frame->data[0], size);
         av_frame_free(&frame);
 
         free -= size;
         dest += size;
-
-        m_isPtsUpdated = true;
     }
 
     if(shouldDecode(m_audioCache, m_audioStream->time_base, m_videoTime) &&
@@ -479,6 +488,11 @@ qreal FFmpegDecoder::fps() const
         return av_q2d(m_videoStream->avg_frame_rate);
 
     return 0.0;
+}
+
+qreal FFmpegDecoder::diff() const
+{
+    return m_videoTime >= 0 && m_audioTime >= 0 ? m_audioTime - m_videoTime - AUDIO_DELAY : 0;
 }
 
 void FFmpegDecoder::decode()

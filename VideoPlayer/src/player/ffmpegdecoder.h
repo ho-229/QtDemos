@@ -84,20 +84,20 @@ public:
      * @return duration of the media in seconds.
      */
     int duration() const;
-    int position() const { return m_position; }
+    int position() const;
 
     QSize videoSize() const;
     AVPixelFormat videoPixelFormat() const;
 
     const QAudioFormat audioFormat() const;
 
-    AVFrame* takeVideoFrame();
+    AVFrame *takeVideoFrame();
     qint64 takeAudioData(char *data, qint64 len);
     QSharedPointer<SubtitleFrame> takeSubtitleFrame();
 
     qreal fps() const;
 
-    qreal diff() const { return m_isPtsUpdated ? m_diff : 0.0; }
+    qreal diff() const;
 
     inline static qreal second(const qint64 time, const AVRational timebase)
     { return static_cast<qreal>(time) * av_q2d(timebase); }
@@ -165,16 +165,15 @@ private:
     QContiguousCache<AVFrame *> m_audioCache;
     QContiguousCache<QSharedPointer<SubtitleFrame>> m_subtitleCache;
 
+    QAtomicInteger<quint8> m_ptsUpdateCount;
+
     volatile bool m_isDecoding = false;
-    volatile bool m_isPtsUpdated = false;
     volatile bool m_runnable = false;             // Is FFmpegDecoder::decode() could run
     volatile bool m_isEnd = false;
 
-    volatile qreal m_diff = 0.0;
-    volatile int m_position = 0;
-    qreal m_videoTime = 0.0;
-
-    volatile qint64 m_audioPts = 0;
+    volatile mutable int m_position = 0;
+    volatile qreal m_videoTime = 0.0;
+    volatile qreal m_audioTime = 0.0;
 
     QList<int> m_videoIndexes;
     QList<int> m_audioIndexes;

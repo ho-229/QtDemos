@@ -30,6 +30,7 @@ public:
     volatile bool isVideoInfoChanged = false;
 
     int interval = 0;
+    int originalInterval = 0;
     int timerId = -1;
 
     qreal lastDiff = 0;
