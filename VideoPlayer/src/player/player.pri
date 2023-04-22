@@ -3,6 +3,7 @@ DEPENDPATH += $$PWD
 
 HEADERS += \
    $$PWD/audiooutput.h \
+   $$PWD/config.h \
    $$PWD/ffmpeg.h \
    $$PWD/ffmpegdecoder.h \
    $$PWD/subtitlerenderer.h \
@@ -15,4 +16,5 @@ SOURCES += \
    $$PWD/ffmpegdecoder.cpp \
    $$PWD/subtitlerenderer.cpp \
    $$PWD/videoplayer.cpp \
+   $$PWD/videoplayer_p.cpp \
    $$PWD/videorenderer.cpp

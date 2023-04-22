@@ -4,6 +4,7 @@
  * @date 2021/4/13
  */
 
+#include "config.h"
 #include "ffmpegdecoder.h"
 
 #include <QDir>
@@ -12,6 +13,7 @@
 #include <QScopeGuard>
 #include <QMutexLocker>
 
+#define FUNC_ERROR qCritical() << __FUNCTION__
 #define FFMPEG_ERROR(x) FUNC_ERROR << ":" << __LINE__ \
                         << ":" << av_make_error_string(m_errorBuf, sizeof (m_errorBuf), x)
 #define SET_AVTIME(x) m_videoTime = x; \
@@ -87,7 +89,6 @@ void FFmpegDecoder::setActiveVideoTrack(int index)
 
     this->clearCache();
     SET_AVTIME(-1);
-//    m_isPtsUpdated = false;
 
     // Initialize video codec context
     if(index < 0 || !this->openCodecContext(m_videoStream, m_videoCodecContext,
@@ -484,10 +485,7 @@ const QAudioFormat FFmpegDecoder::audioFormat() const
 
 qreal FFmpegDecoder::fps() const
 {
-    if(m_videoStream)
-        return av_q2d(m_videoStream->avg_frame_rate);
-
-    return 0.0;
+    return m_videoStream ? av_q2d(m_videoStream->avg_frame_rate) : 0;
 }
 
 qreal FFmpegDecoder::diff() const

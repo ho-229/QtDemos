@@ -9,8 +9,6 @@
 
 #include <QQuickFramebufferObject>
 
-#define ALLOW_DIFF 0.045         // 45ms
-
 class VideoPlayerPrivate;
 
 class VideoPlayer : public QQuickFramebufferObject
@@ -120,8 +118,6 @@ private:
     Q_DECLARE_PRIVATE(VideoPlayer)
 
     void timerEvent(QTimerEvent *) Q_DECL_OVERRIDE;
-
-    inline void updateTimer();
 };
 
 #endif // VIDEOPLAYER_H

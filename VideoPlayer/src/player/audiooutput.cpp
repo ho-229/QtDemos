@@ -9,7 +9,6 @@
 
 #include <QIODevice>
 #include <QAudioOutput>
-#include <QAudioDeviceInfo>
 
 class AudioDevice final : public QIODevice
 {

@@ -15,8 +15,6 @@
 #include <QMetaObject>
 #include <QTimerEvent>
 
-static inline int sigmoid(qreal value);
-
 VideoPlayer::VideoPlayer(QQuickItem *parent) :
     QQuickFramebufferObject(parent),
     d_ptr(new VideoPlayerPrivate(this))
@@ -39,16 +37,7 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
                      this, &VideoPlayer::activeSubtitleTrackChanged);
 
     QObject::connect(d->decoder, &FFmpegDecoder::activeAudioTrackChanged,
-                     this, [this] {
-        d_ptr->audioOutput->setAudioFormat(d_ptr->decoder->audioFormat());
-
-        if(d_ptr->state != Stopped)
-        {
-            d_ptr->audioOutput->play();
-            if(d_ptr->state == Paused)
-                d_ptr->audioOutput->pause();
-        }
-    });
+                     this, [this] { d_ptr->updateAudioOutput(); });
 }
 
 VideoPlayer::~VideoPlayer()
@@ -106,7 +95,7 @@ void VideoPlayer::play()
             QObject::connect(d->decoder, &FFmpegDecoder::stateChanged, &loop, &QEventLoop::exit);
             QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::load, Qt::QueuedConnection);
 
-            if(loop.exec() == FFmpegDecoder::State::Opened)
+            if(loop.exec() == FFmpegDecoder::Opened)
             {
                 d->isVideoInfoChanged = true;
                 emit loaded();
@@ -201,11 +190,8 @@ void VideoPlayer::setActiveVideoTrack(int index)
     QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
                               Qt::QueuedConnection);
 
-    if(d->state != Stopped)
-    {
-        d->interval = d->originalInterval;
-        this->updateTimer();
-    }
+    d->interval = d->originalInterval;
+    d->updateTimer();
 }
 
 int VideoPlayer::activeVideoTrack() const
@@ -227,7 +213,7 @@ void VideoPlayer::setActiveAudioTrack(int index)
                               Qt::QueuedConnection);
 
     d->interval = d->originalInterval;
-    this->updateTimer();
+    d->updateTimer();
 }
 
 int VideoPlayer::activeAudioTrack() const
@@ -251,7 +237,7 @@ void VideoPlayer::setActiveSubtitleTrack(int index)
     d->subtitleRenderer->render({});
 
     d->interval = d->originalInterval;
-    this->updateTimer();
+    d->updateTimer();
 }
 
 int VideoPlayer::activeSubtitleTrack() const
@@ -321,7 +307,7 @@ void VideoPlayer::seek(int position)
     d->audioOutput->reset();
 
     d->interval = d->originalInterval;
-    this->updateTimer();
+    d->updateTimer();
 
     d->lastDiff = 0;
 }
@@ -360,45 +346,5 @@ void VideoPlayer::timerEvent(QTimerEvent *)
         return;
     }
 
-    qreal diff = d->decoder->diff();
-    while(diff > ALLOW_DIFF * 4)
-    {
-        AVFrame *frame = d->decoder->takeVideoFrame();
-        av_frame_free(&frame);
-        diff = d->decoder->diff();
-    }
-
-    const qreal absDiff = qAbs(diff);
-    if(absDiff > ALLOW_DIFF && absDiff > qAbs(d->lastDiff))
-    {
-        const int delta = sigmoid(diff);
-        if(delta)
-        {
-            d->interval = qMax(d->interval - delta, 1);
-            this->updateTimer();
-        }
-    }
-    else if(d->interval != d->originalInterval)
-    {
-        d->interval = d->originalInterval;
-        this->updateTimer();
-    }
-
-    d->lastDiff = diff;
-}
-
-void VideoPlayer::updateTimer()
-{
-    Q_D(VideoPlayer);
-
-    if(d->state != Playing)
-        return;
-
-    this->killTimer(d->timerId);
-    d->timerId = this->startTimer(d->interval);
-}
-
-static inline int sigmoid(qreal value)
-{
-    return value * 100 / (5.5 + qAbs(value));
+    d->synchronize();
 }

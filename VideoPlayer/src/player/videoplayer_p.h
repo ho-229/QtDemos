@@ -37,6 +37,11 @@ public:
 
     QQuickWindow *window() const { return q_ptr->window(); }
 
+    void updateTimer();
+    void updateAudioOutput();
+
+    void synchronize();
+
 private:
     VideoPlayer *const q_ptr;
     Q_DECLARE_PUBLIC(VideoPlayer)
