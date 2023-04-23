@@ -96,6 +96,7 @@ public:
 
 signals:
     void stateChanged(FFmpegDecoder::State);
+    void positionChanged(int);
 
     void activeVideoTrackChanged(int);
     void activeAudioTrackChanged(int);
@@ -157,7 +158,7 @@ private:
     QContiguousCache<AVFrame *> m_audioCache;
     QContiguousCache<QSharedPointer<SubtitleFrame>> m_subtitleCache;
 
-    QAtomicInteger<quint8> m_ptsUpdateCount;
+    qreal m_fps = qQNaN();
 
     volatile bool m_isDecoding = false;
     volatile bool m_runnable = false;             // Is FFmpegDecoder::decode() could run

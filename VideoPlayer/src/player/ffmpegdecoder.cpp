@@ -89,6 +89,7 @@ void FFmpegDecoder::setActiveVideoTrack(int index)
 
     this->clearCache();
     SET_AVTIME(-1);
+    m_fps = qQNaN();
 
     // Initialize video codec context
     if(index < 0 || !this->openCodecContext(m_videoStream, m_videoCodecContext,
@@ -107,6 +108,7 @@ void FFmpegDecoder::setActiveVideoTrack(int index)
                                       SWS_BICUBIC, nullptr, nullptr, nullptr);
     }
 
+    m_fps = av_q2d(m_videoStream->avg_frame_rate);
     emit activeVideoTrackChanged(index);
 }
 
@@ -234,22 +236,23 @@ int FFmpegDecoder::duration() const
 
 int FFmpegDecoder::position() const
 {
-    if(m_videoTime >= 0)
-        m_position = static_cast<int>(m_videoTime);
-    else if(m_audioTime >= 0)
-        m_position = static_cast<int>(m_audioTime);
-
-    return m_state == Closed ? 0 : m_position;
+    return m_position;
 }
 
 QSize FFmpegDecoder::videoSize() const
 {
-    return m_videoCodecContext ? QSize(m_videoCodecContext->width, m_videoCodecContext->height) : QSize();
+    if(!m_videoCodecContext)
+        return {};
+
+    return QSize(m_videoCodecContext->width, m_videoCodecContext->height);
 }
 
 AVPixelFormat FFmpegDecoder::videoPixelFormat() const
 {
-    const auto originalFormat = m_videoCodecContext ? m_videoCodecContext->pix_fmt : AV_PIX_FMT_NONE;
+    auto originalFormat = AV_PIX_FMT_NONE;
+    if(m_videoCodecContext)
+        originalFormat = m_videoCodecContext->pix_fmt;
+
     return m_swsContext ? AV_PIX_FMT_YUV420P : originalFormat;
 }
 
@@ -325,10 +328,10 @@ void FFmpegDecoder::load()
     this->setActiveAudioTrack(0);
     this->setActiveSubtitleTrack(0);
 
-    // If there is no video and audio or fps is invalid
-    if(!(m_videoStream || m_audioStream) || qFuzzyIsNull(this->fps()))
+    // If there is no video and audio
+    if(this->activeVideoTrack() == -1 && this->activeAudioTrack() == -1)
     {
-        qstrcpy(m_errorBuf, "There is no video and audio or fps is invalid");
+        qstrcpy(m_errorBuf, "There is no video and audio");
         this->release();
         return;
     }
@@ -353,6 +356,8 @@ void FFmpegDecoder::release()
     avformat_close_input(&m_formatContext);
 
     m_position = 0;
+    emit positionChanged(0);
+
     SET_AVTIME(-1);
 
     m_videoIndexes.clear();
@@ -374,12 +379,13 @@ void FFmpegDecoder::seek(int position)
     this->clearCache();
     SET_AVTIME(-1);
 
-    const AVStream *seekStream = m_videoStream ? m_videoStream : m_audioStream;
+    const AVStream *seekStream = qIsNaN(m_fps) ? m_audioStream : m_videoStream;
     const int flags = (position < m_position ? AVSEEK_FLAG_BACKWARD : 0) | AVSEEK_FLAG_FRAME;
     av_seek_frame(m_formatContext, seekStream->index, static_cast<qint64>
                   (position / av_q2d(seekStream->time_base)), flags);
 
     m_position = position;
+    emit positionChanged(m_position);
 
     // Flush the codec buffers
     if(m_videoCodecContext)
@@ -402,11 +408,21 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
     if(!m_videoCache.isEmpty())
     {
         frame = m_videoCache.takeFirst();
-        m_videoTime = second(frame->pts, m_videoStream->time_base);
+
+        if(!qIsNaN(m_fps))
+        {
+            m_videoTime = second(frame->pts, m_videoStream->time_base);
+
+            if(m_position != static_cast<int>(m_videoTime))
+            {
+                m_position = static_cast<int>(m_videoTime);
+                emit positionChanged(m_position);
+            }
+        }
     }
 
-    if(shouldDecode(m_videoCache, m_videoStream->time_base, m_videoTime) &&
-        !m_isEnd && !m_isDecoding)
+    if(!m_isEnd && !m_isDecoding && !qIsNaN(m_fps) &&
+        shouldDecode(m_videoCache, m_videoStream->time_base, m_videoTime))
     {
         m_isDecoding = true;
         // Asynchronous call FFmpegDecoder::decode()
@@ -439,10 +455,16 @@ qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
 
         free -= size;
         dest += size;
+
+        if(qIsNaN(m_fps) && m_position != static_cast<int>(m_audioTime))
+        {
+            m_position = static_cast<int>(m_audioTime);
+            emit positionChanged(m_position);
+        }
     }
 
-    if(shouldDecode(m_audioCache, m_audioStream->time_base, m_videoTime) &&
-        !m_isEnd && !m_isDecoding)
+    if(!m_isEnd && !m_isDecoding &&
+        shouldDecode(m_audioCache, m_audioStream->time_base, m_audioTime))
     {
         m_isDecoding = true;
         // Asynchronous call FFmpegDecoder::decode()
@@ -485,7 +507,7 @@ const QAudioFormat FFmpegDecoder::audioFormat() const
 
 qreal FFmpegDecoder::fps() const
 {
-    return m_videoStream ? av_q2d(m_videoStream->avg_frame_rate) : 0;
+    return m_fps;
 }
 
 qreal FFmpegDecoder::diff() const

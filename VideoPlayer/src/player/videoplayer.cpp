@@ -35,6 +35,8 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
                      this, &VideoPlayer::activeAudioTrackChanged);
     QObject::connect(d->decoder, &FFmpegDecoder::activeSubtitleTrackChanged,
                      this, &VideoPlayer::activeSubtitleTrackChanged);
+    QObject::connect(d->decoder, &FFmpegDecoder::positionChanged,
+                     this, &VideoPlayer::positionChanged);
 
     QObject::connect(d->decoder, &FFmpegDecoder::activeAudioTrackChanged,
                      this, [this] { d_ptr->updateAudioOutput(); });
@@ -95,22 +97,21 @@ void VideoPlayer::play()
             QObject::connect(d->decoder, &FFmpegDecoder::stateChanged, &loop, &QEventLoop::exit);
             QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::load, Qt::QueuedConnection);
 
-            if(loop.exec() == FFmpegDecoder::Opened)
-            {
-                d->isVideoInfoChanged = true;
-                emit loaded();
-            }
-            else
+            if(loop.exec() != FFmpegDecoder::Opened)
             {
                 emit errorOccurred(this->errorString());
                 return;
             }
+
+            emit loaded();
+            d->isVideoInfoChanged = true;
+
+            const auto fps = d->decoder->fps();
+            d->averageInterval = qIsNaN(fps) ? 1000.0 : 1000 / fps;
+            d->interval = d->averageInterval;
         }
 
-        d->originalInterval = static_cast<int>(1000 / d->decoder->fps());
-        d->interval = d->originalInterval;
         d->timerId = this->startTimer(d->interval);
-
         d->audioOutput->play();
     }
     else if(d->state == Paused)
@@ -343,14 +344,6 @@ void VideoPlayer::timerEvent(QTimerEvent *)
 
     if(d->decoder->isBitmapSubtitleActived())
         d->subtitleRenderer->render(d->decoder->takeSubtitleFrame());
-
-    const int newPos = d->decoder->position();
-    static int oldPos = 0;
-    if(newPos != oldPos)
-    {
-        oldPos = newPos;
-        emit positionChanged(newPos);
-    }
 
     if(!d->decoder->hasFrame() && d->decoder->isEnd())
     {

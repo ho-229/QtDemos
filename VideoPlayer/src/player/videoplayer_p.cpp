@@ -31,6 +31,7 @@ void VideoPlayerPrivate::updateAudioOutput()
     if(state != VideoPlayer::Stopped)
     {
         audioOutput->play();
+
         if(state == VideoPlayer::Paused)
             audioOutput->pause();
     }
@@ -39,7 +40,10 @@ void VideoPlayerPrivate::updateAudioOutput()
 void VideoPlayerPrivate::synchronize()
 {
     qreal diff = decoder->diff();
-    while(diff > ALLOW_DIFF * 4)
+    if(!diff)
+        return;
+
+    if(diff > ALLOW_DIFF * 4)
     {
         AVFrame *frame = decoder->takeVideoFrame();
         av_frame_free(&frame);

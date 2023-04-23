@@ -112,7 +112,7 @@ void VideoRenderer::updateTextureInfo()
         m_textureAlloced = true;
         break;
     default:
-        FUNC_ERROR << ": Unknow pixel format" << videoFormat;
+        break;
     }
 }
 
