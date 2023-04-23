@@ -25,7 +25,7 @@ void SubtitleRenderer::render(QSharedPointer<SubtitleFrame> &&frame)
     if(frame == m_subtitle)
         return;
 
-    m_subtitle = frame;
+    m_subtitle = std::move(frame);
     this->update();
 }
 void SubtitleRenderer::paint(QPainter *painter)
@@ -33,4 +33,3 @@ void SubtitleRenderer::paint(QPainter *painter)
     if(m_subtitle)
         painter->drawImage(m_viewRect, m_subtitle->image);
 }
-

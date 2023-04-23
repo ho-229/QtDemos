@@ -11,6 +11,7 @@
 #include "ffmpegdecoder.h"
 
 static inline int sigmoid(qreal value);
+static inline void updateAverage(qreal &average, qreal sample);
 
 void VideoPlayerPrivate::updateTimer()
 {
@@ -55,16 +56,23 @@ void VideoPlayerPrivate::synchronize()
             this->updateTimer();
         }
     }
-    else if(interval != originalInterval)
+    else if(interval != averageInterval)
     {
-        interval = originalInterval;
+        interval = averageInterval;
         this->updateTimer();
     }
 
+    updateAverage(averageInterval, interval);
     lastDiff = diff;
 }
 
 static inline int sigmoid(qreal value)
 {
-    return value * 100 / (5.5 + qAbs(value));
+    return value * 100 / (5 + qAbs(value));
+}
+
+static inline void updateAverage(qreal &average, qreal sample)
+{
+    static const qreal weight = 0.97;
+    average = weight * average + (1 - weight) * sample;
 }

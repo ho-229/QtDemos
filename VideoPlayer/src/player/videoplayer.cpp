@@ -190,8 +190,11 @@ void VideoPlayer::setActiveVideoTrack(int index)
     QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
                               Qt::QueuedConnection);
 
-    d->interval = d->originalInterval;
-    d->updateTimer();
+    if(d->interval != d->averageInterval)
+    {
+        d->interval = d->averageInterval;
+        d->updateTimer();
+    }
 }
 
 int VideoPlayer::activeVideoTrack() const
@@ -212,8 +215,11 @@ void VideoPlayer::setActiveAudioTrack(int index)
     QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
                               Qt::QueuedConnection);
 
-    d->interval = d->originalInterval;
-    d->updateTimer();
+    if(d->interval != d->averageInterval)
+    {
+        d->interval = d->averageInterval;
+        d->updateTimer();
+    }
 }
 
 int VideoPlayer::activeAudioTrack() const
@@ -236,8 +242,11 @@ void VideoPlayer::setActiveSubtitleTrack(int index)
 
     d->subtitleRenderer->render({});
 
-    d->interval = d->originalInterval;
-    d->updateTimer();
+    if(d->interval != d->averageInterval)
+    {
+        d->interval = d->averageInterval;
+        d->updateTimer();
+    }
 }
 
 int VideoPlayer::activeSubtitleTrack() const
@@ -306,8 +315,11 @@ void VideoPlayer::seek(int position)
     QMetaObject::invokeMethod(d->decoder, "seek", Qt::QueuedConnection, Q_ARG(int, position));
     d->audioOutput->reset();
 
-    d->interval = d->originalInterval;
-    d->updateTimer();
+    if(d->interval != d->averageInterval)
+    {
+        d->interval = d->averageInterval;
+        d->updateTimer();
+    }
 
     d->lastDiff = 0;
 }
