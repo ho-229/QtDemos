@@ -108,6 +108,7 @@ void VideoPlayer::play()
 
             const auto fps = d->decoder->fps();
             d->averageInterval = qIsNaN(fps) ? 1000.0 : 1000 / fps;
+            d->maxInterval = d->averageInterval * 2;
             d->interval = d->averageInterval;
         }
 
@@ -162,8 +163,6 @@ void VideoPlayer::stop()
 
     d->state = Stopped;
     emit playStateChanged(Stopped);
-
-    d->lastDiff = 0;
 }
 
 void VideoPlayer::setVolume(qreal volume)
@@ -321,8 +320,6 @@ void VideoPlayer::seek(int position)
         d->interval = d->averageInterval;
         d->updateTimer();
     }
-
-    d->lastDiff = 0;
 }
 
 void VideoPlayer::geometryChanged(const QRectF &newGeometry, const QRectF &oldGeometry)

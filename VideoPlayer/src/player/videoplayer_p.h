@@ -30,10 +30,10 @@ public:
     volatile bool isVideoInfoChanged = false;
 
     int interval = 0;
+    int maxInterval = 0;
     qreal averageInterval = 0;
-    int timerId = -1;
 
-    qreal lastDiff = 0;
+    int timerId = -1;
 
     QQuickWindow *window() const { return q_ptr->window(); }
 

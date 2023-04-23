@@ -39,24 +39,17 @@ void VideoPlayerPrivate::updateAudioOutput()
 
 void VideoPlayerPrivate::synchronize()
 {
-    qreal diff = decoder->diff();
+    const qreal diff = decoder->diff();
     if(!diff)
         return;
 
-    if(diff > ALLOW_DIFF * 4)
-    {
-        AVFrame *frame = decoder->takeVideoFrame();
-        av_frame_free(&frame);
-        diff = decoder->diff();
-    }
-
     const qreal absDiff = qAbs(diff);
-    if(absDiff > ALLOW_DIFF && absDiff > qAbs(lastDiff))
+    if(absDiff > ALLOW_DIFF)
     {
         const int delta = sigmoid(diff);
         if(delta)
         {
-            interval = qMax(interval - delta, 1);
+            interval = qMin(qMax(interval - delta, 1), maxInterval);
             this->updateTimer();
         }
     }
@@ -67,7 +60,12 @@ void VideoPlayerPrivate::synchronize()
     }
 
     updateAverage(averageInterval, interval);
-    lastDiff = diff;
+
+    if(diff > ALLOW_DIFF * 4)
+    {
+        AVFrame *frame = decoder->takeVideoFrame();
+        av_frame_free(&frame);
+    }
 }
 
 static inline int sigmoid(qreal value)
