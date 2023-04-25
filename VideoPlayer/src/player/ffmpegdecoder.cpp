@@ -7,11 +7,15 @@
 #include "config.h"
 #include "ffmpegdecoder.h"
 
+#include <mutex>    // for std::call_once
+
 #include <QDir>
 #include <QFileInfo>
 #include <QMetaObject>
 #include <QScopeGuard>
 #include <QMutexLocker>
+
+static std::once_flag initFlag;
 
 #define FUNC_ERROR qCritical() << __FUNCTION__
 #define FFMPEG_ERROR(x) FUNC_ERROR << ":" << __LINE__ \
@@ -21,18 +25,22 @@
 
 /**
  * @ref ffmpeg.c line:181 : static void sub2video_copy_rect()
+ * @ref http://ffmpeg.org/doxygen/6.0/ffmpeg_8c_source.html#l00179
+ * @brief Copy AVSubtitleRect with AV_PIX_FMT_PAL8 bitmap to ARGB32 image
  */
 static void mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
                           AVSubtitleRect *r);
 template <typename T>
 static void findStreams(const AVFormatContext *format, AVMediaType type, QList<T> &list);
+
 inline static bool shouldDecode(const QContiguousCache<AVFrame *> &cache,
                                 AVRational timebase, qreal current);
+inline static qreal second(const qint64 pts, const AVRational timebase);
 
 FFmpegDecoder::FFmpegDecoder(QObject *parent) :
     QObject(parent)
 {
-    qRegisterMetaType<State>();
+    std::call_once(initFlag, [] { qRegisterMetaType<State>(); });
 
     av_log_set_level(AV_LOG_INFO);
 
@@ -74,6 +82,7 @@ void FFmpegDecoder::setActiveVideoTrack(int index)
     if(m_state == Closed || index >= m_videoIndexes.size())
         return;
 
+    // Release previous active track
     if(m_videoCodecContext && m_videoStream)
     {
         if(index >= 0 && m_videoStream->index == m_videoIndexes[index])
@@ -88,7 +97,7 @@ void FFmpegDecoder::setActiveVideoTrack(int index)
     }
 
     this->clearCache();
-    SET_AVTIME(-1);
+    SET_AVTIME(-1);         // Set m_videoTime and m_audioTime as unknown
     m_fps = qQNaN();
 
     // Initialize video codec context
@@ -96,6 +105,7 @@ void FFmpegDecoder::setActiveVideoTrack(int index)
                                             AVMEDIA_TYPE_VIDEO, m_videoIndexes[index]))
         return;
 
+    // Convert to supported format if not
     if(m_videoCodecContext->pix_fmt != AV_PIX_FMT_YUV420P &&
         m_videoCodecContext->pix_fmt != AV_PIX_FMT_YUV444P)
     {
@@ -119,6 +129,7 @@ void FFmpegDecoder::setActiveAudioTrack(int index)
     if(m_state == Closed || index >= m_audioIndexes.size())
         return;
 
+    // Release previous active track
     if(m_audioCodecContext && m_audioStream)
     {
         if(index >= 0 && m_audioStream->index == m_audioIndexes[index])
@@ -130,13 +141,14 @@ void FFmpegDecoder::setActiveAudioTrack(int index)
     }
 
     this->clearCache();
-    SET_AVTIME(-1);
+    SET_AVTIME(-1);         // Set m_videoTime and m_audioTime as unknown
 
     // Initialize audio codec context
     if(index < 0 || !this->openCodecContext(m_audioStream, m_audioCodecContext,
                                              AVMEDIA_TYPE_AUDIO, m_audioIndexes[index]))
         return;
 
+    // Convert to supported format if not
     if(m_audioCodecContext->sample_fmt != AV_SAMPLE_FMT_S16 ||
         m_audioCodecContext->ch_layout.nb_channels != 2)
     {
@@ -163,6 +175,7 @@ void FFmpegDecoder::setActiveSubtitleTrack(int index)
     if(m_state == Closed || index >= m_subtitleIndexes.size() || m_subtitleIndex == index)
         return;
 
+    // Release previous active track
     if(m_subtitleCodecContext && m_subtitleStream)
         this->closeCodecContext(m_subtitleStream, m_subtitleCodecContext);
     else if(m_buffersrcContext && m_buffersinkContext)
@@ -171,9 +184,9 @@ void FFmpegDecoder::setActiveSubtitleTrack(int index)
     m_subtitleIndex = -1;
 
     this->clearCache();
-    SET_AVTIME(-1);
+    SET_AVTIME(-1);         // Set m_videoTime and m_audioTime as unknown
 
-    if(index < 0 || !m_url.isLocalFile() || !m_videoStream)
+    if(index < 0)
         return;
 
     const AVRational timeBase = m_videoStream->time_base;
@@ -200,22 +213,21 @@ void FFmpegDecoder::setActiveSubtitleTrack(int index)
 #endif
     };
 
-    m_subtitleIndex = index;
-    if(m_subtitleIndexes[index].type() == QVariant::Int)
+    if(m_subtitleIndexes[index].type() == QVariant::Int)            // Embedded subtitle
     {
         const int absoluteIndex = m_subtitleIndexes[index].toInt();
-        if(av_find_best_stream(m_formatContext, AVMEDIA_TYPE_SUBTITLE,
-                               absoluteIndex, -1, nullptr, 0) > 0)
-        {
-            QString subtitleFileName = m_url.toLocalFile();
+        const QString subtitleFileName = m_url.toLocalFile();
 
-            if(!this->openSubtitleFilter(args, makeFilterDesc(convertPath(subtitleFileName), absoluteIndex)))
-                this->openCodecContext(m_subtitleStream, m_subtitleCodecContext,
-                                       AVMEDIA_TYPE_SUBTITLE, absoluteIndex);
-        }
+        if(!subtitleFileName.isEmpty() &&
+            this->openSubtitleFilter(args, makeFilterDesc(convertPath(subtitleFileName), absoluteIndex)))
+            m_subtitleIndex = index;
+        else if(this->openCodecContext(m_subtitleStream, m_subtitleCodecContext,
+                                        AVMEDIA_TYPE_SUBTITLE, absoluteIndex))
+            m_subtitleIndex = index;
     }
-    else if(m_subtitleIndexes[index].type() == QVariant::String)
-        this->openSubtitleFilter(args, makeFilterDesc(convertPath(m_subtitleIndexes[index].toString()), 0));
+    else if(m_subtitleIndexes[index].type() == QVariant::String)    // External subtitles
+        if(this->openSubtitleFilter(args, makeFilterDesc(convertPath(m_subtitleIndexes[index].toString()), 0)))
+            m_subtitleIndex = index;
 
     emit activeSubtitleTrackChanged(index);
 }
@@ -312,6 +324,7 @@ void FFmpegDecoder::load()
     findStreams(m_formatContext, AVMEDIA_TYPE_SUBTITLE, m_subtitleIndexes);
     if(m_url.isLocalFile())
     {
+        // Scan the external subtitle files
         const QFileInfo fileInfo(url);
         const QDir subtitleDir(fileInfo.absoluteDir());
         const QStringList subtitleFiles =
@@ -512,6 +525,7 @@ qreal FFmpegDecoder::fps() const
 
 qreal FFmpegDecoder::diff() const
 {
+    // m_videoTime and m_audioTime must be known(non-negative)
     return m_videoTime >= 0 && m_audioTime >= 0 ? m_audioTime - m_videoTime - AUDIO_DELAY : 0;
 }
 
@@ -556,10 +570,10 @@ void FFmpegDecoder::decodeVideo()
         return;
     }
 
+    // If subtitle filter is available
     if(m_buffersrcContext && m_buffersinkContext)
     {
         AVFrame *filterFrame = av_frame_alloc();
-        // FIXME: memory leak here
         if(av_buffersrc_add_frame_flags(
                 m_buffersrcContext, frame, AV_BUFFERSRC_FLAG_KEEP_REF) >= 0
             && av_buffersink_get_frame(m_buffersinkContext, filterFrame) >= 0)
@@ -626,9 +640,9 @@ void FFmpegDecoder::decodeSubtitle(AVPacket *packet)
     AVSubtitle subtitle;
     auto cleanup = qScopeGuard([&] { avsubtitle_free(&subtitle); });
 
-    if(avcodec_decode_subtitle2(m_subtitleCodecContext,&subtitle, &isGot, packet) < 0 ||
+    if(avcodec_decode_subtitle2(m_subtitleCodecContext, &subtitle, &isGot, packet) < 0 ||
         !isGot ||
-        subtitle.format != 0)   // why the fucking ffmpeg doesn't do the job
+        subtitle.format != 0)   // Process graphics subtitle only
         return;
 
     auto frame = QSharedPointer<SubtitleFrame>(
@@ -648,10 +662,17 @@ void FFmpegDecoder::decodeSubtitle(AVPacket *packet)
 
     QMutexLocker locker(&m_mutex);
 
+    // Update the end display time of the last frame
+    // if it is greater than current frame start display time
     if(!m_subtitleCache.isEmpty() && m_subtitleCache.last()->end > frame->start)
         m_subtitleCache.last()->end = frame->start;
 
     m_subtitleCache.append(std::move(frame));
+}
+
+bool FFmpegDecoder::isCacheFull() const
+{
+    return m_videoCache.isFull() || m_audioCache.isFull() || m_subtitleCache.isFull();
 }
 
 void FFmpegDecoder::clearCache()
@@ -861,5 +882,10 @@ inline static bool shouldDecode(const QContiguousCache<AVFrame *> &cache,
     if(cache.isEmpty())
         return true;
 
-    return FFmpegDecoder::second(cache.last()->pts, timebase) - current < MIN_DECODED_DURATION;
+    return second(cache.last()->pts, timebase) - current < MIN_DECODED_DURATION;
+}
+
+inline static qreal second(const qint64 pts, const AVRational timebase)
+{
+    return static_cast<qreal>(pts) * av_q2d(timebase);
 }

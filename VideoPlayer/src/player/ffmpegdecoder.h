@@ -47,6 +47,9 @@ public:
     explicit FFmpegDecoder(QObject *parent = nullptr);
     ~FFmpegDecoder() Q_DECL_OVERRIDE;
 
+    /**
+     * @brief Request the interruption of the FFmpegDecoer::decode
+     */
     void requestInterrupt() { m_runnable = false; }
 
     void setUrl(const QUrl& url) { m_url = url; }
@@ -69,13 +72,16 @@ public:
     bool seekable() const;
 
     bool isEnd() const { return m_isEnd; }
-    bool isCacheFull() const { return m_videoCache.isFull() || m_audioCache.isFull(); }
     bool isBitmapSubtitleActived() const;
 
     /**
      * @return duration of the media in seconds.
      */
     int duration() const;
+
+    /**
+     * @return current playback position
+     */
     int position() const;
 
     QSize videoSize() const;
@@ -87,12 +93,13 @@ public:
     qint64 takeAudioData(char *data, qint64 len);
     QSharedPointer<SubtitleFrame> takeSubtitleFrame();
 
+    /**
+     * @return qQNaN() if not available(eg. no video frames or only a single frame like album cover),
+     *         otherwise returns frame rate of video stream
+     */
     qreal fps() const;
 
     qreal diff() const;
-
-    inline static qreal second(const qint64 time, const AVRational timebase)
-    { return static_cast<qreal>(time) * av_q2d(timebase); }
 
 signals:
     void stateChanged(FFmpegDecoder::State);
@@ -118,6 +125,8 @@ private:
     void decodeVideo();
     void decodeAudio();
     void decodeSubtitle(AVPacket *packet);
+
+    bool isCacheFull() const;
 
     void clearCache();
 
@@ -158,13 +167,13 @@ private:
     QContiguousCache<AVFrame *> m_audioCache;
     QContiguousCache<QSharedPointer<SubtitleFrame>> m_subtitleCache;
 
-    qreal m_fps = qQNaN();
+    qreal m_fps = qQNaN();                          // See also FFmpegDecoder::fps()
 
     volatile bool m_isDecoding = false;
-    volatile bool m_runnable = false;             // Is FFmpegDecoder::decode() could run
+    volatile bool m_runnable = false;               // Is FFmpegDecoder::decode() could run
     volatile bool m_isEnd = false;
 
-    volatile mutable int m_position = 0;
+    volatile int m_position = 0;
     volatile qreal m_videoTime = 0.0;
     volatile qreal m_audioTime = 0.0;
 

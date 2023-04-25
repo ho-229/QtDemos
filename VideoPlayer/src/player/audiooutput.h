@@ -22,15 +22,26 @@ public:
     explicit AudioOutput(FFmpegDecoder *decoder, QObject *parent = nullptr);
     ~AudioOutput() Q_DECL_OVERRIDE;
 
-    void setAudioFormat(const QAudioFormat format);
+    /**
+     * @brief Update audio output when the audio format changed
+     */
+    void updateAudioOutput();
 
     void setVolume(qreal volume);
     qreal volume() const;
 
     void play();
+
+    /**
+     * @bug It will discards the buffer after a while
+     */
     void pause();
     void resume();
     void stop();
+
+    /**
+     * @brief Reset the buffer of audio output
+     */
     void reset();
 
 signals:

@@ -23,6 +23,8 @@ public:
     { return m_decoder->takeAudioData(data, maxlen); }
 
     qint64 writeData(const char *, qint64) override { return 0; }
+
+    FFmpegDecoder *decoder() const { return m_decoder; }
 };
 
 AudioOutput::AudioOutput(FFmpegDecoder *decoder, QObject *parent) :
@@ -39,11 +41,12 @@ AudioOutput::~AudioOutput()
     this->stop();
 }
 
-void AudioOutput::setAudioFormat(const QAudioFormat format)
+void AudioOutput::updateAudioOutput()
 {
     if(m_output)
         this->stop();
 
+    const auto format = m_audioDevice->decoder()->audioFormat();
     if(format.isValid())
         m_output = new QAudioOutput(format, this);
 }

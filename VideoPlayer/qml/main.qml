@@ -115,7 +115,7 @@ Window {
 
             anchors.centerIn: parent
 
-            icon.source: videoPlayer.playState == VideoPlayer.Playing ?
+            icon.source: videoPlayer.playbackState == VideoPlayer.Playing ?
                              "qrc:/image/pause.png" : "qrc:/image/play.png"
             icon.color: "white"
             icon.width: 20
@@ -133,7 +133,7 @@ Window {
             }
 
             onClicked: {
-                if(videoPlayer.playState == VideoPlayer.Playing)
+                if(videoPlayer.playbackState == VideoPlayer.Playing)
                     videoPlayer.pause();
                 else
                     videoPlayer.play();
@@ -157,7 +157,7 @@ Window {
 
             focusPolicy: Qt.NoFocus
 
-            enabled: videoPlayer.playState == VideoPlayer.Playing && videoPlayer.seekable
+            enabled: videoPlayer.playbackState == VideoPlayer.Playing && videoPlayer.seekable
 
             background: Rectangle {
                 color: "transparent"
@@ -242,7 +242,7 @@ Window {
 
             focusPolicy: Qt.NoFocus
 
-            enabled: videoPlayer.playState == VideoPlayer.Playing && videoPlayer.seekable
+            enabled: videoPlayer.playbackState == VideoPlayer.Playing && videoPlayer.seekable
 
             background: Rectangle {
                 color: "transparent"
@@ -262,7 +262,7 @@ Window {
             width: 29
             height: 29
 
-            enabled: videoPlayer.playState != VideoPlayer.Stopped
+            enabled: videoPlayer.playbackState != VideoPlayer.Stopped
 
             anchors.verticalCenter: parent.verticalCenter
             anchors.right: backBtn.left
@@ -332,7 +332,7 @@ Window {
 
             value: videoPlayer.position
 
-            enabled: videoPlayer.playState == VideoPlayer.Playing && videoPlayer.seekable
+            enabled: videoPlayer.playbackState == VideoPlayer.Playing && videoPlayer.seekable
 
             anchors.left: parent.left
             anchors.right: parent.right
@@ -454,7 +454,7 @@ Window {
 
         anchors.centerIn: parent
 
-        visible: videoPlayer.playState == VideoPlayer.Stopped
+        visible: videoPlayer.playbackState == VideoPlayer.Stopped
 
         background: Rectangle {
             radius: 7

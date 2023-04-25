@@ -78,7 +78,7 @@ QUrl VideoPlayer::source() const
     return d_ptr->decoder->url();
 }
 
-VideoPlayer::State VideoPlayer::playState() const
+VideoPlayer::State VideoPlayer::playbackState() const
 {
     return d_ptr->state;
 }
@@ -122,7 +122,7 @@ void VideoPlayer::play()
     }
 
     d->state = Playing;
-    emit playStateChanged(Playing);
+    emit playbackStateChanged(Playing);
 }
 
 void VideoPlayer::pause()
@@ -136,7 +136,7 @@ void VideoPlayer::pause()
     d->audioOutput->pause();
 
     d->state = Paused;
-    emit playStateChanged(Paused);
+    emit playbackStateChanged(Paused);
 }
 
 void VideoPlayer::stop()
@@ -162,7 +162,7 @@ void VideoPlayer::stop()
     d->subtitleRenderer->render({});
 
     d->state = Stopped;
-    emit playStateChanged(Stopped);
+    emit playbackStateChanged(Stopped);
 }
 
 void VideoPlayer::setVolume(qreal volume)
@@ -336,9 +336,11 @@ void VideoPlayer::timerEvent(QTimerEvent *)
 {
     Q_D(VideoPlayer);
 
+    // Update video frame
     d->isUpdated = true;
     this->update();
 
+    // Update bitmap subtitle
     if(d->decoder->isBitmapSubtitleActived())
         d->subtitleRenderer->render(d->decoder->takeSubtitleFrame());
 

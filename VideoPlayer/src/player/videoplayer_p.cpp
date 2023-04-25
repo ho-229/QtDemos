@@ -26,7 +26,7 @@ void VideoPlayerPrivate::updateTimer()
 
 void VideoPlayerPrivate::updateAudioOutput()
 {
-    audioOutput->setAudioFormat(decoder->audioFormat());
+    audioOutput->updateAudioOutput();
 
     if(state != VideoPlayer::Stopped)
     {
@@ -37,6 +37,9 @@ void VideoPlayerPrivate::updateAudioOutput()
     }
 }
 
+/**
+ * @note This algorithm is based on experience so the better implementation is remain
+ */
 void VideoPlayerPrivate::synchronize()
 {
     const qreal diff = decoder->diff();
@@ -46,6 +49,7 @@ void VideoPlayerPrivate::synchronize()
     const qreal absDiff = qAbs(diff);
     if(absDiff > ALLOW_DIFF)
     {
+        // Update the timer interval to sync video to audio
         const int delta = sigmoid(diff);
         if(delta)
         {
@@ -61,6 +65,7 @@ void VideoPlayerPrivate::synchronize()
 
     updateAverage(averageInterval, interval);
 
+    // Drop video frame if video is toooo slow, it usually works when playing high fps video
     if(diff > ALLOW_DIFF * 4)
     {
         AVFrame *frame = decoder->takeVideoFrame();

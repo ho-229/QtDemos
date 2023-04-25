@@ -40,6 +40,9 @@ public:
     void updateTimer();
     void updateAudioOutput();
 
+    /**
+     * @brief Audio-to-video synchronization
+     */
     void synchronize();
 
 private:
