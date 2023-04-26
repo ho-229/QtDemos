@@ -31,10 +31,6 @@ public:
     qreal volume() const;
 
     void play();
-
-    /**
-     * @bug It will discards the buffer after a while
-     */
     void pause();
     void resume();
     void stop();

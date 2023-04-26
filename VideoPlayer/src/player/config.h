@@ -12,7 +12,7 @@
 #define SUBTITLE_CACHE_SIZE 64
 
 // Audio playback delay, it's a experience value
-#define AUDIO_DELAY 0.25
+#define AUDIO_DELAY 0.3
 
 // FFmpegDecoder::decode() will be called asynchronously
 // when the time difference between the current frame and the last cached frame

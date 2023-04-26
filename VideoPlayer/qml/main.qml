@@ -332,7 +332,7 @@ Window {
 
             value: videoPlayer.position
 
-            enabled: videoPlayer.playbackState == VideoPlayer.Playing && videoPlayer.seekable
+            enabled: videoPlayer.seekable
 
             anchors.left: parent.left
             anchors.right: parent.right

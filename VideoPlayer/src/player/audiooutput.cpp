@@ -76,13 +76,13 @@ void AudioOutput::play()
 void AudioOutput::pause()
 {
     if (m_output)
-        m_output->suspend();
+        m_output->reset();
 }
 
 void AudioOutput::resume()
 {
     if (m_output)
-        m_output->resume();
+        m_output->start(m_audioDevice);
 }
 
 void AudioOutput::stop()
