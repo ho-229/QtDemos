@@ -131,7 +131,7 @@ private:
     void clearCache();
 
     bool openCodecContext(AVStream *&stream, AVCodecContext *&codecContext,
-                          AVMediaType type, int index = 0);
+                          AVMediaType type, int index);
     void closeCodecContext(AVStream *&stream, AVCodecContext *&codecContext);
 
     bool openSubtitleFilter(const QString &args, const QString &filterDesc);

@@ -186,7 +186,7 @@ void FFmpegDecoder::setActiveSubtitleTrack(int index)
     this->clearCache();
     SET_AVTIME(-1);         // Set m_videoTime and m_audioTime as unknown
 
-    if(index < 0)
+    if(index < 0 || !m_videoCodecContext)
         return;
 
     const AVRational timeBase = m_videoStream->time_base;
@@ -197,12 +197,12 @@ void FFmpegDecoder::setActiveSubtitleTrack(int index)
         m_videoCodecContext->pix_fmt, timeBase.num, timeBase.den,
         pixelAspect.num, pixelAspect.den);
 
-    auto makeFilterDesc = [this](const QString fileName, int index) -> QString {
+    auto makeFilterDesc = [this](const QString fileName, int relativeIndex) -> QString {
         return QString("subtitles=filename='%1':original_size=%2x%3:si=%4")
             .arg(fileName)
             .arg(m_videoCodecContext->width)
             .arg(m_videoCodecContext->height)
-            .arg(index);
+            .arg(relativeIndex);
     };
     auto convertPath = [](QString fileName) -> QString {
 #ifdef Q_OS_WIN
@@ -215,14 +215,13 @@ void FFmpegDecoder::setActiveSubtitleTrack(int index)
 
     if(m_subtitleIndexes[index].type() == QVariant::Int)            // Embedded subtitle
     {
-        const int absoluteIndex = m_subtitleIndexes[index].toInt();
         const QString subtitleFileName = m_url.toLocalFile();
 
         if(!subtitleFileName.isEmpty() &&
-            this->openSubtitleFilter(args, makeFilterDesc(convertPath(subtitleFileName), absoluteIndex)))
+            this->openSubtitleFilter(args, makeFilterDesc(convertPath(subtitleFileName), index)))
             m_subtitleIndex = index;
         else if(this->openCodecContext(m_subtitleStream, m_subtitleCodecContext,
-                                        AVMEDIA_TYPE_SUBTITLE, absoluteIndex))
+                                        AVMEDIA_TYPE_SUBTITLE, m_subtitleIndexes[index].toInt()))
             m_subtitleIndex = index;
     }
     else if(m_subtitleIndexes[index].type() == QVariant::String)    // External subtitles
