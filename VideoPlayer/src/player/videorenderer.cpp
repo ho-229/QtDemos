@@ -48,6 +48,7 @@ QOpenGLFramebufferObject *VideoRenderer::createFramebufferObject(const QSize &si
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
     format.setSamples(32);
+    format.setMipmap(true);
 
     m_size = size;
     this->resize();
@@ -220,21 +221,18 @@ void VideoRenderer::initTexture()
     // YUV 420p
     m_textureY = new QOpenGLTexture(QOpenGLTexture::Target2D);
     m_textureY->setFormat(QOpenGLTexture::LuminanceFormat);
-    //    mTexY->setFixedSamplePositions(false);
     m_textureY->setMinificationFilter(QOpenGLTexture::Nearest);
     m_textureY->setMagnificationFilter(QOpenGLTexture::Nearest);
     m_textureY->setWrapMode(QOpenGLTexture::ClampToEdge);
 
     m_textureU = new QOpenGLTexture(QOpenGLTexture::Target2D);
     m_textureU->setFormat(QOpenGLTexture::LuminanceFormat);
-    //    mTexU->setFixedSamplePositions(false);
     m_textureU->setMinificationFilter(QOpenGLTexture::Nearest);
     m_textureU->setMagnificationFilter(QOpenGLTexture::Nearest);
     m_textureU->setWrapMode(QOpenGLTexture::ClampToEdge);
 
     m_textureV = new QOpenGLTexture(QOpenGLTexture::Target2D);
     m_textureV->setFormat(QOpenGLTexture::LuminanceFormat);
-    //    mTexV->setFixedSamplePositions(false);
     m_textureV->setMinificationFilter(QOpenGLTexture::Nearest);
     m_textureV->setMagnificationFilter(QOpenGLTexture::Nearest);
     m_textureV->setWrapMode(QOpenGLTexture::ClampToEdge);

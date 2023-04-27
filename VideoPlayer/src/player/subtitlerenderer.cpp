@@ -12,6 +12,7 @@ SubtitleRenderer::SubtitleRenderer(QQuickItem *parent)
     : QQuickPaintedItem(parent)
 {
     this->setRenderTarget(QQuickPaintedItem::FramebufferObject);
+    this->setAntialiasing(true);
     this->setMipmap(true);
 }
 

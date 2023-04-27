@@ -10,6 +10,9 @@ Window {
 
     width: 1280
     height: 720
+    minimumWidth: 700
+    minimumHeight: 450
+
     visible: true
     title: qsTr("Video Player")
 
@@ -332,7 +335,7 @@ Window {
 
             value: videoPlayer.position
 
-            enabled: videoPlayer.seekable
+            enabled: videoPlayer.seekable && videoPlayer.playbackState != VideoPlayer.Stopped
 
             anchors.left: parent.left
             anchors.right: parent.right

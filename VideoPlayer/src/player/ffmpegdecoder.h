@@ -157,6 +157,7 @@ private:
     AVStream *m_subtitleStream = nullptr;
     AVCodecContext *m_subtitleCodecContext = nullptr;
 
+    AVFilterGraph *m_filterGraph = nullptr;
     AVFilterContext *m_buffersrcContext  = nullptr;
     AVFilterContext *m_buffersinkContext = nullptr;
 

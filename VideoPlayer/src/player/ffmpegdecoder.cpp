@@ -572,16 +572,8 @@ void FFmpegDecoder::decodeVideo()
     // If subtitle filter is available
     if(m_buffersrcContext && m_buffersinkContext)
     {
-        AVFrame *filterFrame = av_frame_alloc();
-        if(av_buffersrc_add_frame_flags(
-                m_buffersrcContext, frame, AV_BUFFERSRC_FLAG_KEEP_REF) >= 0
-            && av_buffersink_get_frame(m_buffersinkContext, filterFrame) >= 0)
-        {
-            av_frame_free(&frame);
-            frame = filterFrame;
-        }
-        else
-            av_frame_free(&filterFrame);
+        if(av_buffersrc_add_frame(m_buffersrcContext, frame) >= 0)
+            av_buffersink_get_frame(m_buffersinkContext, frame);
     }
 
     if(m_swsContext)
@@ -763,7 +755,7 @@ bool FFmpegDecoder::openSubtitleFilter(const QString& args, const QString& filte
 
     AVFilterInOut *output = avfilter_inout_alloc();
     AVFilterInOut *input = avfilter_inout_alloc();
-    AVFilterGraph *filterGraph = avfilter_graph_alloc();
+    m_filterGraph = avfilter_graph_alloc();
 
     auto cleanup = qScopeGuard([&output, &input] {
         avfilter_inout_free(&output);
@@ -773,15 +765,16 @@ bool FFmpegDecoder::openSubtitleFilter(const QString& args, const QString& filte
     auto resetContext = [this] {
         m_buffersrcContext = nullptr;
         m_buffersinkContext = nullptr;
+        avfilter_graph_free(&m_filterGraph);
     };
 
-    if(!output || !input || !filterGraph)
+    if(!output || !input || !m_filterGraph)
         return false;
 
     int ret = 0;
     // Create in filter using "arg"
     if((ret = avfilter_graph_create_filter(&m_buffersrcContext, buffersrc, "in",
-                                            args.toUtf8().data(), nullptr, filterGraph)) < 0)
+                                            args.toUtf8().data(), nullptr, m_filterGraph)) < 0)
     {
         FFMPEG_ERROR(ret);
         return false;
@@ -789,7 +782,7 @@ bool FFmpegDecoder::openSubtitleFilter(const QString& args, const QString& filte
 
     // Create out filter
     if((ret = avfilter_graph_create_filter(&m_buffersinkContext, buffersink, "out",
-                                            nullptr, nullptr, filterGraph)) < 0)
+                                            nullptr, nullptr, m_filterGraph)) < 0)
     {
         FFMPEG_ERROR(ret);
         return false;
@@ -805,7 +798,7 @@ bool FFmpegDecoder::openSubtitleFilter(const QString& args, const QString& filte
     input->pad_idx = 0;
     input->filter_ctx = m_buffersinkContext;
 
-    if((ret = avfilter_graph_parse_ptr(filterGraph, filterDesc.toUtf8().data(),
+    if((ret = avfilter_graph_parse_ptr(m_filterGraph, filterDesc.toUtf8().data(),
                                  &input, &output, nullptr)) < 0)
     {
         FFMPEG_ERROR(ret);
@@ -813,7 +806,7 @@ bool FFmpegDecoder::openSubtitleFilter(const QString& args, const QString& filte
         return false;
     }
 
-    if((ret = avfilter_graph_config(filterGraph, nullptr)) < 0)
+    if((ret = avfilter_graph_config(m_filterGraph, nullptr)) < 0)
     {
         FFMPEG_ERROR(ret);
         resetContext();
@@ -825,8 +818,14 @@ bool FFmpegDecoder::openSubtitleFilter(const QString& args, const QString& filte
 
 void FFmpegDecoder::closeSubtitleFilter()
 {
+    int ret = 0;
+    // Close the buffer source after EOF
+    if((ret = av_buffersrc_add_frame(m_buffersrcContext, nullptr)) < 0)
+        FFMPEG_ERROR(ret);
+
     avfilter_free(m_buffersrcContext);
     avfilter_free(m_buffersinkContext);
+    avfilter_graph_free(&m_filterGraph);
 
     m_buffersrcContext = nullptr;
     m_buffersinkContext = nullptr;
