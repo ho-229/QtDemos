@@ -19,9 +19,6 @@
 // is less than MIN_DECODED_DURATION, in seconds
 #define MIN_DECODED_DURATION 0.8
 
-// Sometimes ffmpeg won't report the duration of AVSubtitle so here give a default value, in seconds
-#define SUBTITLE_DEFAULT_DURATION 2
-
 // Allowed time difference between the video PTS and the audio PTS, in seconds
 #define ALLOW_DIFF 0.045         // 45ms
 

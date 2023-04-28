@@ -30,7 +30,6 @@ struct SubtitleFrame
 
     QImage image;
     qreal start = 0;
-    qreal end = 0;
 };
 
 class FFmpegDecoder final : public QObject

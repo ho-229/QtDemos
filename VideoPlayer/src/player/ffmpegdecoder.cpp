@@ -490,15 +490,14 @@ qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
 
 QSharedPointer<SubtitleFrame> FFmpegDecoder::takeSubtitleFrame()
 {
+    static QSharedPointer<SubtitleFrame> current;
+
     QMutexLocker locker(&m_mutex);
 
-    while(!m_subtitleCache.isEmpty() && m_subtitleCache.first()->end < m_videoTime)
-        m_subtitleCache.removeFirst();
+    if(!m_subtitleCache.isEmpty() && m_subtitleCache.first()->start <= m_videoTime)
+        current = m_subtitleCache.takeFirst();
 
-    if(m_subtitleCache.isEmpty() || m_subtitleCache.first()->start > m_videoTime)
-        return {};
-
-    return m_subtitleCache.first();
+    return current;
 }
 
 const QAudioFormat FFmpegDecoder::audioFormat() const
@@ -644,20 +643,9 @@ void FFmpegDecoder::decodeSubtitle(AVPacket *packet)
                       frame->image.width(), frame->image.height(),
                       subtitle.rects[i]);
 
-    const auto duration =
-        packet->duration > 0 ? second(packet->duration, m_subtitleStream->time_base) :
-            SUBTITLE_DEFAULT_DURATION;
-
     frame->start = second(packet->pts, m_subtitleStream->time_base);
-    frame->end = frame->start + duration;
 
     QMutexLocker locker(&m_mutex);
-
-    // Update the end display time of the last frame
-    // if it is greater than current frame start display time
-    if(!m_subtitleCache.isEmpty() && m_subtitleCache.last()->end > frame->start)
-        m_subtitleCache.last()->end = frame->start;
-
     m_subtitleCache.append(std::move(frame));
 }
 
