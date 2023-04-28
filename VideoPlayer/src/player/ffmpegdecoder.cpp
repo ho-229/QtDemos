@@ -182,6 +182,7 @@ void FFmpegDecoder::setActiveSubtitleTrack(int index)
         this->closeSubtitleFilter();
 
     m_subtitleIndex = -1;
+    m_currentSubtitle.reset();
 
     this->clearCache();
     SET_AVTIME(-1);         // Set m_videoTime and m_audioTime as unknown
@@ -490,14 +491,12 @@ qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
 
 QSharedPointer<SubtitleFrame> FFmpegDecoder::takeSubtitleFrame()
 {
-    static QSharedPointer<SubtitleFrame> current;
-
     QMutexLocker locker(&m_mutex);
 
     if(!m_subtitleCache.isEmpty() && m_subtitleCache.first()->start <= m_videoTime)
-        current = m_subtitleCache.takeFirst();
+        m_currentSubtitle = m_subtitleCache.takeFirst();
 
-    return current;
+    return m_currentSubtitle;
 }
 
 const QAudioFormat FFmpegDecoder::audioFormat() const

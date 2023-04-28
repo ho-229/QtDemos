@@ -166,6 +166,7 @@ private:
     QContiguousCache<AVFrame *> m_videoCache;
     QContiguousCache<AVFrame *> m_audioCache;
     QContiguousCache<QSharedPointer<SubtitleFrame>> m_subtitleCache;
+    QSharedPointer<SubtitleFrame> m_currentSubtitle;
 
     qreal m_fps = qQNaN();                          // See also FFmpegDecoder::fps()
 
