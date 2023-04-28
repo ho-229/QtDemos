@@ -22,7 +22,6 @@ signals:
 
 private:
     bool eventFilter(QObject *obj, QEvent *event) Q_DECL_OVERRIDE;
-
 };
 
 #endif // KEYBOARDCONTROLLOR_H
