@@ -104,7 +104,7 @@ void VideoPlayer::play()
             }
 
             emit loaded();
-            d->isVideoInfoChanged = true;
+            d->isFormatUpdated = true;
 
             const auto fps = d->decoder->fps();
             d->averageInterval = qIsNaN(fps) ? 1000.0 : 1000 / fps;
@@ -158,6 +158,7 @@ void VideoPlayer::stop()
 
     emit positionChanged(0);
 
+    d->isFormatUpdated = true;
     this->update();
     d->subtitleRenderer->render({});
 

@@ -357,6 +357,7 @@ void FFmpegDecoder::load()
 
     emit stateChanged(m_state);
 
+    // runs on the same thread so doesn't need to be called by signal
     this->decode();
 }
 
@@ -388,7 +389,7 @@ void FFmpegDecoder::seek(int position)
 {
     m_runnable = true;
 
-    if(m_state == Closed || (!m_videoStream && !m_audioStream))
+    if(m_state == Closed || position == m_position)
         return;
 
     // Clear frame cache
@@ -472,7 +473,7 @@ qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
         free -= size;
         dest += size;
 
-        if(m_videoTime < 0 && m_position != static_cast<int>(m_audioTime))
+        if(qIsNaN(m_fps) && m_position != static_cast<int>(m_audioTime))
         {
             m_position = static_cast<int>(m_audioTime);
             emit positionChanged(m_position);

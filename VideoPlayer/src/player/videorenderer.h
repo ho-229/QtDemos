@@ -6,12 +6,11 @@
 
 #ifndef VIDEORENDERER_H
 #define VIDEORENDERER_H
-
-#include "ffmpegdecoder.h"
-
 #include <QOpenGLFunctions_3_3_Core>
 #include <QQuickFramebufferObject>
 #include <QOpenGLShaderProgram>
+
+struct AVFrame;
 
 class QOpenGLTexture;
 class VideoPlayerPrivate;
@@ -31,8 +30,6 @@ public:
     void synchronize(QQuickFramebufferObject *) Q_DECL_OVERRIDE;
 
 private:
-    FFmpegDecoder *m_decoder = nullptr;
-
     QOpenGLTexture *m_textureY = nullptr;
     QOpenGLTexture *m_textureU = nullptr;
     QOpenGLTexture *m_textureV = nullptr;
@@ -41,25 +38,24 @@ private:
 
     QOpenGLShaderProgram m_program;
 
-    QVector<QVector3D> m_vertices;
-    QVector<QVector2D> m_texcoords;
+    QPair<int, QVector<QVector3D>> m_vertices;
+    QPair<int, QVector<QVector2D>> m_texcoords;
 
-    int m_modelMatHandle, m_viewMatHandle, m_projectMatHandle;
-    int m_verticesHandle;
-    int m_texCoordHandle;
-
-    QMatrix4x4 m_modelMatrix;
-    QMatrix4x4 m_viewMatrix;
-    QMatrix4x4 m_projectionMatrix;
+    QPair<int, QMatrix4x4> m_modelMatrix;
+    QPair<int, QMatrix4x4> m_viewMatrix;
+    QPair<int, QMatrix4x4> m_projectionMatrix;
+    QPair<int, GLint> m_pixelFormat;             // 0 is YUV420, 1 is YUV444
+    int m_texY, m_texU, m_texV;
 
     QSize m_size;
     QRect m_viewRect;
 
-    GLint m_pixFmt = 0;
+    AVFrame *m_frame = nullptr;
+
     bool m_textureAlloced = false;
 
-    void updateTextureInfo();
-    void updateTextureData(AVFrame *frame);
+    void updateTexture();
+    void updateTextureData();
 
     void initShader();
     void initTexture();

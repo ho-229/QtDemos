@@ -27,7 +27,7 @@ public:
     VideoPlayer::State state = VideoPlayer::Stopped;
 
     volatile bool isUpdated = false;
-    volatile bool isVideoInfoChanged = false;
+    volatile bool isFormatUpdated = false;
 
     int interval = 0;
     int maxInterval = 0;
