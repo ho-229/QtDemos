@@ -82,11 +82,17 @@ void FFmpegDecoder::setActiveVideoTrack(int index)
     if(m_state == Closed || index >= m_videoIndexes.size())
         return;
 
+    this->clearCache();
+    SET_AVTIME(-1);         // Set m_videoTime and m_audioTime as unknown
+
     // Release previous active track
     if(m_videoCodecContext && m_videoStream)
     {
+        // Target stream has been tracked
         if(index >= 0 && m_videoStream->index == m_videoIndexes[index])
             return;
+
+        m_fps = qQNaN();
 
         this->closeCodecContext(m_videoStream, m_videoCodecContext);
         if(m_swsContext)
@@ -95,10 +101,6 @@ void FFmpegDecoder::setActiveVideoTrack(int index)
             m_swsContext = nullptr;
         }
     }
-
-    this->clearCache();
-    SET_AVTIME(-1);         // Set m_videoTime and m_audioTime as unknown
-    m_fps = qQNaN();
 
     // Initialize video codec context
     if(index < 0 || !this->openCodecContext(m_videoStream, m_videoCodecContext,
@@ -129,9 +131,13 @@ void FFmpegDecoder::setActiveAudioTrack(int index)
     if(m_state == Closed || index >= m_audioIndexes.size())
         return;
 
+    this->clearCache();
+    SET_AVTIME(-1);         // Set m_videoTime and m_audioTime as unknown
+
     // Release previous active track
     if(m_audioCodecContext && m_audioStream)
     {
+        // Target stream has been tracked
         if(index >= 0 && m_audioStream->index == m_audioIndexes[index])
             return;
 
@@ -139,9 +145,6 @@ void FFmpegDecoder::setActiveAudioTrack(int index)
         if(m_swrContext)
             swr_free(&m_swrContext);
     }
-
-    this->clearCache();
-    SET_AVTIME(-1);         // Set m_videoTime and m_audioTime as unknown
 
     // Initialize audio codec context
     if(index < 0 || !this->openCodecContext(m_audioStream, m_audioCodecContext,
@@ -469,7 +472,7 @@ qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
         free -= size;
         dest += size;
 
-        if(qIsNaN(m_fps) && m_position != static_cast<int>(m_audioTime))
+        if(m_videoTime < 0 && m_position != static_cast<int>(m_audioTime))
         {
             m_position = static_cast<int>(m_audioTime);
             emit positionChanged(m_position);
