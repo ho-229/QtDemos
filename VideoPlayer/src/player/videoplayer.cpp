@@ -112,12 +112,12 @@ void VideoPlayer::play()
             d->interval = d->averageInterval;
         }
 
-        d->timerId = this->startTimer(d->interval);
+        d->timerId = this->startTimer(d->interval, Qt::PreciseTimer);
         d->audioOutput->play();
     }
     else if(d->state == Paused)
     {
-        d->timerId = this->startTimer(d->interval);
+        d->timerId = this->startTimer(d->interval, Qt::PreciseTimer);
         d->audioOutput->resume();
     }
 

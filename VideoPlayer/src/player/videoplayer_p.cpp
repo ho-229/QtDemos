@@ -21,7 +21,7 @@ void VideoPlayerPrivate::updateTimer()
         return;
 
     q->killTimer(timerId);
-    q->startTimer(interval);
+    q->startTimer(interval, Qt::PreciseTimer);
 }
 
 void VideoPlayerPrivate::updateAudioOutput()
