@@ -11,9 +11,9 @@ layout (location = 3) uniform bool isYuv420;
 void main(void)
 {
     vec3 yuv;
-    yuv.x = texture2D(texY, v_texCoord).x;
-    yuv.y = texture2D(texU, v_texCoord).x - 0.5;
-    yuv.z = texture2D(texV, v_texCoord).x - 0.5;
+    yuv.x = texture(texY, v_texCoord).x;
+    yuv.y = texture(texU, v_texCoord).x - 0.5;
+    yuv.z = texture(texV, v_texCoord).x - 0.5;
 
     vec3 rgb;
     if (isYuv420) {

@@ -125,7 +125,7 @@ private:
     void decodeAudio();
     void decodeSubtitle(AVPacket *packet);
 
-    bool isCacheFull() const;
+    bool shouldDecode() const;
 
     void clearCache();
 

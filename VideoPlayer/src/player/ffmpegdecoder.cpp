@@ -33,9 +33,9 @@ static void mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
 template <typename T>
 static void findStreams(const AVFormatContext *format, AVMediaType type, QList<T> &list);
 
-inline static bool shouldDecode(const QContiguousCache<AVFrame *> &cache,
-                                AVRational timebase, qreal current);
 inline static qreal second(const qint64 pts, const AVRational timebase);
+inline static qreal decodedDuration(const QContiguousCache<AVFrame *> &cache,
+                                    AVRational timebase, qreal current);
 
 FFmpegDecoder::FFmpegDecoder(QObject *parent) :
     QObject(parent)
@@ -439,7 +439,7 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
     }
 
     if(!m_isEnd && !m_isDecoding && !qIsNaN(m_fps) &&
-        shouldDecode(m_videoCache, m_videoStream->time_base, m_videoTime))
+        decodedDuration(m_videoCache, m_videoStream->time_base, m_videoTime) < MIN_DECODED_DURATION)
     {
         m_isDecoding = true;
         // Asynchronous call FFmpegDecoder::decode()
@@ -481,7 +481,7 @@ qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
     }
 
     if(!m_isEnd && !m_isDecoding &&
-        shouldDecode(m_audioCache, m_audioStream->time_base, m_audioTime))
+        decodedDuration(m_audioCache, m_audioStream->time_base, m_audioTime) < MIN_DECODED_DURATION)
     {
         m_isDecoding = true;
         // Asynchronous call FFmpegDecoder::decode()
@@ -535,7 +535,7 @@ void FFmpegDecoder::decode()
     AVPacket *packet = av_packet_alloc();
 
     m_isDecoding = true;
-    while(m_state == Opened && !this->isCacheFull() && m_runnable)
+    while(m_state == Opened && m_runnable && this->shouldDecode())
     {
         m_isEnd = av_read_frame(m_formatContext, packet);
         if(m_isEnd)
@@ -652,9 +652,21 @@ void FFmpegDecoder::decodeSubtitle(AVPacket *packet)
     m_subtitleCache.append(std::move(frame));
 }
 
-bool FFmpegDecoder::isCacheFull() const
+bool FFmpegDecoder::shouldDecode() const
 {
-    return m_videoCache.isFull() || m_audioCache.isFull() || m_subtitleCache.isFull();
+    QMutexLocker locker(&m_mutex);
+
+    if(m_videoCache.isFull() || m_audioCache.isFull() || m_subtitleCache.isFull())
+        return false;
+
+    bool enough = true;
+
+    if(!qIsNaN(m_fps) && m_videoStream)
+        enough &= decodedDuration(m_videoCache, m_videoStream->time_base, m_videoTime) > MAX_DECODED_DURATION;
+    if(m_audioStream)
+        enough &= decodedDuration(m_audioCache, m_audioStream->time_base, m_audioTime) > MAX_DECODED_DURATION;
+
+    return !enough;
 }
 
 void FFmpegDecoder::clearCache()
@@ -865,16 +877,13 @@ static void findStreams(const AVFormatContext *format, AVMediaType type, QList<T
             list.append(i);
 }
 
-inline static bool shouldDecode(const QContiguousCache<AVFrame *> &cache,
-                                AVRational timebase, qreal current)
-{
-    if(cache.isEmpty())
-        return true;
-
-    return second(cache.last()->pts, timebase) - current < MIN_DECODED_DURATION;
-}
-
 inline static qreal second(const qint64 pts, const AVRational timebase)
 {
     return static_cast<qreal>(pts) * av_q2d(timebase);
+}
+
+inline static qreal decodedDuration(const QContiguousCache<AVFrame *> &cache,
+                                    AVRational timebase, qreal current)
+{
+    return cache.isEmpty() ? 0 : second(cache.last()->pts, timebase) - current;
 }
