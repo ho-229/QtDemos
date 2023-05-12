@@ -13,6 +13,14 @@
 #include <QOpenGLPixelTransferOptions>
 #include <QOpenGLFramebufferObjectFormat>
 
+static const GLfloat vertices[] = {
+    // vertex   texCoord
+    1, 1,       1, 1,       // right top
+    1, -1,      1, 0,       // right bottom
+    -1, -1,     0, 0,       // left bottom
+    -1, 1,      0, 1,       // left top
+};
+
 VideoRenderer::VideoRenderer(VideoPlayerPrivate * const player_p)
     : m_player_p(player_p)
 {
@@ -21,23 +29,37 @@ VideoRenderer::VideoRenderer(VideoPlayerPrivate * const player_p)
 
     this->initializeOpenGLFunctions();
 
-    this->glDepthMask(GL_TRUE);
-    this->glEnable(GL_TEXTURE_2D);
-
-    this->initShader();
-    this->initGeometry();
+    this->initializeProgram();
 }
 
 VideoRenderer::~VideoRenderer()
 {
-    this->destoryTexture(m_textureY);
-    this->destoryTexture(m_textureU);
-    this->destoryTexture(m_textureV);
+    if(m_textureAlloced)
+        this->destoryTexture();
 }
 
 void VideoRenderer::render()
 {
-    this->paint();
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    if(!m_textureAlloced)
+        return;
+
+    glViewport(m_viewRect.x(), m_viewRect.y(),
+               m_viewRect.width(), m_viewRect.height());
+
+    m_program.bind();
+    m_vao.bind();
+
+    for(size_t i = 0; i < 3; ++i)
+        m_texture[i]->bind(i);
+
+    glDrawArrays(GL_QUADS, 0, 4);
+
+    m_vao.release();
+    m_program.release();
+
     m_player_p->window()->resetOpenGLState();
 }
 
@@ -45,7 +67,7 @@ QOpenGLFramebufferObject *VideoRenderer::createFramebufferObject(const QSize &si
 {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(32);
+    format.setSamples(8);
     format.setMipmap(true);
 
     m_size = size;
@@ -85,40 +107,31 @@ void VideoRenderer::updateTexture()
     const auto videoFormat = m_player_p->decoder->videoPixelFormat();
     const auto videoSize = m_player_p->decoder->videoSize();
 
-    destoryTexture(m_textureY);
-    destoryTexture(m_textureU);
-    destoryTexture(m_textureV);
-    m_textureAlloced = false;
+    if(m_textureAlloced)
+    {
+        this->destoryTexture();
+        m_textureAlloced = false;
+    }
+
+    auto updatePixelFormat = [this](int isYuv420) {
+        m_program.bind();
+        m_program.setUniformValue(3, isYuv420);
+        m_program.release();
+    };
 
     switch(videoFormat)
     {
-    case AV_PIX_FMT_YUV420P:        // YUV 420p 12bpp
-        this->initTexture();
+    case AV_PIX_FMT_YUV420P:            // YUV 420p 12bpp
+        this->initializeTexture(true, videoSize);
 
-        m_textureY->setSize(videoSize.width(), videoSize.height());
-        m_textureY->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
-
-        m_textureU->setSize(videoSize.width() / 2, videoSize.height() / 2);
-        m_textureU->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
-
-        m_textureV->setSize(videoSize.width() / 2, videoSize.height() / 2);
-        m_textureV->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
-
-        m_pixelFormat.second = 0;
+        updatePixelFormat(true);
+        m_textureAlloced = true;
         break;
-    case AV_PIX_FMT_YUV444P:        // YUV 444P 24bpp
-        this->initTexture();
+    case AV_PIX_FMT_YUV444P:            // YUV 444P 24bpp
+        this->initializeTexture(false, videoSize);
 
-        m_textureY->setSize(videoSize.width(), videoSize.height());
-        m_textureY->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
-
-        m_textureU->setSize(videoSize.width(), videoSize.height());
-        m_textureU->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
-
-        m_textureV->setSize(videoSize.width(), videoSize.height());
-        m_textureV->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
-
-        m_pixelFormat.second = 1;
+        updatePixelFormat(false);
+        m_textureAlloced = true;
         break;
     default:
         break;
@@ -133,67 +146,15 @@ void VideoRenderer::updateTextureData()
     QOpenGLPixelTransferOptions options;
     options.setImageHeight(m_frame->height);
 
-    options.setRowLength(m_frame->linesize[0]);
-    m_textureY->setData(QOpenGLTexture::Luminance, QOpenGLTexture::UInt8,
-                   reinterpret_cast<const void *>(m_frame->data[0]), &options);
-    options.setRowLength(m_frame->linesize[1]);
-    m_textureU->setData(QOpenGLTexture::Luminance, QOpenGLTexture::UInt8,
-                   reinterpret_cast<const void *>(m_frame->data[1]), &options);
-    options.setRowLength(m_frame->linesize[2]);
-    m_textureV->setData(QOpenGLTexture::Luminance, QOpenGLTexture::UInt8,
-                   reinterpret_cast<const void *>(m_frame->data[2]), &options);
+    for(size_t i = 0; i < 3; ++i)
+    {
+        options.setRowLength(m_frame->linesize[i]);
+        m_texture[i]->setData(QOpenGLTexture::Luminance, QOpenGLTexture::UInt8,
+                              reinterpret_cast<const void *>(m_frame->data[i]), &options);
+    }
 }
 
-void VideoRenderer::paint()
-{
-    glClearColor(0, 0, 0, 1);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    if(!m_textureAlloced)
-        return;
-
-    glViewport(m_viewRect.x(), m_viewRect.y(),
-               m_viewRect.width(), m_viewRect.height());
-
-    m_program.bind();
-
-    // Vertex
-    m_program.enableAttributeArray(m_vertices.first);
-    m_program.setAttributeArray(m_vertices.first, m_vertices.second.constData());
-
-    // Fragment position
-    m_program.enableAttributeArray(m_texcoords.first);
-    m_program.setAttributeArray(m_texcoords.first, m_texcoords.second.constData());
-
-    // MVP rectangle
-    m_program.setUniformValue(m_modelMatrix.first, m_modelMatrix.second);
-    m_program.setUniformValue(m_viewMatrix.first, m_viewMatrix.second);
-    m_program.setUniformValue(m_projectionMatrix.first, m_projectionMatrix.second);
-
-    // Pixel format
-    m_program.setUniformValue(m_pixelFormat.first, m_pixelFormat.second);
-
-    // Y
-    m_textureY->bind(0);
-    m_program.setUniformValue(m_texY, 0);
-
-    // U
-    m_textureU->bind(1);
-    m_program.setUniformValue(m_texU, 1);
-
-    // V
-    m_textureV->bind(2);
-    m_program.setUniformValue(m_texV, 2);
-
-    glDrawArrays(GL_TRIANGLE_FAN, 0, m_vertices.second.size());
-
-    m_program.disableAttributeArray(m_vertices.first);
-    m_program.disableAttributeArray(m_texcoords.first);
-
-    m_program.release();
-}
-
-void VideoRenderer::initShader()
+void VideoRenderer::initializeProgram()
 {
     if (!m_program.addShaderFromSourceFile(QOpenGLShader::Vertex,":/vertex.vsh") ||
         !m_program.addShaderFromSourceFile(QOpenGLShader::Fragment, ":/fragment.fsh"))
@@ -203,61 +164,50 @@ void VideoRenderer::initShader()
     }
 
     m_program.link();
+    m_program.bind();
 
-    m_modelMatrix.first = m_program.uniformLocation("u_modelMatrix");
-    m_viewMatrix.first = m_program.uniformLocation("u_viewMatrix");
-    m_projectionMatrix.first = m_program.uniformLocation("u_projectMatrix");
-    m_texY = m_program.uniformLocation("tex_y");
-    m_texU = m_program.uniformLocation("tex_u");
-    m_texV = m_program.uniformLocation("tex_v");
+    // Set texture unit
+    for(int i = 0; i < 3; ++i)
+        m_program.setUniformValue(i, i);
 
-    m_vertices.first = m_program.attributeLocation("qt_Vertex");
-    m_texcoords.first = m_program.attributeLocation("texCoord");
+    m_vbo.create();
+    m_vbo.bind();
+    m_vbo.allocate(vertices, sizeof(vertices));
+    m_vbo.setUsagePattern(QOpenGLBuffer::StaticRead);
+
+    m_vao.create();
+    m_vao.bind();
+
+    // vertex
+    m_program.setAttributeBuffer(0, GL_FLOAT, 0, 2, 4 * sizeof(GLfloat));
+    m_program.enableAttributeArray(0);
+
+    // texCoord
+    m_program.setAttributeBuffer(1, GL_FLOAT, 2 * sizeof(GLfloat), 2, 4 * sizeof(GLfloat));
+    m_program.enableAttributeArray(1);
+
+    m_vao.release();
+    m_vbo.release();
+
+    m_program.release();
 }
 
-void VideoRenderer::initTexture()
+void VideoRenderer::initializeTexture(bool isYuv420, const QSize &size)
 {
-    m_textureY = new QOpenGLTexture(QOpenGLTexture::Target2D);
-    m_textureY->setFormat(QOpenGLTexture::LuminanceFormat);
-    m_textureY->setMinificationFilter(QOpenGLTexture::Nearest);
-    m_textureY->setMagnificationFilter(QOpenGLTexture::Nearest);
-    m_textureY->setWrapMode(QOpenGLTexture::ClampToEdge);
+    for(size_t i = 0; i < 3; ++i)
+    {
+        m_texture[i] = new QOpenGLTexture(QOpenGLTexture::Target2D);
+        m_texture[i]->setFormat(QOpenGLTexture::LuminanceFormat);
+        m_texture[i]->setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
+        m_texture[i]->setWrapMode(QOpenGLTexture::ClampToEdge);
 
-    m_textureU = new QOpenGLTexture(QOpenGLTexture::Target2D);
-    m_textureU->setFormat(QOpenGLTexture::LuminanceFormat);
-    m_textureU->setMinificationFilter(QOpenGLTexture::Nearest);
-    m_textureU->setMagnificationFilter(QOpenGLTexture::Nearest);
-    m_textureU->setWrapMode(QOpenGLTexture::ClampToEdge);
+        if(isYuv420 && i > 0)
+            m_texture[i]->setSize(size.width() / 2, size.height() / 2);
+        else
+            m_texture[i]->setSize(size.width(), size.height());
 
-    m_textureV = new QOpenGLTexture(QOpenGLTexture::Target2D);
-    m_textureV->setFormat(QOpenGLTexture::LuminanceFormat);
-    m_textureV->setMinificationFilter(QOpenGLTexture::Nearest);
-    m_textureV->setMagnificationFilter(QOpenGLTexture::Nearest);
-    m_textureV->setWrapMode(QOpenGLTexture::ClampToEdge);
-
-    m_textureAlloced = true;
-}
-
-void VideoRenderer::initGeometry()
-{
-    m_vertices.second << QVector3D(-1, 1, 0.0f)
-                      << QVector3D(1, 1, 0.0f)
-                      << QVector3D(1, -1, 0.0f)
-                      << QVector3D(-1, -1, 0.0f);
-
-    m_texcoords.second << QVector2D(0, 1)
-                       << QVector2D(1, 1)
-                       << QVector2D(1, 0)
-                       << QVector2D(0, 0);
-
-    m_viewMatrix.second.setToIdentity();
-    m_viewMatrix.second.lookAt(QVector3D(0.0f, 0.0f, 1.001f), QVector3D(0.0f, 0.0f, -5.0f),
-                               QVector3D(0.0f, 1.0f, 0.0f));
-
-    m_modelMatrix.second.setToIdentity();
-
-    m_projectionMatrix.second.setToIdentity();
-    m_projectionMatrix.second.frustum(-1.0, 1.0, -1.0f, 1.0f, 1.0f, 100.0f);
+        m_texture[i]->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
+    }
 }
 
 void VideoRenderer::resize()
@@ -274,17 +224,8 @@ void VideoRenderer::resize()
     m_player_p->subtitleRenderer->updateViewRect(m_viewRect);
 }
 
-void VideoRenderer::destoryTexture(QOpenGLTexture *&texture)
+void VideoRenderer::destoryTexture()
 {
-    if(!texture)
-        return;
-
-    if(texture->isBound())
-        texture->release();
-
-    if(texture->isCreated())
-        texture->destroy();
-
-    delete texture;
-    texture = nullptr;
+    for(size_t i = 0; i < 3; ++i)
+        delete m_texture[i];
 }

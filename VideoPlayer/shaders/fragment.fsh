@@ -1,21 +1,23 @@
-﻿varying vec2 v_texCoord;
+#version 440
+in vec2 v_texCoord;
+out vec4 fragColor;
 
-uniform sampler2D tex_y;
-uniform sampler2D tex_u;
-uniform sampler2D tex_v;
+layout (location = 0) uniform sampler2D texY;
+layout (location = 1) uniform sampler2D texU;
+layout (location = 2) uniform sampler2D texV;
 
-uniform int pixFmt;
+layout (location = 3) uniform bool isYuv420;
 
 void main(void)
 {
     vec3 yuv;
-    yuv.x = texture2D(tex_y, v_texCoord).r;
-    yuv.y = texture2D(tex_u, v_texCoord).r - 0.5;
-    yuv.z = texture2D(tex_v, v_texCoord).r - 0.5;
+    yuv.x = texture2D(texY, v_texCoord).x;
+    yuv.y = texture2D(texU, v_texCoord).x - 0.5;
+    yuv.z = texture2D(texV, v_texCoord).x - 0.5;
 
     vec3 rgb;
-    if (pixFmt == 0) {
-        // YUV420p
+    if (isYuv420) {
+        // YUV420P
         rgb = mat3(1.0,    1.0,     1.0,
                    0.0,    -0.3455, 1.779,
                    1.4075, -0.7169, 0.0) * yuv;
@@ -26,6 +28,5 @@ void main(void)
         rgb.z = clamp(yuv.x + 1.772 * yuv.y, 0.0, 1.0);
     }
 
-    gl_FragColor = vec4(rgb, 1.0);
+    fragColor = vec4(rgb, 1);
 }
-

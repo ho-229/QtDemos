@@ -1,13 +1,10 @@
-﻿attribute highp vec3 qt_Vertex;
-attribute highp vec2 texCoord;
+#version 440
+layout (location = 0) in vec2 vertex;
+layout (location = 1) in vec2 texCoord;
 
-uniform mat4 u_modelMatrix;
-uniform mat4 u_viewMatrix;
-uniform mat4 u_projectMatrix;
-
-varying vec2 v_texCoord;
+out vec2 v_texCoord;
 void main(void)
 {
-    gl_Position = u_projectMatrix * u_viewMatrix * u_modelMatrix * vec4(qt_Vertex, 1.0f);
+    gl_Position = vec4(vertex, 0, 1.0f);
     v_texCoord = texCoord;
 }

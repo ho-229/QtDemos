@@ -6,9 +6,12 @@
 
 #ifndef VIDEORENDERER_H
 #define VIDEORENDERER_H
-#include <QOpenGLFunctions_3_3_Core>
+
+#include <QOpenGLFunctions_4_4_Core>
+#include <QOpenGLVertexArrayObject>
 #include <QQuickFramebufferObject>
 #include <QOpenGLShaderProgram>
+#include <QOpenGLBuffer>
 
 struct AVFrame;
 
@@ -16,10 +19,10 @@ class QOpenGLTexture;
 class VideoPlayerPrivate;
 
 class VideoRenderer : public QQuickFramebufferObject::Renderer,
-                      protected QOpenGLFunctions_3_3_Core
+                      protected QOpenGLFunctions_4_4_Core
 {
 public:
-    VideoRenderer(VideoPlayerPrivate * const player_p);
+    VideoRenderer(VideoPlayerPrivate *const player_p);
     ~VideoRenderer() Q_DECL_OVERRIDE;
 
     void render() Q_DECL_OVERRIDE;
@@ -30,22 +33,14 @@ public:
     void synchronize(QQuickFramebufferObject *) Q_DECL_OVERRIDE;
 
 private:
-    QOpenGLTexture *m_textureY = nullptr;
-    QOpenGLTexture *m_textureU = nullptr;
-    QOpenGLTexture *m_textureV = nullptr;
+    QOpenGLTexture *m_texture[3] = { nullptr };    // [0]: Y, [1]: U, [2]: V
 
-    VideoPlayerPrivate * const m_player_p = nullptr;
+    QOpenGLBuffer m_vbo;
+    QOpenGLVertexArrayObject m_vao;
+
+    VideoPlayerPrivate *const m_player_p = nullptr;
 
     QOpenGLShaderProgram m_program;
-
-    QPair<int, QVector<QVector3D>> m_vertices;
-    QPair<int, QVector<QVector2D>> m_texcoords;
-
-    QPair<int, QMatrix4x4> m_modelMatrix;
-    QPair<int, QMatrix4x4> m_viewMatrix;
-    QPair<int, QMatrix4x4> m_projectionMatrix;
-    QPair<int, GLint> m_pixelFormat;             // 0 is YUV420, 1 is YUV444
-    int m_texY, m_texU, m_texV;
 
     QSize m_size;
     QRect m_viewRect;
@@ -57,14 +52,12 @@ private:
     void updateTexture();
     void updateTextureData();
 
-    void initShader();
-    void initTexture();
-    void initGeometry();
-
-    void paint();
     void resize();
 
-    static void destoryTexture(QOpenGLTexture *&texture);
+    void initializeProgram();
+
+    void initializeTexture(bool isYuv420, const QSize &size);
+    void destoryTexture();
 };
 
 #endif // VIDEORENDERER_H
