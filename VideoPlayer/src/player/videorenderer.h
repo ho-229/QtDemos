@@ -7,6 +7,8 @@
 #ifndef VIDEORENDERER_H
 #define VIDEORENDERER_H
 
+#include <libavutil/pixfmt.h>
+
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLVertexArrayObject>
 #include <QQuickFramebufferObject>
@@ -56,7 +58,7 @@ private:
 
     void initializeProgram();
 
-    void initializeTexture(bool isYuv420, const QSize &size);
+    void initializeTexture(AVPixelFormat format, const QSize &size);
     void destoryTexture();
 };
 

@@ -254,21 +254,17 @@ int FFmpegDecoder::position() const
     return m_position;
 }
 
-QSize FFmpegDecoder::videoSize() const
+const VideoFormat FFmpegDecoder::videoFormat() const
 {
     if(!m_videoCodecContext)
-        return {};
+        return {{}, AV_PIX_FMT_NONE, AVCOL_SPC_NB, AVCOL_RANGE_NB};
 
-    return QSize(m_videoCodecContext->width, m_videoCodecContext->height);
-}
-
-AVPixelFormat FFmpegDecoder::videoPixelFormat() const
-{
-    auto originalFormat = AV_PIX_FMT_NONE;
-    if(m_videoCodecContext)
-        originalFormat = m_videoCodecContext->pix_fmt;
-
-    return m_swsContext ? AV_PIX_FMT_YUV420P : originalFormat;
+    return {
+        QSize(m_videoCodecContext->width, m_videoCodecContext->height),
+        m_swsContext ? AV_PIX_FMT_YUV420P : m_videoCodecContext->pix_fmt,
+        m_videoCodecContext->colorspace,
+        m_videoCodecContext->color_range,
+    };
 }
 
 int FFmpegDecoder::videoTrackCount() const
