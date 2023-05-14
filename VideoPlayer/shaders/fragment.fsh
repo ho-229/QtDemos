@@ -5,8 +5,9 @@ out vec4 fragColor;
 layout (location = 0) uniform sampler2D texY;
 layout (location = 1) uniform sampler2D texU;
 layout (location = 2) uniform sampler2D texV;
+layout (location = 3) uniform sampler2D texSubtitle;
 
-layout (location = 3) uniform mat3 colorConversion;
+layout (location = 4) uniform mat3 colorConversion;
 
 void main(void)
 {
@@ -16,5 +17,6 @@ void main(void)
     yuv.z = texture(texV, v_texCoord).x - 128. / 255.;
 
     vec3 rgb = colorConversion * yuv;
-    fragColor = vec4(rgb, 1);
+    vec4 subtitle = texture(texSubtitle, v_texCoord);
+    fragColor = mix(vec4(rgb, 1), subtitle, subtitle.a);
 }

@@ -108,13 +108,8 @@ signals:
     void activeAudioTrackChanged(int);
     void activeSubtitleTrackChanged(int);
 
-protected:
-    void geometryChanged(const QRectF &newGeometry,
-                         const QRectF &oldGeometry) override;
-
 private:
     VideoPlayerPrivate *const d_ptr;
-
     Q_DECLARE_PRIVATE(VideoPlayer)
 
     void timerEvent(QTimerEvent *) Q_DECL_OVERRIDE;

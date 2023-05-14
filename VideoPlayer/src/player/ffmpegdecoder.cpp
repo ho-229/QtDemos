@@ -185,7 +185,6 @@ void FFmpegDecoder::setActiveSubtitleTrack(int index)
         this->closeSubtitleFilter();
 
     m_subtitleIndex = -1;
-    m_currentSubtitle.reset();
 
     this->clearCache();
     SET_AVTIME(-1);         // Set m_videoTime and m_audioTime as unknown
@@ -280,11 +279,6 @@ int FFmpegDecoder::audioTrackCount() const
 int FFmpegDecoder::subtitleTrackCount() const
 {
     return m_subtitleIndexes.size();
-}
-
-bool FFmpegDecoder::isBitmapSubtitleActived() const
-{
-    return m_subtitleCodecContext && m_subtitleCodecContext->pix_fmt == AV_PIX_FMT_PAL8;
 }
 
 void FFmpegDecoder::load()
@@ -489,14 +483,14 @@ qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
     return len - free;
 }
 
-QSharedPointer<SubtitleFrame> FFmpegDecoder::takeSubtitleFrame()
+SubtitleFrame *FFmpegDecoder::takeSubtitleFrame()
 {
     QMutexLocker locker(&m_mutex);
 
     if(!m_subtitleCache.isEmpty() && m_subtitleCache.first()->start <= m_videoTime)
         m_currentSubtitle = m_subtitleCache.takeFirst();
 
-    return m_currentSubtitle;
+    return m_currentSubtitle.data();
 }
 
 const QAudioFormat FFmpegDecoder::audioFormat() const
@@ -642,6 +636,7 @@ void FFmpegDecoder::decodeSubtitle(AVPacket *packet)
                       frame->image.width(), frame->image.height(),
                       subtitle.rects[i]);
 
+    frame->image.convertTo(QImage::Format_RGBA8888);
     frame->start = second(packet->pts, m_subtitleStream->time_base);
 
     QMutexLocker locker(&m_mutex);
@@ -685,6 +680,7 @@ void FFmpegDecoder::clearCache()
     }
 
     m_subtitleCache.clear();
+    m_currentSubtitle.reset();
 }
 
 bool FFmpegDecoder::openCodecContext(AVStream *&stream, AVCodecContext *&codecContext,

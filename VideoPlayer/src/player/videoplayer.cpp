@@ -8,7 +8,6 @@
 #include "videoplayer.h"
 #include "videoplayer_p.h"
 #include "videorenderer.h"
-#include "subtitlerenderer.h"
 
 #include <QThread>
 #include <QEventLoop>
@@ -26,8 +25,6 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
     d->decoder->thread()->start();
 
     d->audioOutput = new AudioOutput(d->decoder, this);
-
-    d->subtitleRenderer = new SubtitleRenderer(this);
 
     QObject::connect(d->decoder, &FFmpegDecoder::activeVideoTrackChanged,
                      this, &VideoPlayer::activeVideoTrackChanged);
@@ -160,7 +157,6 @@ void VideoPlayer::stop()
 
     d->isFormatUpdated = true;
     this->update();
-    d->subtitleRenderer->render({});
 
     d->state = Stopped;
     emit playbackStateChanged(Stopped);
@@ -240,8 +236,6 @@ void VideoPlayer::setActiveSubtitleTrack(int index)
                               Qt::QueuedConnection, Q_ARG(int, index));
     QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
                               Qt::QueuedConnection);
-
-    d->subtitleRenderer->render({});
 
     if(d->interval != d->averageInterval)
     {
@@ -323,16 +317,6 @@ void VideoPlayer::seek(int position)
     }
 }
 
-void VideoPlayer::geometryChanged(const QRectF &newGeometry, const QRectF &oldGeometry)
-{
-    Q_D(VideoPlayer);
-
-    d->subtitleRenderer->setPosition(newGeometry.topLeft());
-    d->subtitleRenderer->setSize(newGeometry.size());
-
-    QQuickFramebufferObject::geometryChanged(newGeometry, oldGeometry);
-}
-
 void VideoPlayer::timerEvent(QTimerEvent *)
 {
     Q_D(VideoPlayer);
@@ -340,10 +324,6 @@ void VideoPlayer::timerEvent(QTimerEvent *)
     // Update video frame
     d->isUpdated = true;
     this->update();
-
-    // Update bitmap subtitle
-    if(d->decoder->isBitmapSubtitleActived())
-        d->subtitleRenderer->render(d->decoder->takeSubtitleFrame());
 
     if(!d->decoder->hasFrame() && d->decoder->isEnd())
     {

@@ -79,7 +79,6 @@ public:
     bool seekable() const;
 
     bool isEnd() const { return m_isEnd; }
-    bool isBitmapSubtitleActived() const;
 
     /**
      * @return duration of the media in seconds.
@@ -96,7 +95,7 @@ public:
 
     AVFrame *takeVideoFrame();
     qint64 takeAudioData(char *data, qint64 len);
-    QSharedPointer<SubtitleFrame> takeSubtitleFrame();
+    SubtitleFrame *takeSubtitleFrame();
 
     /**
      * @return qQNaN() if not available(eg. no video frames or only a single frame like album cover),

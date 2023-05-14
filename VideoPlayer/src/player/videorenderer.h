@@ -7,12 +7,13 @@
 #ifndef VIDEORENDERER_H
 #define VIDEORENDERER_H
 
-#include <libavutil/pixfmt.h>
+#include "ffmpegdecoder.h"
 
 #include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLVertexArrayObject>
 #include <QQuickFramebufferObject>
 #include <QOpenGLShaderProgram>
+#include <QScopedPointer>
 #include <QOpenGLBuffer>
 
 struct AVFrame;
@@ -35,7 +36,7 @@ public:
     void synchronize(QQuickFramebufferObject *) Q_DECL_OVERRIDE;
 
 private:
-    QOpenGLTexture *m_texture[3] = { nullptr };    // [0]: Y, [1]: U, [2]: V
+    QOpenGLTexture *m_texture[4] = { nullptr };    // [0]: Y, [1]: U, [2]: V, [3]: Subtitle
 
     QOpenGLBuffer m_vbo;
     QOpenGLVertexArrayObject m_vao;
@@ -48,11 +49,14 @@ private:
     QRect m_viewRect;
 
     AVFrame *m_frame = nullptr;
+    SubtitleFrame *m_subtitle = nullptr;
+    QScopedPointer<const GLubyte> m_dummySubtitle;
 
     bool m_textureAlloced = false;
 
     void updateTexture();
     void updateTextureData();
+    void updateSubtitleTexture(const QSize &size);
 
     void resize();
 

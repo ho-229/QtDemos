@@ -6,7 +6,6 @@
 
 #include "videorenderer.h"
 #include "videoplayer_p.h"
-#include "subtitlerenderer.h"
 
 #include <QQuickWindow>
 #include <QOpenGLTexture>
@@ -81,7 +80,7 @@ void VideoRenderer::render()
     m_program.bind();
     m_vao.bind();
 
-    for(size_t i = 0; i < 3; ++i)
+    for(size_t i = 0; i < 4; ++i)
         m_texture[i]->bind(i);
 
     glDrawArrays(GL_QUADS, 0, 4);
@@ -141,9 +140,10 @@ void VideoRenderer::updateTexture()
         m_textureAlloced = false;
     }
 
-    auto updateColorMatrix = [&]() {
+    auto updateColorMatrix = [&] {
         m_program.bind();
-        m_program.setUniformValue(3, colorInverseMatrix(videoFormat.colorSpace, videoFormat.colorRange));
+        // colorConversion
+        m_program.setUniformValue(4, colorInverseMatrix(videoFormat.colorSpace, videoFormat.colorRange));
         m_program.release();
     };
 
@@ -180,6 +180,21 @@ void VideoRenderer::updateTextureData()
         m_texture[i]->setData(QOpenGLTexture::Luminance, QOpenGLTexture::UInt8,
                               reinterpret_cast<const void *>(m_frame->data[i]), &options);
     }
+
+    auto subtitle = m_player_p->decoder->takeSubtitleFrame();
+    if(subtitle != m_subtitle)
+    {
+        m_subtitle = subtitle;
+        if(subtitle)
+        {
+            if(m_texture[3]->width() != subtitle->image.width() || m_texture[3]->height() != subtitle->image.height())
+                this->updateSubtitleTexture(subtitle->image.size());
+
+            m_texture[3]->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, subtitle->image.constBits());
+        }
+        else        // Cleanup texture data
+            m_texture[3]->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, m_dummySubtitle.data());
+    }
 }
 
 void VideoRenderer::initializeProgram()
@@ -195,7 +210,7 @@ void VideoRenderer::initializeProgram()
     m_program.bind();
 
     // Set texture unit
-    for(int i = 0; i < 3; ++i)
+    for(int i = 0; i < 4; ++i)
         m_program.setUniformValue(i, i);
 
     m_vbo.create();
@@ -236,25 +251,42 @@ void VideoRenderer::initializeTexture(AVPixelFormat format, const QSize &size)
 
         m_texture[i]->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
     }
+
+    m_texture[3] = new QOpenGLTexture(QOpenGLTexture::Target2D);
+
+    // Temporary initialization, because the subtitle size is not known until the subtitle frame is decoded
+    this->updateSubtitleTexture(size);
+}
+
+void VideoRenderer::updateSubtitleTexture(const QSize &size)
+{
+    if(m_texture[3]->isCreated())
+        m_texture[3]->destroy();
+
+    m_texture[3]->setFormat(QOpenGLTexture::RGBA8_UNorm);
+    m_texture[3]->setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
+    m_texture[3]->setWrapMode(QOpenGLTexture::ClampToEdge);
+    m_texture[3]->setSize(size.width(), size.height());
+    m_texture[3]->allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
+
+    m_dummySubtitle.reset(new GLubyte[size.width() * size.height() * 4]());
 }
 
 void VideoRenderer::resize()
 {
     const QRect screenRect(QPoint(0, 0), m_size);
-    const QSize videoSize(m_player_p->decoder->videoFormat().size);
+    QSize videoSize(m_player_p->decoder->videoFormat().size);
 
     if(!videoSize.isValid())
         return;
 
     m_viewRect.setSize(videoSize.scaled(m_size, Qt::KeepAspectRatio));
     m_viewRect.moveCenter(screenRect.center());
-
-    m_player_p->subtitleRenderer->updateViewRect(m_viewRect);
 }
 
 void VideoRenderer::destoryTexture()
 {
-    for(size_t i = 0; i < 3; ++i)
+    for(size_t i = 0; i < 4; ++i)
         delete m_texture[i];
 }
 

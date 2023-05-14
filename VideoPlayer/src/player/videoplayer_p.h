@@ -11,7 +11,6 @@
 
 class AudioOutput;
 class FFmpegDecoder;
-class SubtitleRenderer;
 
 class VideoPlayerPrivate
 {
@@ -21,8 +20,6 @@ public:
     FFmpegDecoder *decoder = nullptr;
 
     AudioOutput *audioOutput = nullptr;
-
-    SubtitleRenderer *subtitleRenderer = nullptr;
 
     VideoPlayer::State state = VideoPlayer::Stopped;
 
