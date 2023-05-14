@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @brief Video Renderer
  * @anchor Ho 229
  * @date 2021/4/14
@@ -85,10 +85,11 @@ void VideoRenderer::render()
 
     glDrawArrays(GL_QUADS, 0, 4);
 
+    for(int i = 3; i > -1; --i)
+        m_texture[i]->release(i);
+
     m_vao.release();
     m_program.release();
-
-    m_player_p->window()->resetOpenGLState();
 }
 
 QOpenGLFramebufferObject *VideoRenderer::createFramebufferObject(const QSize &size)

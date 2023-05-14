@@ -26,7 +26,7 @@ static std::once_flag initFlag;
 /**
  * @ref ffmpeg.c line:181 : static void sub2video_copy_rect()
  * @ref http://ffmpeg.org/doxygen/6.0/ffmpeg_8c_source.html#l00179
- * @brief Copy AVSubtitleRect with AV_PIX_FMT_PAL8 bitmap to ARGB32 image
+ * @brief Copy AVSubtitleRect with AV_PIX_FMT_PAL8 bitmap to RGBA8888 image
  */
 static void mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
                           AVSubtitleRect *r);
@@ -636,7 +636,6 @@ void FFmpegDecoder::decodeSubtitle(AVPacket *packet)
                       frame->image.width(), frame->image.height(),
                       subtitle.rects[i]);
 
-    frame->image.convertTo(QImage::Format_RGBA8888);
     frame->start = second(packet->pts, m_subtitleStream->time_base);
 
     QMutexLocker locker(&m_mutex);
@@ -833,6 +832,17 @@ static void mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
     uint8_t *src, *src2;
     int x, y;
 
+    // ref https://stackoverflow.com/questions/61645259/conversion-from-argb-to-rgba
+    auto argb2rgba = [](uint32_t argb) {
+        return
+            // Source is in format: 0xAARRGGBB
+            ((argb & 0x00FF0000) >> 16)  | //______RR
+            ((argb & 0x0000FF00))        | //____GG__
+            ((argb & 0x000000FF) << 16)  | //___BB____
+            ((argb & 0xFF000000));         //AA______
+            // Return value is in format:  0xAABBGGRR
+    };
+
     if (r->type != SUBTITLE_BITMAP)
     {
         FUNC_ERROR << ": non-bitmap subtitle\n";
@@ -854,7 +864,7 @@ static void mergeSubtitle(uint8_t *dst, int dst_linesize, int w, int h,
         src2 = src;
 
         for (x = 0; x < r->w; x++)
-            *(dst2++) = pal[*(src2++)];
+            *(dst2++) = argb2rgba(pal[*(src2++)]);
 
         dst += dst_linesize;
         src += r->linesize[0];

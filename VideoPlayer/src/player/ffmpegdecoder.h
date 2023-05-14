@@ -25,7 +25,7 @@
 struct SubtitleFrame
 {
     SubtitleFrame(int width, int height) :
-        image(width, height, QImage::Format_ARGB32)
+        image(width, height, QImage::Format_RGBA8888)
     { image.fill(Qt::transparent); }
 
     QImage image;

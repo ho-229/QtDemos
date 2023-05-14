@@ -32,8 +32,6 @@ public:
 
     int timerId = -1;
 
-    QQuickWindow *window() const { return q_ptr->window(); }
-
     void updateTimer();
     void updateAudioOutput();
 
