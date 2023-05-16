@@ -126,8 +126,8 @@ public slots:
     void decode();
 
 private:
-    void decodeVideo();
-    void decodeAudio();
+    void decodeVideo(AVPacket *packet);
+    void decodeAudio(AVPacket *packet);
     void decodeSubtitle(AVPacket *packet);
 
     bool shouldDecode() const;
@@ -179,6 +179,7 @@ private:
     volatile bool m_runnable = false;               // Is FFmpegDecoder::decode() could run
     volatile bool m_isEnd = false;
 
+    int m_seekTarget = -1;                          // -1 means undefined
     volatile int m_position = 0;
     volatile qreal m_videoTime = 0.0;
     volatile qreal m_audioTime = 0.0;

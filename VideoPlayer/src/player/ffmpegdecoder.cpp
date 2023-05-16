@@ -363,6 +363,7 @@ void FFmpegDecoder::release()
     avformat_close_input(&m_formatContext);
 
     m_position = 0;
+    m_seekTarget = -1;
     emit positionChanged(0);
 
     SET_AVTIME(-1);
@@ -384,13 +385,9 @@ void FFmpegDecoder::seek(int position)
 
     // Clear frame cache
     this->clearCache();
+
     SET_AVTIME(-1);
-
-    const AVStream *seekStream = qIsNaN(m_fps) ? m_audioStream : m_videoStream;
-    const int flags = (position < m_position ? AVSEEK_FLAG_BACKWARD : 0) | AVSEEK_FLAG_FRAME;
-    av_seek_frame(m_formatContext, seekStream->index, static_cast<qint64>
-                  (position / av_q2d(seekStream->time_base)), flags);
-
+    m_seekTarget = position;
     m_position = position;
     emit positionChanged(m_position);
 
@@ -399,6 +396,10 @@ void FFmpegDecoder::seek(int position)
         avcodec_flush_buffers(m_videoCodecContext);
     if(m_audioCodecContext)
         avcodec_flush_buffers(m_audioCodecContext);
+
+    const AVStream *seekStream = qIsNaN(m_fps) ? m_audioStream : m_videoStream;
+    av_seek_frame(m_formatContext, seekStream->index, static_cast<qint64>
+                  (position / av_q2d(seekStream->time_base)), AVSEEK_FLAG_FRAME);
 
     // runs on the same thread so doesn't need to be called by signal
     this->decode();
@@ -532,14 +533,12 @@ void FFmpegDecoder::decode()
             break;
 
         // Video frame decode
-        if(m_videoStream && packet->stream_index == m_videoStream->index &&
-            !avcodec_send_packet(m_videoCodecContext, packet))
-            this->decodeVideo();
+        if(m_videoStream && packet->stream_index == m_videoStream->index)
+            this->decodeVideo(packet);
 
         // Audio frame decode
-        else if(m_audioStream && packet->stream_index == m_audioStream->index &&
-                 !avcodec_send_packet(m_audioCodecContext, packet))
-            this->decodeAudio();
+        else if(m_audioStream && packet->stream_index == m_audioStream->index)
+                this->decodeAudio(packet);
 
         // Subtitle frame decode
         else if(m_subtitleStream && packet->stream_index == m_subtitleStream->index)
@@ -552,10 +551,12 @@ void FFmpegDecoder::decode()
     av_packet_free(&packet);
 }
 
-void FFmpegDecoder::decodeVideo()
+void FFmpegDecoder::decodeVideo(AVPacket *packet)
 {
     AVFrame *frame = av_frame_alloc();
-    if(avcodec_receive_frame(m_videoCodecContext, frame))
+    if(avcodec_send_packet(m_videoCodecContext, packet) ||
+        avcodec_receive_frame(m_videoCodecContext, frame) ||
+        (!qIsNaN(m_fps) && second(frame->pts, m_videoStream->time_base) < m_seekTarget))
     {
         av_frame_free(&frame);
         return;
@@ -586,10 +587,12 @@ void FFmpegDecoder::decodeVideo()
     m_videoCache.append(frame);
 }
 
-void FFmpegDecoder::decodeAudio()
+void FFmpegDecoder::decodeAudio(AVPacket *packet)
 {
     AVFrame *frame = av_frame_alloc();
-    if(avcodec_receive_frame(m_audioCodecContext, frame))
+    if(avcodec_send_packet(m_audioCodecContext, packet) ||
+        avcodec_receive_frame(m_audioCodecContext, frame) ||
+        second(frame->pts, m_audioStream->time_base) < m_seekTarget)
     {
         av_frame_free(&frame);
         return;
