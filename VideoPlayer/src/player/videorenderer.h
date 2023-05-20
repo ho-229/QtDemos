@@ -13,7 +13,7 @@
 #include <QOpenGLVertexArrayObject>
 #include <QQuickFramebufferObject>
 #include <QOpenGLShaderProgram>
-#include <QScopedPointer>
+#include <QScopedArrayPointer>
 #include <QOpenGLBuffer>
 
 struct AVFrame;
@@ -50,7 +50,7 @@ private:
 
     AVFrame *m_frame = nullptr;
     SubtitleFrame *m_subtitle = nullptr;
-    QScopedPointer<const GLubyte> m_dummySubtitle;
+    QScopedArrayPointer<const GLubyte> m_dummySubtitle;
 
     bool m_textureAlloced = false;
 
