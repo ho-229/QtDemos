@@ -108,9 +108,14 @@ void FFmpegDecoder::setActiveVideoTrack(int index)
         return;
 
     // Convert to supported format if not
-    if(m_videoCodecContext->pix_fmt != AV_PIX_FMT_YUV420P &&
-        m_videoCodecContext->pix_fmt != AV_PIX_FMT_YUV444P)
+    switch(m_videoCodecContext->pix_fmt)
     {
+    case AV_PIX_FMT_YUV420P:
+    case AV_PIX_FMT_YUV420P10LE:
+    case AV_PIX_FMT_YUV444P:
+    case AV_PIX_FMT_YUV444P10LE:
+        break;
+    default:
         m_swsContext = sws_getContext(m_videoCodecContext->width,
                                       m_videoCodecContext->height,
                                       m_videoCodecContext->pix_fmt,
@@ -118,6 +123,7 @@ void FFmpegDecoder::setActiveVideoTrack(int index)
                                       m_videoCodecContext->height,
                                       AV_PIX_FMT_YUV420P,
                                       SWS_BICUBIC, nullptr, nullptr, nullptr);
+        break;
     }
 
     m_fps = av_q2d(m_videoStream->avg_frame_rate);

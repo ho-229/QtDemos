@@ -14,6 +14,7 @@
 #include <QQuickFramebufferObject>
 #include <QOpenGLShaderProgram>
 #include <QScopedArrayPointer>
+#include <QOpenGLTexture>
 #include <QOpenGLBuffer>
 
 struct AVFrame;
@@ -47,6 +48,7 @@ private:
 
     QSize m_size;
     QRect m_viewRect;
+    QOpenGLTexture::PixelFormat m_pixelFormat;
 
     AVFrame *m_frame = nullptr;
     SubtitleFrame *m_subtitle = nullptr;
@@ -62,7 +64,7 @@ private:
 
     void initializeProgram();
 
-    void initializeTexture(AVPixelFormat format, const QSize &size);
+    void initializeTexture(const QSize sizes[3]);
     void destoryTexture();
 };
 

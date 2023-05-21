@@ -141,25 +141,37 @@ void VideoRenderer::updateTexture()
         m_textureAlloced = false;
     }
 
-    auto updateColorMatrix = [&] {
+    auto updateUniformValues = [&](int is10Bit) {
         m_program.bind();
         // colorConversion
         m_program.setUniformValue(4, colorInverseMatrix(videoFormat.colorSpace, videoFormat.colorRange));
+
+        // is10Bit
+        m_program.setUniformValue(5, is10Bit);
         m_program.release();
     };
 
+    const QSize sizes420[3] = { videoFormat.size, videoFormat.size / 2,  videoFormat.size / 2};
+    const QSize sizes444[3] = { videoFormat.size, videoFormat.size, videoFormat.size };
+
     switch(videoFormat.pixelFormat)
     {
-    case AV_PIX_FMT_YUV420P:            // YUV 420p 12bpp
-        this->initializeTexture(videoFormat.pixelFormat, videoFormat.size);
+    case AV_PIX_FMT_YUV420P:
+    case AV_PIX_FMT_YUV420P10LE:
+        m_pixelFormat = videoFormat.pixelFormat == AV_PIX_FMT_YUV420P10LE ?
+                            QOpenGLTexture::LuminanceAlpha : QOpenGLTexture::Luminance;
+        this->initializeTexture(sizes420);
 
-        updateColorMatrix();
+        updateUniformValues(videoFormat.pixelFormat == AV_PIX_FMT_YUV420P10LE);
         m_textureAlloced = true;
         break;
-    case AV_PIX_FMT_YUV444P:            // YUV 444P 24bpp
-        this->initializeTexture(videoFormat.pixelFormat, videoFormat.size);
+    case AV_PIX_FMT_YUV444P:
+    case AV_PIX_FMT_YUV444P10LE:
+        m_pixelFormat = videoFormat.pixelFormat == AV_PIX_FMT_YUV444P10LE ?
+                            QOpenGLTexture::LuminanceAlpha : QOpenGLTexture::Luminance;
+        this->initializeTexture(sizes444);
 
-        updateColorMatrix();
+        updateUniformValues(videoFormat.pixelFormat == AV_PIX_FMT_YUV444P10LE);
         m_textureAlloced = true;
         break;
     default:
@@ -178,8 +190,8 @@ void VideoRenderer::updateTextureData()
     for(size_t i = 0; i < 3; ++i)
     {
         options.setRowLength(m_frame->linesize[i]);
-        m_texture[i]->setData(QOpenGLTexture::Luminance, QOpenGLTexture::UInt8,
-                              reinterpret_cast<const void *>(m_frame->data[i]), &options);
+        m_texture[i]->setData(m_pixelFormat, QOpenGLTexture::UInt8,
+                              reinterpret_cast<const void *>(m_frame->data[i]), nullptr);
     }
 
     auto subtitle = m_player_p->decoder->takeSubtitleFrame();
@@ -236,27 +248,23 @@ void VideoRenderer::initializeProgram()
     m_program.release();
 }
 
-void VideoRenderer::initializeTexture(AVPixelFormat format, const QSize &size)
+void VideoRenderer::initializeTexture(const QSize sizes[3])
 {
     for(size_t i = 0; i < 3; ++i)
     {
         m_texture[i] = new QOpenGLTexture(QOpenGLTexture::Target2D);
-        m_texture[i]->setFormat(QOpenGLTexture::LuminanceFormat);
+        m_texture[i]->setFormat(m_pixelFormat == QOpenGLTexture::Luminance ?
+                                    QOpenGLTexture::LuminanceFormat : QOpenGLTexture::LuminanceAlphaFormat);
         m_texture[i]->setMinMagFilters(QOpenGLTexture::Linear, QOpenGLTexture::Linear);
         m_texture[i]->setWrapMode(QOpenGLTexture::ClampToEdge);
-
-        if(format == AV_PIX_FMT_YUV420P && i > 0)
-            m_texture[i]->setSize(size.width() / 2, size.height() / 2);
-        else
-            m_texture[i]->setSize(size.width(), size.height());
-
-        m_texture[i]->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::UInt8);
+        m_texture[i]->setSize(sizes[i].width(), sizes[i].height());
+        m_texture[i]->allocateStorage(m_pixelFormat, QOpenGLTexture::UInt8);
     }
 
     m_texture[3] = new QOpenGLTexture(QOpenGLTexture::Target2D);
 
     // Temporary initialization, because the subtitle size is not known until the subtitle frame is decoded
-    this->updateSubtitleTexture(size);
+    this->updateSubtitleTexture(sizes[0]);      // sizes[0](Y channel) must be original size
 }
 
 void VideoRenderer::updateSubtitleTexture(const QSize &size)
