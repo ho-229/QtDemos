@@ -189,9 +189,10 @@ void VideoRenderer::updateTextureData()
 
     for(size_t i = 0; i < 3; ++i)
     {
-        options.setRowLength(m_frame->linesize[i]);
+        options.setRowLength(m_pixelFormat == QOpenGLTexture::Luminance ?
+                                 m_frame->linesize[i] : m_frame->linesize[i] / 2);
         m_texture[i]->setData(m_pixelFormat, QOpenGLTexture::UInt8,
-                              reinterpret_cast<const void *>(m_frame->data[i]), nullptr);
+                              reinterpret_cast<const void *>(m_frame->data[i]), &options);
     }
 
     auto subtitle = m_player_p->decoder->takeSubtitleFrame();
