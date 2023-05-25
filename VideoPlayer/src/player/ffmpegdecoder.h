@@ -32,14 +32,6 @@ struct SubtitleFrame
     qreal start = 0;
 };
 
-struct VideoFormat
-{
-    QSize size;
-    AVPixelFormat pixelFormat;
-    AVColorSpace colorSpace;
-    AVColorRange colorRange;
-};
-
 class FFmpegDecoder final : public QObject
 {
     Q_OBJECT
@@ -90,7 +82,6 @@ public:
      */
     int position() const;
 
-    const VideoFormat videoFormat() const;
     const QAudioFormat audioFormat() const;
 
     AVFrame *takeVideoFrame();

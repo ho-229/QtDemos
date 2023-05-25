@@ -259,19 +259,6 @@ int FFmpegDecoder::position() const
     return m_position;
 }
 
-const VideoFormat FFmpegDecoder::videoFormat() const
-{
-    if(!m_videoCodecContext)
-        return {{}, AV_PIX_FMT_NONE, AVCOL_SPC_NB, AVCOL_RANGE_NB};
-
-    return {
-        QSize(m_videoCodecContext->width, m_videoCodecContext->height),
-        m_swsContext ? AV_PIX_FMT_YUV420P : m_videoCodecContext->pix_fmt,
-        m_videoCodecContext->colorspace,
-        m_videoCodecContext->color_range,
-    };
-}
-
 int FFmpegDecoder::videoTrackCount() const
 {
     return m_videoIndexes.size();

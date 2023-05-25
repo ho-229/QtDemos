@@ -5,10 +5,7 @@
  */
 
 #include "videorenderer.h"
-#include "videoplayer_p.h"
 
-#include <QQuickWindow>
-#include <QOpenGLTexture>
 #include <QGenericMatrix>
 #include <QOpenGLPixelTransferOptions>
 #include <QOpenGLFramebufferObjectFormat>
@@ -46,17 +43,18 @@ static const float colorinverseMatrices[][3 * 3] = {
     }
 };
 
+enum Flag
+{
+    VideoFrameUpdate = 1,
+    SubtitleFrameUpdate = 2,
+};
+
 static QMatrix3x3 colorInverseMatrix(AVColorSpace space, AVColorRange range);
 static void adjustColorRange(QMatrix3x3 &inverse, AVColorRange range);
 
-VideoRenderer::VideoRenderer(VideoPlayerPrivate * const player_p)
-    : m_player_p(player_p)
+VideoRenderer::VideoRenderer()
 {
-    if(!m_player_p)
-        return;
-
     this->initializeOpenGLFunctions();
-
     this->initializeProgram();
 }
 
@@ -107,83 +105,47 @@ QOpenGLFramebufferObject *VideoRenderer::createFramebufferObject(const QSize &si
 
 void VideoRenderer::synchronize(QQuickFramebufferObject *)
 {
-    // Destory texture
-    if(m_player_p->isFormatUpdated && m_textureAlloced)
+    if(m_flags & VideoFrameUpdate)
     {
-        this->updateTexture();
-        m_player_p->isFormatUpdated = false;
-    }
-    else if(m_player_p->isUpdated && (m_frame = m_player_p->decoder->takeVideoFrame()))
-    {
-        // Allocate texture when the first frame is encountered
-        if(m_player_p->isFormatUpdated)
+        if(m_frame)
         {
-            this->updateTexture();
-            this->resize();
+            // Allocate texture when the first frame is encountered
+            if(!m_textureAlloced)
+            {
+                m_videoSize = {m_frame->width, m_frame->height};
+                this->setupTexture();
+                this->resize();
+            }
 
-            m_player_p->isFormatUpdated = false;
+            this->updateVideoTextureData();
         }
-
-        this->updateTextureData();
-        av_frame_free(&m_frame);
-
-        m_player_p->isUpdated = false;
+        else if(m_textureAlloced)
+            this->destoryTexture();
     }
+
+    if(m_flags & SubtitleFrameUpdate && m_textureAlloced)
+        this->updateSubtitleTextureData();
+
+    m_flags = 0;
 }
 
-void VideoRenderer::updateTexture()
+void VideoRenderer::updateVideoFrame(AVFrame *frame)
 {
-    const auto videoFormat = m_player_p->decoder->videoFormat();
-
-    if(m_textureAlloced)
-    {
-        this->destoryTexture();
-        m_textureAlloced = false;
-    }
-
-    auto updateUniformValues = [&](int is10Bit) {
-        m_program.bind();
-        // colorConversion
-        m_program.setUniformValue(4, colorInverseMatrix(videoFormat.colorSpace, videoFormat.colorRange));
-
-        // is10Bit
-        m_program.setUniformValue(5, is10Bit);
-        m_program.release();
-    };
-
-    const QSize sizes420[3] = { videoFormat.size, videoFormat.size / 2,  videoFormat.size / 2};
-    const QSize sizes444[3] = { videoFormat.size, videoFormat.size, videoFormat.size };
-
-    switch(videoFormat.pixelFormat)
-    {
-    case AV_PIX_FMT_YUV420P:
-    case AV_PIX_FMT_YUV420P10LE:
-        m_pixelFormat = videoFormat.pixelFormat == AV_PIX_FMT_YUV420P10LE ?
-                            QOpenGLTexture::LuminanceAlpha : QOpenGLTexture::Luminance;
-        this->initializeTexture(sizes420);
-
-        updateUniformValues(videoFormat.pixelFormat == AV_PIX_FMT_YUV420P10LE);
-        m_textureAlloced = true;
-        break;
-    case AV_PIX_FMT_YUV444P:
-    case AV_PIX_FMT_YUV444P10LE:
-        m_pixelFormat = videoFormat.pixelFormat == AV_PIX_FMT_YUV444P10LE ?
-                            QOpenGLTexture::LuminanceAlpha : QOpenGLTexture::Luminance;
-        this->initializeTexture(sizes444);
-
-        updateUniformValues(videoFormat.pixelFormat == AV_PIX_FMT_YUV444P10LE);
-        m_textureAlloced = true;
-        break;
-    default:
-        break;
-    }
+    m_frame = frame;
+    m_flags |= VideoFrameUpdate;
 }
 
-void VideoRenderer::updateTextureData()
+void VideoRenderer::updateSubtitleFrame(SubtitleFrame *frame)
 {
-    if(!m_textureAlloced)
+    if(frame == m_subtitle)
         return;
 
+    m_subtitle = frame;
+    m_flags |= SubtitleFrameUpdate;
+}
+
+void VideoRenderer::updateVideoTextureData()
+{
     QOpenGLPixelTransferOptions options;
     options.setImageHeight(m_frame->height);
 
@@ -195,20 +157,20 @@ void VideoRenderer::updateTextureData()
                               reinterpret_cast<const void *>(m_frame->data[i]), &options);
     }
 
-    auto subtitle = m_player_p->decoder->takeSubtitleFrame();
-    if(subtitle != m_subtitle)
-    {
-        m_subtitle = subtitle;
-        if(subtitle)
-        {
-            if(m_texture[3]->width() != subtitle->image.width() || m_texture[3]->height() != subtitle->image.height())
-                this->updateSubtitleTexture(subtitle->image.size());
+    av_frame_free(&m_frame);
+}
 
-            m_texture[3]->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, subtitle->image.constBits());
-        }
-        else        // Cleanup texture data
-            m_texture[3]->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, m_dummySubtitle.data());
+void VideoRenderer::updateSubtitleTextureData()
+{
+    const void *data = m_dummySubtitle.data();
+    if(m_subtitle)
+    {
+        if(m_texture[3]->width() != m_subtitle->image.width() || m_texture[3]->height() != m_subtitle->image.height())
+            this->updateSubtitleTexture(m_subtitle->image.size());
+
+        data = m_subtitle->image.constBits();
     }
+    m_texture[3]->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, data);
 }
 
 void VideoRenderer::initializeProgram()
@@ -249,7 +211,43 @@ void VideoRenderer::initializeProgram()
     m_program.release();
 }
 
-void VideoRenderer::initializeTexture(const QSize sizes[3])
+void VideoRenderer::setupTexture()
+{
+    auto updateUniformValues = [&](int is10Bit) {
+        m_program.bind();
+        // colorConversion
+        m_program.setUniformValue(4, colorInverseMatrix(m_frame->colorspace, m_frame->color_range));
+
+        // is10Bit
+        m_program.setUniformValue(5, is10Bit);
+        m_program.release();
+    };
+
+    const QSize sizes420[3] = { m_videoSize, m_videoSize / 2,  m_videoSize / 2};
+    const QSize sizes444[3] = { m_videoSize };
+
+    switch(m_frame->format)
+    {
+    case AV_PIX_FMT_YUV420P:
+    case AV_PIX_FMT_YUV420P10LE:
+        m_pixelFormat = m_frame->format == AV_PIX_FMT_YUV420P10LE ?
+                            QOpenGLTexture::LuminanceAlpha : QOpenGLTexture::Luminance;
+        this->allocateTexture(sizes420);
+        updateUniformValues(m_frame->format == AV_PIX_FMT_YUV420P10LE);
+        break;
+    case AV_PIX_FMT_YUV444P:
+    case AV_PIX_FMT_YUV444P10LE:
+        m_pixelFormat = m_frame->format == AV_PIX_FMT_YUV444P10LE ?
+                            QOpenGLTexture::LuminanceAlpha : QOpenGLTexture::Luminance;
+        this->allocateTexture(sizes444);
+        updateUniformValues(m_frame->format == AV_PIX_FMT_YUV444P10LE);
+        break;
+    default:
+        qCritical() << "Unsupport pixel format:" << m_frame->format;
+    }
+}
+
+void VideoRenderer::allocateTexture(const QSize sizes[3])
 {
     for(size_t i = 0; i < 3; ++i)
     {
@@ -266,6 +264,8 @@ void VideoRenderer::initializeTexture(const QSize sizes[3])
 
     // Temporary initialization, because the subtitle size is not known until the subtitle frame is decoded
     this->updateSubtitleTexture(sizes[0]);      // sizes[0](Y channel) must be original size
+
+    m_textureAlloced = true;
 }
 
 void VideoRenderer::updateSubtitleTexture(const QSize &size)
@@ -284,13 +284,11 @@ void VideoRenderer::updateSubtitleTexture(const QSize &size)
 
 void VideoRenderer::resize()
 {
-    const QRect screenRect(QPoint(0, 0), m_size);
-    QSize videoSize(m_player_p->decoder->videoFormat().size);
-
-    if(!videoSize.isValid())
+    if(!m_videoSize.isValid())
         return;
 
-    m_viewRect.setSize(videoSize.scaled(m_size, Qt::KeepAspectRatio));
+    const QRect screenRect(QPoint(0, 0), m_size);
+    m_viewRect.setSize(m_videoSize.scaled(m_size, Qt::KeepAspectRatio));
     m_viewRect.moveCenter(screenRect.center());
 }
 
@@ -298,6 +296,8 @@ void VideoRenderer::destoryTexture()
 {
     for(size_t i = 0; i < 4; ++i)
         delete m_texture[i];
+
+    m_textureAlloced = false;
 }
 
 static void adjustColorRange(QMatrix3x3 &inverse, AVColorRange range)

@@ -59,7 +59,8 @@ VideoPlayer::~VideoPlayer()
 
 QQuickFramebufferObject::Renderer *VideoPlayer::createRenderer() const
 {
-    return new VideoRenderer(d_ptr);    // Create custom renderer
+    d_ptr->videoRenderer = new VideoRenderer;
+    return d_ptr->videoRenderer;    // Create custom renderer
 }
 
 void VideoPlayer::setSource(const QUrl& source)
@@ -101,7 +102,6 @@ void VideoPlayer::play()
             }
 
             emit loaded();
-            d->isFormatUpdated = true;
 
             const auto fps = d->decoder->fps();
             d->averageInterval = qIsNaN(fps) ? 1000.0 : 1000 / fps;
@@ -155,7 +155,7 @@ void VideoPlayer::stop()
 
     emit positionChanged(0);
 
-    d->isFormatUpdated = true;
+    d->videoRenderer->updateVideoFrame(nullptr);
     this->update();
 
     d->state = Stopped;
@@ -322,7 +322,10 @@ void VideoPlayer::timerEvent(QTimerEvent *)
     Q_D(VideoPlayer);
 
     // Update video frame
-    d->isUpdated = true;
+    AVFrame *frame = d->decoder->takeVideoFrame();
+    if(frame)
+        d->videoRenderer->updateVideoFrame(frame);
+    d->videoRenderer->updateSubtitleFrame(d->decoder->takeSubtitleFrame());
     this->update();
 
     if(!d->decoder->hasFrame() && d->decoder->isEnd())

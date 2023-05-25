@@ -26,7 +26,7 @@ class VideoRenderer : public QQuickFramebufferObject::Renderer,
                       protected QOpenGLFunctions_4_4_Core
 {
 public:
-    VideoRenderer(VideoPlayerPrivate *const player_p);
+    VideoRenderer();
     ~VideoRenderer() Q_DECL_OVERRIDE;
 
     void render() Q_DECL_OVERRIDE;
@@ -36,19 +36,22 @@ public:
 
     void synchronize(QQuickFramebufferObject *) Q_DECL_OVERRIDE;
 
+    void updateVideoFrame(AVFrame *frame);
+    void updateSubtitleFrame(SubtitleFrame *frame);
+
 private:
     QOpenGLTexture *m_texture[4] = { nullptr };    // [0]: Y, [1]: U, [2]: V, [3]: Subtitle
 
     QOpenGLBuffer m_vbo;
     QOpenGLVertexArrayObject m_vao;
 
-    VideoPlayerPrivate *const m_player_p = nullptr;
-
     QOpenGLShaderProgram m_program;
 
-    QSize m_size;
+    QSize m_size, m_videoSize;
     QRect m_viewRect;
     QOpenGLTexture::PixelFormat m_pixelFormat;
+
+    quint8 m_flags;
 
     AVFrame *m_frame = nullptr;
     SubtitleFrame *m_subtitle = nullptr;
@@ -56,15 +59,17 @@ private:
 
     bool m_textureAlloced = false;
 
-    void updateTexture();
-    void updateTextureData();
-    void updateSubtitleTexture(const QSize &size);
+    void updateVideoTextureData();
+    void updateSubtitleTextureData();
 
     void resize();
 
     void initializeProgram();
 
-    void initializeTexture(const QSize sizes[3]);
+    void setupTexture();
+    void allocateTexture(const QSize sizes[3]);
+    void updateSubtitleTexture(const QSize &size);
+
     void destoryTexture();
 };
 

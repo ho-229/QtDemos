@@ -11,6 +11,7 @@
 
 class AudioOutput;
 class FFmpegDecoder;
+class VideoRenderer;
 
 class VideoPlayerPrivate
 {
@@ -20,11 +21,9 @@ public:
     FFmpegDecoder *decoder = nullptr;
 
     AudioOutput *audioOutput = nullptr;
+    VideoRenderer *videoRenderer = nullptr;
 
     VideoPlayer::State state = VideoPlayer::Stopped;
-
-    volatile bool isUpdated = false;
-    volatile bool isFormatUpdated = false;
 
     int interval = 0;
     int maxInterval = 0;
