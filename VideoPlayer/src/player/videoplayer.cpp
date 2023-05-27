@@ -24,7 +24,8 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
     d->decoder->moveToThread(new QThread(this));
     d->decoder->thread()->start();
 
-    d->audioOutput = new AudioOutput(d->decoder, this);
+    d->audioOutput = new AudioOutput([d](char *data, qint64 maxlen)
+                                     { return d->updateAudioData(data, maxlen); }, this);
 
     QObject::connect(d->decoder, &FFmpegDecoder::activeVideoTrackChanged,
                      this, &VideoPlayer::activeVideoTrackChanged);
@@ -87,36 +88,29 @@ void VideoPlayer::play()
 
     if(d->state == Playing)
         return;
-    else if(d->state == Stopped)
+
+    if(d->state == Stopped && d->decoder->state() == FFmpegDecoder::Closed)
     {
-        if(d->decoder->state() == FFmpegDecoder::Closed)
+        QEventLoop loop;
+        QObject::connect(d->decoder, &FFmpegDecoder::stateChanged, &loop, &QEventLoop::exit);
+        QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::load, Qt::QueuedConnection);
+
+        if(loop.exec() != FFmpegDecoder::Opened)
         {
-            QEventLoop loop;
-            QObject::connect(d->decoder, &FFmpegDecoder::stateChanged, &loop, &QEventLoop::exit);
-            QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::load, Qt::QueuedConnection);
-
-            if(loop.exec() != FFmpegDecoder::Opened)
-            {
-                emit errorOccurred(this->errorString());
-                return;
-            }
-
-            emit loaded();
-
-            const auto fps = d->decoder->fps();
-            d->averageInterval = qIsNaN(fps) ? 1000.0 : 1000 / fps;
-            d->maxInterval = d->averageInterval * 2;
-            d->interval = d->averageInterval;
+            emit errorOccurred(this->errorString());
+            return;
         }
 
-        d->timerId = this->startTimer(d->interval, Qt::PreciseTimer);
-        d->audioOutput->play();
+        emit loaded();
+
+        const auto fps = d->decoder->fps();
+        d->averageInterval = qIsNaN(fps) ? 1000.0 : 1000 / fps;
+        d->maxInterval = d->averageInterval * 2;
+        d->interval = d->averageInterval;
     }
-    else if(d->state == Paused)
-    {
-        d->timerId = this->startTimer(d->interval, Qt::PreciseTimer);
-        d->audioOutput->resume();
-    }
+
+    d->timerId = this->startTimer(d->interval, Qt::PreciseTimer);
+    d->audioOutput->play();
 
     d->state = Playing;
     emit playbackStateChanged(Playing);

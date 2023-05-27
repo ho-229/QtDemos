@@ -435,27 +435,21 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
     return frame;
 }
 
-qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
+AVFrame *FFmpegDecoder::takeAudioFrame(qint64 maxlen)
 {
-    if(m_state == Closed || !len)
-        return {};
+    if(m_state == Closed)
+        return nullptr;
 
-    qint64 free = len;
-    char *dest = data;
+    AVFrame *frame = nullptr;
 
-    m_mutex.lock();
-    while(!m_audioCache.isEmpty() && m_audioCache.first()->linesize[0] <= free)
+    QMutexLocker locker(&m_mutex);
+    if(!m_audioCache.isEmpty())
     {
-        AVFrame *frame = m_audioCache.takeFirst();
-        const int size = frame->linesize[0];
+        if(maxlen < m_audioCache.first()->linesize[0])
+            return nullptr;
 
+        frame = m_audioCache.takeFirst();
         m_audioTime = second(frame->pts, m_audioStream->time_base);
-
-        memcpy(dest, frame->data[0], size);
-        av_frame_free(&frame);
-
-        free -= size;
-        dest += size;
 
         if(qIsNaN(m_fps) && m_position != static_cast<int>(m_audioTime))
         {
@@ -472,9 +466,7 @@ qint64 FFmpegDecoder::takeAudioData(char *data, qint64 len)
         QMetaObject::invokeMethod(this, &FFmpegDecoder::decode);
     }
 
-    m_mutex.unlock();
-
-    return len - free;
+    return frame;
 }
 
 SubtitleFrame *FFmpegDecoder::takeSubtitleFrame()

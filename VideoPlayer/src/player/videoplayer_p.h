@@ -34,6 +34,8 @@ public:
     void updateTimer();
     void updateAudioOutput();
 
+    qint64 updateAudioData(char *data, qint64 maxlen);
+
     /**
      * @brief Audio-to-video synchronization
      */

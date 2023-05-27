@@ -7,40 +7,39 @@
 #ifndef AUDIOOUTPUT_H
 #define AUDIOOUTPUT_H
 
-#include <QAudio>
+#include <functional>
+
 #include <QObject>
 #include <QAudioFormat>
 
 class QAudioOutput;
 class AudioDevice;
-class FFmpegDecoder;
 
 class AudioOutput : public QObject
 {
     Q_OBJECT
 public:
-    explicit AudioOutput(FFmpegDecoder *decoder, QObject *parent = nullptr);
+    using Callback = std::function<qint64(char *, qint64)>;
+
+    explicit AudioOutput(const Callback &callback, QObject *parent = nullptr);
     ~AudioOutput() Q_DECL_OVERRIDE;
 
     /**
      * @brief Update audio output when the audio format changed
      */
-    void updateAudioOutput();
+    void updateAudioOutput(const QAudioFormat &format);
 
     void setVolume(qreal volume);
     qreal volume() const;
 
     void play();
     void pause();
-    void resume();
     void stop();
 
     /**
      * @brief Reset the buffer of audio output
      */
     void reset();
-
-signals:
 
 private:
     QAudioOutput *m_output = nullptr;

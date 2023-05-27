@@ -85,7 +85,7 @@ public:
     const QAudioFormat audioFormat() const;
 
     AVFrame *takeVideoFrame();
-    qint64 takeAudioData(char *data, qint64 len);
+    AVFrame *takeAudioFrame(qint64 maxlen);
     SubtitleFrame *takeSubtitleFrame();
 
     /**

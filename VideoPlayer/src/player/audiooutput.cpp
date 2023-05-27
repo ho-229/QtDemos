@@ -5,35 +5,35 @@
  */
 
 #include "audiooutput.h"
-#include "ffmpegdecoder.h"
 
+#include <QDebug>
 #include <QIODevice>
 #include <QAudioOutput>
 
 class AudioDevice final : public QIODevice
 {
-    FFmpegDecoder *m_decoder = nullptr;
+    const AudioOutput::Callback m_callback;
 public:
-    AudioDevice(FFmpegDecoder *decoder, QObject *parent = nullptr)
-        : QIODevice(parent),
-          m_decoder(decoder)
+    AudioDevice(const AudioOutput::Callback &callback, QObject *parent = nullptr)
+        : QIODevice(parent)
+        , m_callback(callback)
     { this->setOpenMode(QIODevice::ReadOnly); }
 
     qint64 readData(char *data, qint64 maxlen) override
-    { return m_decoder->takeAudioData(data, maxlen); }
+    {
+        if(!maxlen)
+            return 0;
+
+        return m_callback(data, maxlen);
+    }
 
     qint64 writeData(const char *, qint64) override { return 0; }
-
-    FFmpegDecoder *decoder() const { return m_decoder; }
 };
 
-AudioOutput::AudioOutput(FFmpegDecoder *decoder, QObject *parent) :
+AudioOutput::AudioOutput(const Callback &callback, QObject *parent) :
     QObject(parent)
 {
-    if(!decoder)
-        FUNC_ERROR << ": Decoder is not valid";
-
-    m_audioDevice = new AudioDevice(decoder, this);
+    m_audioDevice = new AudioDevice(callback, this);
 }
 
 AudioOutput::~AudioOutput()
@@ -41,12 +41,11 @@ AudioOutput::~AudioOutput()
     this->stop();
 }
 
-void AudioOutput::updateAudioOutput()
+void AudioOutput::updateAudioOutput(const QAudioFormat &format)
 {
     if(m_output)
         this->stop();
 
-    const auto format = m_audioDevice->decoder()->audioFormat();
     if(format.isValid())
         m_output = new QAudioOutput(format, this);
 }
@@ -70,19 +69,13 @@ void AudioOutput::play()
     m_output->start(m_audioDevice);
 
     if (m_output->error() != QAudio::NoError)
-        FUNC_ERROR << ": " << m_output->error();
+        qCritical() << __PRETTY_FUNCTION__ << ":" << m_output->error();
 }
 
 void AudioOutput::pause()
 {
     if (m_output)
         m_output->reset();
-}
-
-void AudioOutput::resume()
-{
-    if (m_output)
-        m_output->start(m_audioDevice);
 }
 
 void AudioOutput::stop()

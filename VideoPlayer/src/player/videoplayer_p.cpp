@@ -9,6 +9,7 @@
 #include "config.h"
 #include "audiooutput.h"
 #include "ffmpegdecoder.h"
+#include "qglobal.h"
 
 static inline int sigmoid(qreal value);
 static inline void updateAverage(qreal &average, qreal sample);
@@ -26,15 +27,32 @@ void VideoPlayerPrivate::updateTimer()
 
 void VideoPlayerPrivate::updateAudioOutput()
 {
-    audioOutput->updateAudioOutput();
+    audioOutput->updateAudioOutput(decoder->audioFormat());
 
-    if(state != VideoPlayer::Stopped)
-    {
+    if(state == VideoPlayer::Playing)
         audioOutput->play();
+}
 
-        if(state == VideoPlayer::Paused)
-            audioOutput->pause();
+qint64 VideoPlayerPrivate::updateAudioData(char *data, qint64 maxlen)
+{
+    if(!data)
+        return 0;
+
+    qint64 free = maxlen;
+    char *dest = data;
+    AVFrame *frame = nullptr;
+
+    while((frame = decoder->takeAudioFrame(free)))
+    {
+        const qint64 size = frame->linesize[0];
+        memcpy(dest, frame->data[0], size);
+        av_frame_free(&frame);
+
+        dest += size;
+        free -= size;
     }
+
+    return maxlen - free;
 }
 
 /**
