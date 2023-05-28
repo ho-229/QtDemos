@@ -77,11 +77,6 @@ public:
      */
     int duration() const;
 
-    /**
-     * @return current playback position
-     */
-    int position() const;
-
     const QAudioFormat audioFormat() const;
 
     AVFrame *takeVideoFrame();
@@ -94,11 +89,11 @@ public:
      */
     qreal fps() const;
 
-    qreal diff() const;
+    static qreal framePts(const AVFrame *frame);
+    static qreal frameDuration(const AVFrame *frame);
 
 signals:
     void stateChanged(FFmpegDecoder::State);
-    void positionChanged(int);
 
     void activeVideoTrackChanged(int);
     void activeAudioTrackChanged(int);
@@ -171,9 +166,6 @@ private:
     volatile bool m_isEnd = false;
 
     int m_seekTarget = -1;                          // -1 means undefined
-    volatile int m_position = 0;
-    volatile qreal m_videoTime = 0.0;
-    volatile qreal m_audioTime = 0.0;
 
     QList<int> m_videoIndexes;
     QList<int> m_audioIndexes;

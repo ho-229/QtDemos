@@ -41,6 +41,8 @@ public:
      */
     void reset();
 
+    bool isLowBytesFree() const;
+
 private:
     QAudioOutput *m_output = nullptr;
     AudioDevice *m_audioDevice = nullptr;

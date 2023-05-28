@@ -17,11 +17,8 @@
 
 static std::once_flag initFlag;
 
-#define FUNC_ERROR qCritical() << __FUNCTION__
-#define FFMPEG_ERROR(x) FUNC_ERROR << ":" << __LINE__ \
+#define FFMPEG_ERROR(x) qCritical() << __PRETTY_FUNCTION__ << ":" << __LINE__ \
                         << ":" << av_make_error_string(m_errorBuf, sizeof (m_errorBuf), x)
-#define SET_AVTIME(x) m_videoTime = x; \
-                      m_audioTime = x;
 
 /**
  * @ref ffmpeg.c line:181 : static void sub2video_copy_rect()
@@ -34,8 +31,7 @@ template <typename T>
 static void findStreams(const AVFormatContext *format, AVMediaType type, QList<T> &list);
 
 inline static qreal second(const qint64 pts, const AVRational timebase);
-inline static qreal decodedDuration(const QContiguousCache<AVFrame *> &cache,
-                                    AVRational timebase, qreal current);
+inline static qreal decodedDuration(const QContiguousCache<AVFrame *> &cache);
 
 FFmpegDecoder::FFmpegDecoder(QObject *parent) :
     QObject(parent)
@@ -83,7 +79,6 @@ void FFmpegDecoder::setActiveVideoTrack(int index)
         return;
 
     this->clearCache();
-    SET_AVTIME(-1);         // Set m_videoTime and m_audioTime as unknown
 
     // Release previous active track
     if(m_videoCodecContext && m_videoStream)
@@ -138,7 +133,6 @@ void FFmpegDecoder::setActiveAudioTrack(int index)
         return;
 
     this->clearCache();
-    SET_AVTIME(-1);         // Set m_videoTime and m_audioTime as unknown
 
     // Release previous active track
     if(m_audioCodecContext && m_audioStream)
@@ -193,7 +187,6 @@ void FFmpegDecoder::setActiveSubtitleTrack(int index)
     m_subtitleIndex = -1;
 
     this->clearCache();
-    SET_AVTIME(-1);         // Set m_videoTime and m_audioTime as unknown
 
     if(index < 0 || !m_videoCodecContext)
         return;
@@ -252,11 +245,6 @@ int FFmpegDecoder::duration() const
         return 0;
 
     return static_cast<int>(m_formatContext->duration / AV_TIME_BASE);
-}
-
-int FFmpegDecoder::position() const
-{
-    return m_position;
 }
 
 int FFmpegDecoder::videoTrackCount() const
@@ -355,11 +343,7 @@ void FFmpegDecoder::release()
 
     avformat_close_input(&m_formatContext);
 
-    m_position = 0;
     m_seekTarget = -1;
-    emit positionChanged(0);
-
-    SET_AVTIME(-1);
 
     m_videoIndexes.clear();
     m_audioIndexes.clear();
@@ -373,18 +357,14 @@ void FFmpegDecoder::seek(int position)
 {
     m_runnable = true;
 
-    if(m_state == Closed || position == m_position)
+    if(m_state == Closed)
         return;
 
     // Clear frame cache
     this->clearCache();
 
-    SET_AVTIME(-1);
     m_seekTarget = position;
-    m_position = position;
-    emit positionChanged(m_position);
 
-    // Flush the codec buffers
     if(m_videoCodecContext)
         avcodec_flush_buffers(m_videoCodecContext);
     if(m_audioCodecContext)
@@ -407,23 +387,10 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
     m_mutex.lock();
 
     if(!m_videoCache.isEmpty())
-    {
         frame = m_videoCache.takeFirst();
 
-        if(!qIsNaN(m_fps))
-        {
-            m_videoTime = second(frame->pts, m_videoStream->time_base);
-
-            if(m_position != static_cast<int>(m_videoTime))
-            {
-                m_position = static_cast<int>(m_videoTime);
-                emit positionChanged(m_position);
-            }
-        }
-    }
-
     if(!m_isEnd && !m_isDecoding && !qIsNaN(m_fps) &&
-        decodedDuration(m_videoCache, m_videoStream->time_base, m_videoTime) < MIN_DECODED_DURATION)
+        decodedDuration(m_videoCache) < MIN_DECODED_DURATION)
     {
         m_isDecoding = true;
         // Asynchronous call FFmpegDecoder::decode()
@@ -449,17 +416,10 @@ AVFrame *FFmpegDecoder::takeAudioFrame(qint64 maxlen)
             return nullptr;
 
         frame = m_audioCache.takeFirst();
-        m_audioTime = second(frame->pts, m_audioStream->time_base);
-
-        if(qIsNaN(m_fps) && m_position != static_cast<int>(m_audioTime))
-        {
-            m_position = static_cast<int>(m_audioTime);
-            emit positionChanged(m_position);
-        }
     }
 
     if(!m_isEnd && !m_isDecoding &&
-        decodedDuration(m_audioCache, m_audioStream->time_base, m_audioTime) < MIN_DECODED_DURATION)
+        decodedDuration(m_audioCache) < MIN_DECODED_DURATION)
     {
         m_isDecoding = true;
         // Asynchronous call FFmpegDecoder::decode()
@@ -473,8 +433,8 @@ SubtitleFrame *FFmpegDecoder::takeSubtitleFrame()
 {
     QMutexLocker locker(&m_mutex);
 
-    if(!m_subtitleCache.isEmpty() && m_subtitleCache.first()->start <= m_videoTime)
-        m_currentSubtitle = m_subtitleCache.takeFirst();
+//    if(!m_subtitleCache.isEmpty() && m_subtitleCache.first()->start <= m_videoTime)
+//        m_currentSubtitle = m_subtitleCache.takeFirst();
 
     return m_currentSubtitle.data();
 }
@@ -500,10 +460,20 @@ qreal FFmpegDecoder::fps() const
     return m_fps;
 }
 
-qreal FFmpegDecoder::diff() const
+qreal FFmpegDecoder::framePts(const AVFrame *frame)
 {
-    // m_videoTime and m_audioTime must be known(non-negative)
-    return m_videoTime >= 0 && m_audioTime >= 0 ? m_audioTime - m_videoTime - AUDIO_DELAY : 0;
+    if(frame->pts == AV_NOPTS_VALUE)
+        return 0;
+
+    return static_cast<qreal>(frame->pts) * av_q2d(frame->time_base);
+}
+
+qreal FFmpegDecoder::frameDuration(const AVFrame *frame)
+{
+    if(!frame->duration)
+        return 0;
+
+    return static_cast<qreal>(frame->duration) * av_q2d(frame->time_base);
 }
 
 void FFmpegDecoder::decode()
@@ -568,6 +538,8 @@ void FFmpegDecoder::decodeVideo(AVPacket *packet)
         frame = swsFrame;
     }
 
+    frame->time_base = m_videoStream->time_base;
+
     QMutexLocker locker(&m_mutex);
     m_videoCache.append(frame);
 }
@@ -600,6 +572,8 @@ void FFmpegDecoder::decodeAudio(AVPacket *packet)
         av_frame_free(&frame);
         frame = swrFrame;
     }
+
+    frame->time_base = m_audioStream->time_base;
 
     QMutexLocker locker(&m_mutex);
     m_audioCache.append(frame);
@@ -640,9 +614,9 @@ bool FFmpegDecoder::shouldDecode() const
     bool enough = true;
 
     if(!qIsNaN(m_fps) && m_videoStream)
-        enough &= decodedDuration(m_videoCache, m_videoStream->time_base, m_videoTime) > MAX_DECODED_DURATION;
+        enough &= decodedDuration(m_videoCache) > MAX_DECODED_DURATION;
     if(m_audioStream)
-        enough &= decodedDuration(m_audioCache, m_audioStream->time_base, m_audioTime) > MAX_DECODED_DURATION;
+        enough &= decodedDuration(m_audioCache) > MAX_DECODED_DURATION;
 
     return !enough;
 }
@@ -872,8 +846,10 @@ inline static qreal second(const qint64 pts, const AVRational timebase)
     return static_cast<qreal>(pts) * av_q2d(timebase);
 }
 
-inline static qreal decodedDuration(const QContiguousCache<AVFrame *> &cache,
-                                    AVRational timebase, qreal current)
+inline static qreal decodedDuration(const QContiguousCache<AVFrame *> &cache)
 {
-    return cache.isEmpty() ? 0 : second(cache.last()->pts, timebase) - current;
+    if(cache.isEmpty())
+        return 0;
+
+    return FFmpegDecoder::framePts(cache.last()) - FFmpegDecoder::framePts(cache.first());
 }

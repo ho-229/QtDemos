@@ -33,8 +33,6 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
                      this, &VideoPlayer::activeAudioTrackChanged);
     QObject::connect(d->decoder, &FFmpegDecoder::activeSubtitleTrackChanged,
                      this, &VideoPlayer::activeSubtitleTrackChanged);
-    QObject::connect(d->decoder, &FFmpegDecoder::positionChanged,
-                     this, &VideoPlayer::positionChanged);
 
     QObject::connect(d->decoder, &FFmpegDecoder::activeAudioTrackChanged,
                      this, [this] { d_ptr->updateAudioOutput(); });
@@ -88,8 +86,7 @@ void VideoPlayer::play()
 
     if(d->state == Playing)
         return;
-
-    if(d->state == Stopped && d->decoder->state() == FFmpegDecoder::Closed)
+    else if(d->state == Stopped && d->decoder->state() == FFmpegDecoder::Closed)
     {
         QEventLoop loop;
         QObject::connect(d->decoder, &FFmpegDecoder::stateChanged, &loop, &QEventLoop::exit);
@@ -104,9 +101,12 @@ void VideoPlayer::play()
         emit loaded();
 
         const auto fps = d->decoder->fps();
-        d->averageInterval = qIsNaN(fps) ? 1000.0 : 1000 / fps;
-        d->maxInterval = d->averageInterval * 2;
-        d->interval = d->averageInterval;
+        d->interval = qIsNaN(fps) ? 1000.0 : 1000 / fps;
+    }
+    else if(d->state == Paused)
+    {
+        d->videoClock.resume();
+        d->audioClock.resume();
     }
 
     d->timerId = this->startTimer(d->interval, Qt::PreciseTimer);
@@ -125,6 +125,9 @@ void VideoPlayer::pause()
 
     this->killTimer(d->timerId);
     d->audioOutput->pause();
+
+    d->videoClock.pause();
+    d->audioClock.pause();
 
     d->state = Paused;
     emit playbackStateChanged(Paused);
@@ -147,6 +150,10 @@ void VideoPlayer::stop()
     QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::release, Qt::QueuedConnection);
     loop.exec();
 
+    d->videoClock.invalidate();
+    d->audioClock.invalidate();
+
+    d->position = 0;
     emit positionChanged(0);
 
     d->videoRenderer->updateVideoFrame(nullptr);
@@ -181,11 +188,8 @@ void VideoPlayer::setActiveVideoTrack(int index)
     QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
                               Qt::QueuedConnection);
 
-    if(d->interval != d->averageInterval)
-    {
-        d->interval = d->averageInterval;
-        d->updateTimer();
-    }
+    d->videoClock.invalidate();
+    d->audioClock.invalidate();
 }
 
 int VideoPlayer::activeVideoTrack() const
@@ -203,14 +207,9 @@ void VideoPlayer::setActiveAudioTrack(int index)
     d->decoder->requestInterrupt();
     QMetaObject::invokeMethod(d->decoder, "setActiveAudioTrack",
                               Qt::QueuedConnection, Q_ARG(int, index));
-    QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
-                              Qt::QueuedConnection);
 
-    if(d->interval != d->averageInterval)
-    {
-        d->interval = d->averageInterval;
-        d->updateTimer();
-    }
+    d->videoClock.invalidate();
+    d->audioClock.invalidate();
 }
 
 int VideoPlayer::activeAudioTrack() const
@@ -231,11 +230,8 @@ void VideoPlayer::setActiveSubtitleTrack(int index)
     QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
                               Qt::QueuedConnection);
 
-    if(d->interval != d->averageInterval)
-    {
-        d->interval = d->averageInterval;
-        d->updateTimer();
-    }
+    d->videoClock.invalidate();
+    d->audioClock.invalidate();
 }
 
 int VideoPlayer::activeSubtitleTrack() const
@@ -265,7 +261,7 @@ int VideoPlayer::duration() const
 
 int VideoPlayer::position() const
 {
-    return d_ptr->decoder->position();
+    return d_ptr->position;
 }
 
 bool VideoPlayer::hasVideo() const
@@ -297,36 +293,35 @@ void VideoPlayer::seek(int position)
 {
     Q_D(VideoPlayer);
 
-    if(d->state == State::Stopped || !this->seekable() || d->decoder->position() == position)
+    if(d->state == State::Stopped || !this->seekable() || d->position == position)
         return;
 
+    // FIXME: seek async
     d->decoder->requestInterrupt();
     QMetaObject::invokeMethod(d->decoder, "seek", Qt::QueuedConnection, Q_ARG(int, position));
     d->audioOutput->reset();
 
-    if(d->interval != d->averageInterval)
-    {
-        d->interval = d->averageInterval;
-        d->updateTimer();
-    }
+    d->videoClock.invalidate();
+    d->audioClock.invalidate();
 }
 
 void VideoPlayer::timerEvent(QTimerEvent *)
 {
     Q_D(VideoPlayer);
 
-    // Update video frame
-    AVFrame *frame = d->decoder->takeVideoFrame();
-    if(frame)
-        d->videoRenderer->updateVideoFrame(frame);
-    d->videoRenderer->updateSubtitleFrame(d->decoder->takeSubtitleFrame());
+    d->updateVideoFrame();
     this->update();
 
-    if(!d->decoder->hasFrame() && d->decoder->isEnd())
+    if(d->videoClock.isValid() || d->audioClock.isValid())
     {
-        this->stop();
-        return;
+        const int position = d->videoClock.isValid() ? d->videoClock.time() : d->audioClock.time();
+        if(position != d->position)
+        {
+            d->position = position;
+            emit positionChanged(position);
+        }
     }
 
-    d->synchronize();
+    if(!d->decoder->hasFrame() && d->decoder->isEnd())
+        this->stop();
 }

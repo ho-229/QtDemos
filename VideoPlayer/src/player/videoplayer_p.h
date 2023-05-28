@@ -9,9 +9,37 @@
 
 #include "videoplayer.h"
 
+#include <QElapsedTimer>
+
 class AudioOutput;
 class FFmpegDecoder;
 class VideoRenderer;
+
+class Clock
+{
+    qreal m_time = 0;
+    QElapsedTimer m_updateClock;
+public:
+    explicit Clock() = default;
+
+    qreal time() const { return m_time + qreal(m_updateClock.elapsed()) / 1000; }
+    bool isValid() const { return m_updateClock.isValid(); }
+
+    void update(qreal time)
+    {
+        m_time = time;
+        m_updateClock.start();
+    }
+
+    void pause()
+    {
+        if(m_updateClock.isValid())
+            m_time += qreal(m_updateClock.elapsed()) / 1000;
+    }
+    void resume() { m_updateClock.start(); }
+
+    void invalidate() { m_updateClock.invalidate(); }
+};
 
 class VideoPlayerPrivate
 {
@@ -25,21 +53,19 @@ public:
 
     VideoPlayer::State state = VideoPlayer::Stopped;
 
-    int interval = 0;
-    int maxInterval = 0;
-    qreal averageInterval = 0;
+    int position = 0;
 
+    int interval = 0;
     int timerId = -1;
 
     void updateTimer();
     void updateAudioOutput();
 
-    qint64 updateAudioData(char *data, qint64 maxlen);
+    Clock videoClock;
+    Clock audioClock;
 
-    /**
-     * @brief Audio-to-video synchronization
-     */
-    void synchronize();
+    qint64 updateAudioData(char *data, qint64 maxlen);
+    void updateVideoFrame();
 
 private:
     VideoPlayer *const q_ptr;

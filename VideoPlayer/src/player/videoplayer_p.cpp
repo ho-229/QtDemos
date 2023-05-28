@@ -6,13 +6,9 @@
 
 #include "videoplayer_p.h"
 
-#include "config.h"
 #include "audiooutput.h"
 #include "ffmpegdecoder.h"
-#include "qglobal.h"
-
-static inline int sigmoid(qreal value);
-static inline void updateAverage(qreal &average, qreal sample);
+#include "videorenderer.h"
 
 void VideoPlayerPrivate::updateTimer()
 {
@@ -45,6 +41,9 @@ qint64 VideoPlayerPrivate::updateAudioData(char *data, qint64 maxlen)
     while((frame = decoder->takeAudioFrame(free)))
     {
         const qint64 size = frame->linesize[0];
+        if(!audioClock.isValid() || (audioOutput->isLowBytesFree() && dest == data))
+            audioClock.update(FFmpegDecoder::framePts(frame));
+
         memcpy(dest, frame->data[0], size);
         av_frame_free(&frame);
 
@@ -55,49 +54,33 @@ qint64 VideoPlayerPrivate::updateAudioData(char *data, qint64 maxlen)
     return maxlen - free;
 }
 
-/**
- * @note This algorithm is based on experience so the better implementation is remain
- */
-void VideoPlayerPrivate::synchronize()
+void VideoPlayerPrivate::updateVideoFrame()
 {
-    const qreal diff = decoder->diff();
-    if(!diff)
-        return;
-
-    const qreal absDiff = qAbs(diff);
-    if(absDiff > ALLOW_DIFF)
+    AVFrame *frame = nullptr;
+    while((frame = decoder->takeVideoFrame()))
     {
-        // Update the timer interval to sync video to audio
-        const int delta = sigmoid(diff);
-        if(delta)
+        videoClock.update(FFmpegDecoder::framePts(frame));
+        auto nextInterval = FFmpegDecoder::frameDuration(frame);
+
+        if(audioClock.isValid())
+            nextInterval -= audioClock.time() - videoClock.time();
+        nextInterval *= 1000;
+
+        if(nextInterval < 1)
         {
-            interval = qMin(qMax(interval - delta, 1), maxInterval);
+            av_frame_free(&frame);
+            continue;
+        }
+
+        if(interval != nextInterval)
+        {
+            interval = nextInterval;
             this->updateTimer();
         }
+
+        videoRenderer->updateVideoFrame(frame);
+        // FIXME: bitmap subtitle
+//        videoRenderer->updateSubtitleFrame(decoder->takeSubtitleFrame());
+        break;
     }
-    else if(interval != averageInterval)
-    {
-        interval = averageInterval;
-        this->updateTimer();
-    }
-
-    updateAverage(averageInterval, interval);
-
-    // Drop video frame if video is toooo slow, it usually works when playing high fps video
-    if(diff > ALLOW_DIFF * 4)
-    {
-        AVFrame *frame = decoder->takeVideoFrame();
-        av_frame_free(&frame);
-    }
-}
-
-static inline int sigmoid(qreal value)
-{
-    return value * 100 / (5 + qAbs(value));
-}
-
-static inline void updateAverage(qreal &average, qreal sample)
-{
-    static const qreal weight = 0.97;
-    average = weight * average + (1 - weight) * sample;
 }

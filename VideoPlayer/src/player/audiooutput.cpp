@@ -99,3 +99,11 @@ void AudioOutput::reset()
     if (previousState == QAudio::ActiveState)
         m_output->start(m_audioDevice);
 }
+
+bool AudioOutput::isLowBytesFree() const
+{
+    if(!m_output)
+        return false;
+
+    return m_output->bytesFree() >= m_output->bufferSize() * 0.75;
+}
