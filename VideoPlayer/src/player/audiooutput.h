@@ -41,7 +41,7 @@ public:
      */
     void reset();
 
-    bool isLowBytesFree() const;
+    bool isLowDataLeft() const;
 
 private:
     QAudioOutput *m_output = nullptr;

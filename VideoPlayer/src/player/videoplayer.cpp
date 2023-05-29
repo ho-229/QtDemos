@@ -293,12 +293,18 @@ void VideoPlayer::seek(int position)
 {
     Q_D(VideoPlayer);
 
-    if(d->state == State::Stopped || !this->seekable() || d->position == position)
+    if(d->position == position || d->state == State::Stopped || !this->seekable())
         return;
 
-    // FIXME: seek async
+    d->position = position;
+    emit positionChanged(position);
+
     d->decoder->requestInterrupt();
+    QEventLoop loop;
+    QObject::connect(d->decoder, &FFmpegDecoder::seeked, &loop, &QEventLoop::quit);
     QMetaObject::invokeMethod(d->decoder, "seek", Qt::QueuedConnection, Q_ARG(int, position));
+    loop.exec();
+
     d->audioOutput->reset();
 
     d->videoClock.invalidate();

@@ -100,7 +100,7 @@ void AudioOutput::reset()
         m_output->start(m_audioDevice);
 }
 
-bool AudioOutput::isLowBytesFree() const
+bool AudioOutput::isLowDataLeft() const
 {
     if(!m_output)
         return false;

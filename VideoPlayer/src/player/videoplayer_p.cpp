@@ -41,7 +41,7 @@ qint64 VideoPlayerPrivate::updateAudioData(char *data, qint64 maxlen)
     while((frame = decoder->takeAudioFrame(free)))
     {
         const qint64 size = frame->linesize[0];
-        if(!audioClock.isValid() || (audioOutput->isLowBytesFree() && dest == data))
+        if(!audioClock.isValid() || (audioOutput->isLowDataLeft() && dest == data))
             audioClock.update(FFmpegDecoder::framePts(frame));
 
         memcpy(dest, frame->data[0], size);
