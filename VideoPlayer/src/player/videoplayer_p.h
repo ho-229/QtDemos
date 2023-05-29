@@ -58,16 +58,18 @@ public:
     int interval = 0;
     int timerId = -1;
 
-    void updateTimer();
-    void updateAudioOutput();
+    void restartAudioOutput();
 
     Clock videoClock;
     Clock audioClock;
 
     qint64 updateAudioData(char *data, qint64 maxlen);
     void updateVideoFrame();
+    void updateSubtitleFrame();
 
 private:
+    inline void updateTimer(int newInterval);
+
     VideoPlayer *const q_ptr;
     Q_DECLARE_PUBLIC(VideoPlayer)
 };

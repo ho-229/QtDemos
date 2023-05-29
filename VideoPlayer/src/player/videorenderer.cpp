@@ -137,9 +137,6 @@ void VideoRenderer::updateVideoFrame(AVFrame *frame)
 
 void VideoRenderer::updateSubtitleFrame(SubtitleFrame *frame)
 {
-    if(frame == m_subtitle)
-        return;
-
     m_subtitle = frame;
     m_flags |= SubtitleFrameUpdate;
 }
@@ -170,7 +167,11 @@ void VideoRenderer::updateSubtitleTextureData()
 
         data = m_subtitle->image.constBits();
     }
+
     m_texture[3]->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, data);
+
+    delete m_subtitle;
+    m_subtitle = nullptr;
 }
 
 void VideoRenderer::initializeProgram()

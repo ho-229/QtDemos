@@ -6,22 +6,21 @@
 
 #include "videoplayer_p.h"
 
+#include "config.h"
 #include "audiooutput.h"
 #include "ffmpegdecoder.h"
 #include "videorenderer.h"
 
-void VideoPlayerPrivate::updateTimer()
+void VideoPlayerPrivate::updateTimer(int newInterval)
 {
     Q_Q(VideoPlayer);
 
-    if(state != VideoPlayer::Playing)
-        return;
-
+    interval = newInterval;
     q->killTimer(timerId);
     q->startTimer(interval, Qt::PreciseTimer);
 }
 
-void VideoPlayerPrivate::updateAudioOutput()
+void VideoPlayerPrivate::restartAudioOutput()
 {
     audioOutput->updateAudioOutput(decoder->audioFormat());
 
@@ -40,10 +39,10 @@ qint64 VideoPlayerPrivate::updateAudioData(char *data, qint64 maxlen)
 
     while((frame = decoder->takeAudioFrame(free)))
     {
-        const qint64 size = frame->linesize[0];
         if(!audioClock.isValid() || (audioOutput->isLowDataLeft() && dest == data))
             audioClock.update(FFmpegDecoder::framePts(frame));
 
+        const qint64 size = frame->linesize[0];
         memcpy(dest, frame->data[0], size);
         av_frame_free(&frame);
 
@@ -63,7 +62,7 @@ void VideoPlayerPrivate::updateVideoFrame()
         auto nextInterval = FFmpegDecoder::frameDuration(frame);
 
         if(audioClock.isValid())
-            nextInterval -= audioClock.time() - videoClock.time();
+            nextInterval -= audioClock.time() - videoClock.time() - AUDIO_DELAY;
         nextInterval *= 1000;
 
         if(nextInterval < 1)
@@ -73,14 +72,16 @@ void VideoPlayerPrivate::updateVideoFrame()
         }
 
         if(interval != nextInterval)
-        {
-            interval = nextInterval;
-            this->updateTimer();
-        }
+            this->updateTimer(nextInterval);
 
         videoRenderer->updateVideoFrame(frame);
-        // FIXME: bitmap subtitle
-//        videoRenderer->updateSubtitleFrame(decoder->takeSubtitleFrame());
         break;
     }
+}
+
+void VideoPlayerPrivate::updateSubtitleFrame()
+{
+    SubtitleFrame *frame = nullptr;
+    if((frame = decoder->takeSubtitleFrame(videoClock.time())))
+        videoRenderer->updateSubtitleFrame(frame);
 }

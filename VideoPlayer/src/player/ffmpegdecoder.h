@@ -81,7 +81,7 @@ public:
 
     AVFrame *takeVideoFrame();
     AVFrame *takeAudioFrame(qint64 maxlen);
-    SubtitleFrame *takeSubtitleFrame();
+    SubtitleFrame *takeSubtitleFrame(qreal time);
 
     /**
      * @return qQNaN() if not available(eg. no video frames or only a single frame like album cover),
@@ -157,8 +157,7 @@ private:
 
     QContiguousCache<AVFrame *> m_videoCache;
     QContiguousCache<AVFrame *> m_audioCache;
-    QContiguousCache<QSharedPointer<SubtitleFrame>> m_subtitleCache;
-    QSharedPointer<SubtitleFrame> m_currentSubtitle;
+    QContiguousCache<SubtitleFrame *> m_subtitleCache;
 
     qreal m_fps = qQNaN();                          // See also FFmpegDecoder::fps()
 

@@ -35,7 +35,7 @@ VideoPlayer::VideoPlayer(QQuickItem *parent) :
                      this, &VideoPlayer::activeSubtitleTrackChanged);
 
     QObject::connect(d->decoder, &FFmpegDecoder::activeAudioTrackChanged,
-                     this, [this] { d_ptr->updateAudioOutput(); });
+                     this, [this] { d_ptr->restartAudioOutput(); });
 }
 
 VideoPlayer::~VideoPlayer()
@@ -152,6 +152,7 @@ void VideoPlayer::stop()
 
     d->videoClock.invalidate();
     d->audioClock.invalidate();
+    d->videoRenderer->updateSubtitleFrame(nullptr);
 
     d->position = 0;
     emit positionChanged(0);
@@ -190,6 +191,7 @@ void VideoPlayer::setActiveVideoTrack(int index)
 
     d->videoClock.invalidate();
     d->audioClock.invalidate();
+    d->videoRenderer->updateSubtitleFrame(nullptr);
 }
 
 int VideoPlayer::activeVideoTrack() const
@@ -210,6 +212,7 @@ void VideoPlayer::setActiveAudioTrack(int index)
 
     d->videoClock.invalidate();
     d->audioClock.invalidate();
+    d->videoRenderer->updateSubtitleFrame(nullptr);
 }
 
 int VideoPlayer::activeAudioTrack() const
@@ -232,6 +235,7 @@ void VideoPlayer::setActiveSubtitleTrack(int index)
 
     d->videoClock.invalidate();
     d->audioClock.invalidate();
+    d->videoRenderer->updateSubtitleFrame(nullptr);
 }
 
 int VideoPlayer::activeSubtitleTrack() const
@@ -316,6 +320,7 @@ void VideoPlayer::timerEvent(QTimerEvent *)
     Q_D(VideoPlayer);
 
     d->updateVideoFrame();
+    d->updateSubtitleFrame();
     this->update();
 
     if(d->videoClock.isValid() || d->audioClock.isValid())
