@@ -6,7 +6,6 @@
 
 #include "videoplayer_p.h"
 
-#include "config.h"
 #include "audiooutput.h"
 #include "ffmpegdecoder.h"
 #include "videorenderer.h"
@@ -65,7 +64,7 @@ void VideoPlayerPrivate::updateVideoFrame()
             auto nextInterval = FFmpegDecoder::frameDuration(frame);
 
             if(audioClock.isValid())
-                nextInterval -= audioClock.time() - videoClock.time() - AUDIO_DELAY;
+                nextInterval -= audioClock.time() - videoClock.time() - audioOutput->bufferDuration();
             nextInterval *= 1000;
 
             if(nextInterval < 1)

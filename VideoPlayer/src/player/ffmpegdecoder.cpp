@@ -7,15 +7,13 @@
 #include "config.h"
 #include "ffmpegdecoder.h"
 
-#include <mutex>    // for std::call_once
-
 #include <QDir>
 #include <QFileInfo>
 #include <QMetaObject>
 #include <QScopeGuard>
 #include <QMutexLocker>
 
-static std::once_flag initFlag;
+static bool initFlag = false;
 
 #define FFMPEG_ERROR(x) qCritical() << __PRETTY_FUNCTION__ << ":" << __LINE__ \
                         << ":" << av_make_error_string(m_errorBuf, sizeof (m_errorBuf), x)
@@ -36,7 +34,11 @@ inline static qreal decodedDuration(const QContiguousCache<AVFrame *> &cache);
 FFmpegDecoder::FFmpegDecoder(QObject *parent) :
     QObject(parent)
 {
-    std::call_once(initFlag, [] { qRegisterMetaType<State>(); });
+    if(!initFlag)
+    {
+        qRegisterMetaType<State>();
+        initFlag = true;
+    }
 
     av_log_set_level(AV_LOG_INFO);
 

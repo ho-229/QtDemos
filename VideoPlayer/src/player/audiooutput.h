@@ -42,10 +42,12 @@ public:
     void reset();
 
     bool isLowDataLeft() const;
+    qreal bufferDuration() const;
 
 private:
     QAudioOutput *m_output = nullptr;
     AudioDevice *m_audioDevice = nullptr;
+    qreal m_bufferDuration = 0;
 };
 
 #endif // AUDIOOUTPUT_H

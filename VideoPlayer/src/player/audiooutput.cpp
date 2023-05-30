@@ -67,6 +67,7 @@ void AudioOutput::play()
         return;
 
     m_output->start(m_audioDevice);
+    m_bufferDuration = qreal(m_output->format().durationForBytes(m_output->bufferSize())) / 1000000;
 
     if (m_output->error() != QAudio::NoError)
         qCritical() << __PRETTY_FUNCTION__ << ":" << m_output->error();
@@ -106,4 +107,9 @@ bool AudioOutput::isLowDataLeft() const
         return false;
 
     return m_output->bytesFree() > m_output->bufferSize() * 0.75;
+}
+
+qreal AudioOutput::bufferDuration() const
+{
+    return m_bufferDuration;
 }
