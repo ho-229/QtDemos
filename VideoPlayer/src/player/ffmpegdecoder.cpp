@@ -464,7 +464,7 @@ qreal FFmpegDecoder::fps() const
 qreal FFmpegDecoder::framePts(const AVFrame *frame)
 {
     if(frame->pts == AV_NOPTS_VALUE)
-        return 0;
+        return -1;
 
     return static_cast<qreal>(frame->pts) * av_q2d(frame->time_base);
 }

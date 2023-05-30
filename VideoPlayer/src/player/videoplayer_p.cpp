@@ -58,21 +58,25 @@ void VideoPlayerPrivate::updateVideoFrame()
     AVFrame *frame = nullptr;
     while((frame = decoder->takeVideoFrame()))
     {
-        videoClock.update(FFmpegDecoder::framePts(frame));
-        auto nextInterval = FFmpegDecoder::frameDuration(frame);
-
-        if(audioClock.isValid())
-            nextInterval -= audioClock.time() - videoClock.time() - AUDIO_DELAY;
-        nextInterval *= 1000;
-
-        if(nextInterval < 1)
+        const qreal pts = FFmpegDecoder::framePts(frame);
+        if(!qFuzzyCompare(pts, -1))
         {
-            av_frame_free(&frame);
-            continue;
-        }
+            videoClock.update(pts);
+            auto nextInterval = FFmpegDecoder::frameDuration(frame);
 
-        if(interval != nextInterval)
-            this->updateTimer(nextInterval);
+            if(audioClock.isValid())
+                nextInterval -= audioClock.time() - videoClock.time() - AUDIO_DELAY;
+            nextInterval *= 1000;
+
+            if(nextInterval < 1)
+            {
+                av_frame_free(&frame);
+                continue;
+            }
+
+            if(interval != nextInterval)
+                this->updateTimer(nextInterval);
+        }
 
         videoRenderer->updateVideoFrame(frame);
         break;

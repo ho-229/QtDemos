@@ -105,5 +105,5 @@ bool AudioOutput::isLowDataLeft() const
     if(!m_output)
         return false;
 
-    return m_output->bytesFree() >= m_output->bufferSize() * 0.75;
+    return m_output->bytesFree() > m_output->bufferSize() * 0.75;
 }
