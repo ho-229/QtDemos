@@ -304,15 +304,13 @@ void VideoPlayer::seek(int position)
     emit positionChanged(position);
 
     d->decoder->requestInterrupt();
-    QEventLoop loop;
-    QObject::connect(d->decoder, &FFmpegDecoder::seeked, &loop, &QEventLoop::quit);
-    QMetaObject::invokeMethod(d->decoder, "seek", Qt::QueuedConnection, Q_ARG(int, position));
-    loop.exec();
+    QMetaObject::invokeMethod(d->decoder, "seek", Qt::BlockingQueuedConnection, Q_ARG(int, position));
 
     d->audioOutput->reset();
 
     d->videoClock.invalidate();
     d->audioClock.invalidate();
+    d->videoRenderer->updateSubtitleFrame(nullptr);
 }
 
 void VideoPlayer::timerEvent(QTimerEvent *)

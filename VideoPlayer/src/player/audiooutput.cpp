@@ -70,7 +70,7 @@ void AudioOutput::play()
     m_bufferDuration = qreal(m_output->format().durationForBytes(m_output->bufferSize())) / 1000000;
 
     if (m_output->error() != QAudio::NoError)
-        qCritical() << __PRETTY_FUNCTION__ << ":" << m_output->error();
+        qCritical() << __FUNCTION__ << ":" << m_output->error();
 }
 
 void AudioOutput::pause()

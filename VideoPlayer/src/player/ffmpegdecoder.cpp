@@ -15,7 +15,7 @@
 
 static bool initFlag = false;
 
-#define FFMPEG_ERROR(x) qCritical() << __PRETTY_FUNCTION__ << ":" << __LINE__ \
+#define FFMPEG_ERROR(x) qCritical() << __FUNCTION__ << ":" << __LINE__ \
                         << ":" << av_make_error_string(m_errorBuf, sizeof (m_errorBuf), x)
 
 /**
@@ -377,8 +377,7 @@ void FFmpegDecoder::seek(int position)
     av_seek_frame(m_formatContext, seekStream->index, static_cast<qint64>
                   (position / av_q2d(seekStream->time_base)), AVSEEK_FLAG_FRAME);
 
-    // runs on the same thread so doesn't need to be called by signal
-    this->decode();
+    QMetaObject::invokeMethod(this, &FFmpegDecoder::decode, Qt::QueuedConnection);
 }
 
 AVFrame *FFmpegDecoder::takeVideoFrame()
@@ -397,7 +396,7 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
     {
         m_isDecoding = true;
         // Asynchronous call FFmpegDecoder::decode()
-        QMetaObject::invokeMethod(this, &FFmpegDecoder::decode);
+        QMetaObject::invokeMethod(this, &FFmpegDecoder::decode, Qt::QueuedConnection);
     }
 
     m_mutex.unlock();
@@ -426,7 +425,7 @@ AVFrame *FFmpegDecoder::takeAudioFrame(qint64 maxlen)
     {
         m_isDecoding = true;
         // Asynchronous call FFmpegDecoder::decode()
-        QMetaObject::invokeMethod(this, &FFmpegDecoder::decode);
+        QMetaObject::invokeMethod(this, &FFmpegDecoder::decode, Qt::QueuedConnection);
     }
 
     return frame;
