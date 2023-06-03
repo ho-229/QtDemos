@@ -46,8 +46,17 @@ void AudioOutput::updateAudioOutput(const QAudioFormat &format)
     if(m_output)
         this->stop();
 
-    if(format.isValid())
-        m_output = new QAudioOutput(format, this);
+    if(!format.isValid())
+        return;
+
+    m_output = new QAudioOutput(format, this);
+
+    // restart when encounter unexpected idle
+    QObject::connect(m_output, &QAudioOutput::stateChanged, this,
+                     [this](QAudio::State s) {
+                         if(s == QAudio::IdleState)
+                             m_output->start(m_audioDevice);
+                     });
 }
 
 void AudioOutput::setVolume(qreal volume)

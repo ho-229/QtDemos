@@ -64,7 +64,7 @@ void VideoPlayerPrivate::updateVideoFrame()
             auto nextInterval = FFmpegDecoder::frameDuration(frame);
 
             if(audioClock.isValid())
-                nextInterval -= audioClock.time() - videoClock.time() - audioOutput->bufferDuration();
+                nextInterval -= audioClock.time() - videoClock.time()/* - audioOutput->bufferDuration()*/;
             nextInterval *= 1000;
 
             if(nextInterval < 1)
