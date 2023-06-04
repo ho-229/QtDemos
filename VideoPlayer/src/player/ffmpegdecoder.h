@@ -93,7 +93,6 @@ public:
     static qreal frameDuration(const AVFrame *frame);
 
 signals:
-    void seeked();
     void stateChanged(FFmpegDecoder::State);
 
     void activeVideoTrackChanged(int);

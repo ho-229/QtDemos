@@ -365,7 +365,6 @@ void FFmpegDecoder::seek(int position)
     // Clear frame cache
     this->clearCache();
 
-    emit seeked();
     m_seekTarget = position;
 
     if(m_videoCodecContext)

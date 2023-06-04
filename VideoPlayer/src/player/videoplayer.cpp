@@ -311,6 +311,16 @@ void VideoPlayer::seek(int position)
     d->videoClock.invalidate();
     d->audioClock.invalidate();
     d->videoRenderer->updateSubtitleFrame(nullptr);
+
+    if(d->state == Paused)
+    {
+        AVFrame *frame = nullptr;
+        while(!(frame = d->decoder->takeVideoFrame()))
+            QThread::yieldCurrentThread();
+
+        d->videoRenderer->updateVideoFrame(frame);
+        this->update();
+    }
 }
 
 void VideoPlayer::timerEvent(QTimerEvent *)
