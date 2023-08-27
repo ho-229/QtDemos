@@ -403,21 +403,16 @@ AVFrame *FFmpegDecoder::takeVideoFrame()
     return frame;
 }
 
-AVFrame *FFmpegDecoder::takeAudioFrame(qint64 maxlen)
+AVFrame *FFmpegDecoder::takeAudioFrame()
 {
     if(m_state == Closed)
         return nullptr;
 
-    AVFrame *frame = nullptr;
-
     QMutexLocker locker(&m_mutex);
-    if(!m_audioCache.isEmpty())
-    {
-        if(maxlen < m_audioCache.first()->linesize[0])
-            return nullptr;
+    if(m_audioCache.isEmpty())
+        return nullptr;
 
-        frame = m_audioCache.takeFirst();
-    }
+    AVFrame *frame = m_audioCache.takeFirst();
 
     if(!m_isEnd && !m_isDecoding &&
         decodedDuration(m_audioCache) < MIN_DECODED_DURATION)

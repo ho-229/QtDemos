@@ -150,6 +150,9 @@ void VideoPlayer::stop()
     QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::release, Qt::QueuedConnection);
     loop.exec();
 
+    av_frame_free(&d->audioFrame);
+    d->audioFramePos = 0;
+
     d->videoClock.invalidate();
     d->audioClock.invalidate();
     d->videoRenderer->updateSubtitleFrame(nullptr);
@@ -189,6 +192,9 @@ void VideoPlayer::setActiveVideoTrack(int index)
     QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
                               Qt::QueuedConnection);
 
+    av_frame_free(&d->audioFrame);
+    d->audioFramePos = 0;
+
     d->videoClock.invalidate();
     d->audioClock.invalidate();
     d->videoRenderer->updateSubtitleFrame(nullptr);
@@ -209,6 +215,9 @@ void VideoPlayer::setActiveAudioTrack(int index)
     d->decoder->requestInterrupt();
     QMetaObject::invokeMethod(d->decoder, "setActiveAudioTrack",
                               Qt::QueuedConnection, Q_ARG(int, index));
+
+    av_frame_free(&d->audioFrame);
+    d->audioFramePos = 0;
 
     d->videoClock.invalidate();
     d->audioClock.invalidate();
@@ -232,6 +241,9 @@ void VideoPlayer::setActiveSubtitleTrack(int index)
                               Qt::QueuedConnection, Q_ARG(int, index));
     QMetaObject::invokeMethod(d->decoder, &FFmpegDecoder::decode,
                               Qt::QueuedConnection);
+
+    av_frame_free(&d->audioFrame);
+    d->audioFramePos = 0;
 
     d->videoClock.invalidate();
     d->audioClock.invalidate();
@@ -307,6 +319,9 @@ void VideoPlayer::seek(int position)
     QMetaObject::invokeMethod(d->decoder, "seek", Qt::BlockingQueuedConnection, Q_ARG(int, position));
 
     d->audioOutput->reset();
+
+    av_frame_free(&d->audioFrame);
+    d->audioFramePos = 0;
 
     d->videoClock.invalidate();
     d->audioClock.invalidate();

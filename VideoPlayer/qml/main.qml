@@ -78,7 +78,7 @@ Window {
         anchors.left: parent.left
         anchors.right: parent.right
 
-        gradient:Gradient {
+        gradient: Gradient {
             GradientStop { position: 0.0; color: "black" }
             GradientStop { position: 1.0; color: "transparent" }
         }
@@ -105,7 +105,7 @@ Window {
         anchors.left: parent.left
         anchors.right: parent.right
 
-        gradient:Gradient {
+        gradient: Gradient {
             GradientStop { position: 1.0; color: "black" }
             GradientStop { position: 0.0; color: "transparent" }
         }

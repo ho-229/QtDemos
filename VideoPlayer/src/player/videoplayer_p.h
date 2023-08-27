@@ -11,6 +11,8 @@
 
 #include <QElapsedTimer>
 
+struct AVFrame;
+
 class AudioOutput;
 class FFmpegDecoder;
 class VideoRenderer;
@@ -57,6 +59,9 @@ public:
 
     int interval = 0;
     int timerId = -1;
+
+    AVFrame *audioFrame = nullptr;
+    qint64 audioFramePos = 0;
 
     void restartAudioOutput();
 

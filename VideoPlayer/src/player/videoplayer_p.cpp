@@ -34,19 +34,30 @@ qint64 VideoPlayerPrivate::updateAudioData(char *data, qint64 maxlen)
 
     qint64 free = maxlen;
     char *dest = data;
-    AVFrame *frame = nullptr;
 
-    while((frame = decoder->takeAudioFrame(free)))
+    while(free)
     {
+        if(!audioFrame)
+        {
+            if(!(audioFrame = decoder->takeAudioFrame()))
+                break;
+        }
+
         if(!audioClock.isValid() || (audioOutput->isLowDataLeft() && dest == data))
-            audioClock.update(FFmpegDecoder::framePts(frame));
+            audioClock.update(FFmpegDecoder::framePts(audioFrame));
 
-        const qint64 size = frame->linesize[0];
-        memcpy(dest, frame->data[0], size);
-        av_frame_free(&frame);
+        const auto size = qMin(qint64(audioFrame->linesize[0]) - audioFramePos, free);
 
+        memcpy(dest, audioFrame->data[0] + audioFramePos, size);
         dest += size;
         free -= size;
+        audioFramePos += size;
+
+        if(audioFramePos >= audioFrame->linesize[0])
+        {
+            audioFramePos = 0;
+            av_frame_free(&audioFrame);
+        }
     }
 
     return maxlen - free;
