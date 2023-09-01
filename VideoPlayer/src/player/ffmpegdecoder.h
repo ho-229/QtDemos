@@ -124,6 +124,8 @@ private:
                           AVMediaType type, int index);
     void closeCodecContext(AVStream *&stream, AVCodecContext *&codecContext);
 
+    AVBufferRef *openHardwareDecoder(const AVCodec *codec);
+
     bool openSubtitleFilter(const QString &args, const QString &filterDesc);
     void closeSubtitleFilter();
 
@@ -140,6 +142,8 @@ private:
 
     AVStream *m_videoStream = nullptr;
     AVCodecContext *m_videoCodecContext = nullptr;
+    AVBufferRef *m_hardwareDeviceContext = nullptr;
+    AVPixelFormat m_hardwareDeviceType = AV_PIX_FMT_NONE;
 
     AVStream *m_audioStream = nullptr;
     AVCodecContext *m_audioCodecContext = nullptr;

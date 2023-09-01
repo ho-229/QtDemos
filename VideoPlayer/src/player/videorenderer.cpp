@@ -56,6 +56,8 @@ VideoRenderer::VideoRenderer()
 {
     this->initializeOpenGLFunctions();
     this->initializeProgram();
+
+    qDebug() << QOpenGLContext::currentContext()->extensions();
 }
 
 VideoRenderer::~VideoRenderer()

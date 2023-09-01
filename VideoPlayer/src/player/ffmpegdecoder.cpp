@@ -104,24 +104,25 @@ void FFmpegDecoder::setActiveVideoTrack(int index)
                                             AVMEDIA_TYPE_VIDEO, m_videoIndexes[index]))
         return;
 
+    qDebug() << "pix fmt" << m_videoCodecContext->pix_fmt;
     // Convert to supported format if not
-    switch(m_videoCodecContext->pix_fmt)
-    {
-    case AV_PIX_FMT_YUV420P:
-    case AV_PIX_FMT_YUV420P10LE:
-    case AV_PIX_FMT_YUV444P:
-    case AV_PIX_FMT_YUV444P10LE:
-        break;
-    default:
+//    switch(m_videoCodecContext->pix_fmt)
+//    {
+//    case AV_PIX_FMT_YUV420P:
+//    case AV_PIX_FMT_YUV420P10LE:
+//    case AV_PIX_FMT_YUV444P:
+//    case AV_PIX_FMT_YUV444P10LE:
+//        break;
+//    default:
         m_swsContext = sws_getContext(m_videoCodecContext->width,
                                       m_videoCodecContext->height,
-                                      m_videoCodecContext->pix_fmt,
+                                      AV_PIX_FMT_NV12,
                                       m_videoCodecContext->width,
                                       m_videoCodecContext->height,
                                       AV_PIX_FMT_YUV420P,
                                       SWS_BICUBIC, nullptr, nullptr, nullptr);
-        break;
-    }
+//        break;
+//    }
 
     m_fps = av_q2d(m_videoStream->avg_frame_rate);
     emit activeVideoTrackChanged(index);
@@ -513,11 +514,23 @@ void FFmpegDecoder::decodeVideo(AVPacket *packet)
         return;
     }
 
-    // If subtitle filter is available
-    if(m_buffersrcContext && m_buffersinkContext)
+
+//    qDebug() << frame->format << m_hardwareDeviceType << m_videoCodecContext->pix_fmt;
+    qDebug() << frame->format << m_hardwareDeviceType << m_videoCodecContext->pix_fmt << m_videoCodecContext->codec_id << m_videoCodecContext->sw_pix_fmt;
+//    qDebug() << m_videoCodecContext->hwaccel->name;
+    int ret = 0;
+//    if(frame->format == m_hardwareDeviceType)
     {
-        if(av_buffersrc_add_frame(m_buffersrcContext, frame) >= 0)
-            av_buffersink_get_frame(m_buffersinkContext, frame);
+        AVFrame *hwframe = av_frame_alloc();
+        av_frame_copy_props(hwframe, frame);
+        if((ret = av_hwframe_transfer_data(hwframe, frame, 0)) < 0)
+        {
+            FFMPEG_ERROR(ret);
+            return;
+        }
+
+        av_frame_free(&frame);
+        frame = hwframe;
     }
 
     if(m_swsContext)
@@ -532,6 +545,13 @@ void FFmpegDecoder::decodeVideo(AVPacket *packet)
         av_frame_free(&frame);
 
         frame = swsFrame;
+    }
+
+    // If subtitle filter is available
+    if(m_buffersrcContext && m_buffersinkContext)
+    {
+        if(av_buffersrc_add_frame(m_buffersrcContext, frame) >= 0)
+            av_buffersink_get_frame(m_buffersinkContext, frame);
     }
 
     frame->time_base = m_videoStream->time_base;
@@ -643,7 +663,7 @@ bool FFmpegDecoder::openCodecContext(AVStream *&stream, AVCodecContext *&codecCo
 {
     // Find stream
     int ret = 0;
-    if ((ret = av_find_best_stream(m_formatContext, type, index, -1, nullptr, 0)) < 0)
+    if((ret = av_find_best_stream(m_formatContext, type, index, -1, nullptr, 0)) < 0)
     {
         FUNC_ERROR << "Could not find stream" << av_get_media_type_string(type);
         FFMPEG_ERROR(ret);
@@ -654,7 +674,7 @@ bool FFmpegDecoder::openCodecContext(AVStream *&stream, AVCodecContext *&codecCo
 
     // Find codec
     const AVCodec *codec = avcodec_find_decoder(stream->codecpar->codec_id);
-    if (!codec)
+    if(!codec)
     {
         FUNC_ERROR << "Cound not find codec" << av_get_media_type_string(type);
         return false;
@@ -670,7 +690,7 @@ bool FFmpegDecoder::openCodecContext(AVStream *&stream, AVCodecContext *&codecCo
     codecContext->thread_count = 1;
 
     AVDictionary *opts = nullptr;
-    if ((ret = avcodec_parameters_to_context(codecContext, stream->codecpar)) < 0)
+    if((ret = avcodec_parameters_to_context(codecContext, stream->codecpar)) < 0)
     {
         FUNC_ERROR << "Failed to copy codec parameters to decoder context"
                    << av_get_media_type_string(type);
@@ -679,8 +699,11 @@ bool FFmpegDecoder::openCodecContext(AVStream *&stream, AVCodecContext *&codecCo
     }
     av_dict_set(&opts, "refcounted_frames", "0", 0);
 
+    if(type == AVMEDIA_TYPE_VIDEO)
+        codecContext->hw_device_ctx = this->openHardwareDecoder(codec);
+
     // Open codec and get the context
-    if ((ret = avcodec_open2(codecContext, codec, &opts)) < 0)
+    if((ret = avcodec_open2(codecContext, codec, &opts)) < 0)
     {
         FUNC_ERROR << "Failed to open codec" << av_get_media_type_string(type);
         FFMPEG_ERROR(ret);
@@ -696,6 +719,24 @@ void FFmpegDecoder::closeCodecContext(AVStream *&stream, AVCodecContext *&codecC
     avcodec_free_context(&codecContext);
 
     stream = nullptr;
+}
+
+AVBufferRef *FFmpegDecoder::openHardwareDecoder(const AVCodec *codec)
+{
+    const AVCodecHWConfig *config = nullptr;
+    for(int i = 0; (config = avcodec_get_hw_config(codec, i)); ++i)
+    {
+//        if(config->device_type != AV_HWDEVICE_TYPE_VDPAU)
+//            continue;
+        if(!av_hwdevice_ctx_create(&m_hardwareDeviceContext, config->device_type, nullptr, nullptr, 0))
+        {
+            m_hardwareDeviceType = config->pix_fmt;
+            return av_buffer_ref(m_hardwareDeviceContext);
+        }
+    }
+
+    m_hardwareDeviceType = AV_PIX_FMT_NONE;
+    return nullptr;
 }
 
 bool FFmpegDecoder::openSubtitleFilter(const QString& args, const QString& filterDesc)
